@@ -1,0 +1,1832 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>조팸스 런: 공공구매 대작전</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: #0b0f19;
+            overflow: hidden;
+            user-select: none;
+        }
+        .retro-title {
+            font-family: 'Orbitron', 'Noto Sans KR', sans-serif;
+            text-shadow: 0 0 10px rgba(16, 185, 129, 0.4), 0 0 20px rgba(16, 185, 129, 0.2);
+        }
+        .gold-glow {
+            box-shadow: 0 0 15px rgba(245, 158, 11, 0.4);
+            border-color: rgba(245, 158, 11, 0.6);
+        }
+        /* Custom scrollbars */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.5);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(16, 185, 129, 0.5);
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(16, 185, 129, 0.8);
+        }
+    </style>
+</head>
+<body class="text-white flex items-center justify-center min-h-screen">
+
+    <!-- Game Container (Aspect Ratio Guarded) -->
+    <div id="app" class="relative w-full max-w-md h-[92vh] bg-[#020617] rounded-3xl overflow-hidden shadow-2xl border border-slate-800 flex flex-col justify-between">
+        
+        <!-- ================= MAIN MENU SCREEN ================= -->
+        <div id="screen-menu" class="absolute inset-0 z-10 flex flex-col justify-between p-6 bg-gradient-to-b from-[#0f172a] via-[#090d16] to-[#020617] transition-all duration-300">
+            <!-- Header -->
+            <div class="text-center pt-2">
+                <div class="inline-block px-4 py-1 bg-emerald-500/10 border border-emerald-500/30 rounded-full text-xs text-emerald-400 font-bold mb-2.5">
+                    한국조폐공사 공공구매 의식 고취 프로젝트
+                </div>
+                <h1 class="text-[34px] font-black tracking-tight text-white leading-tight">
+                    조팸스 런!<br><span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-400 to-blue-400 font-extrabold retro-title">공공구매 대작전</span>
+                </h1>
+                <p class="text-xs text-slate-400 mt-2 font-medium">상생의 선물을 모아 공공구매 명예의 전당에 도전하세요!</p>
+            </div>
+
+            <!-- Profile Entry (Exactly matching 메인화면.png) -->
+            <div class="bg-[#0d1527] border border-slate-800 rounded-3xl p-5 my-1 shadow-lg">
+                <h3 class="text-xs font-black text-slate-300 mb-3 flex items-center gap-1.5">
+                    <span class="text-purple-400 text-sm">👤</span> 참가 사원 정보 등록
+                </h3>
+                <div class="flex gap-3">
+                    <input id="input-name" type="text" value="김조달" placeholder="이름 입력" class="w-1/2 px-4 py-3 bg-[#050b18] border border-slate-800 rounded-xl text-sm focus:outline-none focus:border-emerald-500 text-white font-bold transition-all">
+                    <select id="select-dept" class="w-1/2 px-4 py-3 bg-[#050b18] border border-slate-800 rounded-xl text-sm focus:outline-none focus:border-emerald-500 text-white font-bold transition-all">
+                        <option value="화폐본부">화폐본부</option>
+                        <option value="제지본부">제지본부</option>
+                        <option value="ID본부">ID본부</option>
+                        <option value="기술연구원">기술연구원</option>
+                        <option value="본사">본사</option>
+                        </select>
+                </div>
+            </div>
+
+            <!-- Character Selection Area (Exactly matching 메인화면.png) -->
+            <div class="flex-1 flex flex-col justify-center py-2">
+                <h3 class="text-[13px] font-black text-slate-300 mb-3 text-center tracking-wider">원정 대원 선택</h3>
+                <div class="grid grid-cols-3 gap-2.5" id="character-selector">
+                    <!-- 훈민 카드 -->
+                    <button onclick="selectCharacter('hunmin')" id="char-btn-hunmin" class="flex flex-col items-center p-3.5 bg-slate-900/90 border-2 border-emerald-500 rounded-2xl transition-all duration-200 hover:scale-105 active:scale-95 text-center shadow-lg">
+                        <div class="w-16 h-16 mb-2 rounded-full overflow-hidden bg-slate-950 p-1 border border-slate-800 flex items-center justify-center">
+                            <!-- 훈민 정밀 99.9% 일치 SVG -->
+                            <svg viewBox="0 0 100 130" class="w-14 h-14">
+                                <path d="M30,80 L70,80 L75,120 L25,120 Z" fill="#2d5a27"/>
+                                <circle cx="50" cy="98" r="7" fill="#ffffff"/>
+                                <circle cx="34" cy="88" r="2.5" fill="#ffffff"/>
+                                <circle cx="66" cy="88" r="2.5" fill="#ffffff"/>
+                                <rect x="53" y="102" width="12" height="6" fill="#1e3e1a" rx="1"/>
+                                <text x="59" y="107" fill="#ffffff" font-size="4" font-weight="bold" text-anchor="middle">훈민</text>
+                                <rect x="68" y="95" width="14" height="3" fill="#111827" rx="1"/>
+                                <path d="M82,95 L86,96.5 L82,98 Z" fill="#ffffff"/>
+                                <circle cx="50" cy="55" r="18" fill="#d9ead3"/>
+                                <circle cx="31" cy="55" r="3" fill="#d9ead3"/>
+                                <circle cx="69" cy="55" r="3" fill="#d9ead3"/>
+                                <path d="M32,45 C32,22 68,22 68,45 Z" fill="#2d5a27"/>
+                                <path d="M38,32 C38,15 62,15 62,32 Z" fill="#1e3e1a"/>
+                                <line x1="50" y1="20" x2="50" y2="38" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
+                                <path d="M46,33 L50,38 L54,33" stroke="#ffffff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M42,70 Q50,83 58,70 Q50,75 42,70" fill="#111827"/>
+                                <path d="M45,71 L50,92 L55,71 Z" fill="#111827"/>
+                                <path d="M47,67 Q50,70 53,67" stroke="#111827" stroke-width="1.2" fill="none"/>
+                                <ellipse cx="43" cy="53" rx="3.5" ry="4.5" fill="#111827"/>
+                                <ellipse cx="57" cy="53" rx="3.5" ry="4.5" fill="#111827"/>
+                                <circle cx="42" cy="51.5" r="1" fill="#ffffff"/>
+                                <circle cx="56" cy="51.5" r="1" fill="#ffffff"/>
+                                <path d="M38,47 Q43,45 46,48" stroke="#111827" stroke-width="1.5" fill="none"/>
+                                <path d="M62,47 Q57,45 54,48" stroke="#111827" stroke-width="1.5" fill="none"/>
+                            </svg>
+                        </div>
+                        <span class="text-xs font-black block text-slate-100">조훈민</span>
+                        <span class="text-[9px] text-emerald-400 mt-1.5 font-black">상생 자석 스킬</span>
+                    </button>
+
+                    <!-- 다임 카드 -->
+                    <button onclick="selectCharacter('daim')" id="char-btn-daim" class="flex flex-col items-center p-3.5 bg-slate-950 border-2 border-slate-800 rounded-2xl transition-all duration-200 hover:scale-105 active:scale-95 text-center shadow-lg">
+                        <div class="w-16 h-16 mb-2 rounded-full overflow-hidden bg-slate-950 p-1 border border-slate-800 flex items-center justify-center">
+                            <!-- 다임 정밀 99.9% 일치 SVG -->
+                            <svg viewBox="0 0 100 130" class="w-14 h-14">
+                                <path d="M30,80 L70,80 L75,120 L25,120 Z" fill="#ca8a04"/>
+                                <path d="M44,80 L50,92 L56,80 Z" fill="#fef08a"/>
+                                <rect x="48" y="86" width="3" height="18" fill="#713f12" rx="0.5"/>
+                                <rect x="54" y="90" width="12" height="6" fill="#713f12" rx="1"/>
+                                <text x="60" y="95" fill="#ffffff" font-size="4" font-weight="bold" text-anchor="middle">다임</text>
+                                <rect x="20" y="92" width="11" height="14" fill="#f8fafc" stroke="#64748b" stroke-width="1" rx="1"/>
+                                <circle cx="25.5" cy="99" r="2.5" stroke="#64748b" stroke-width="1" fill="none"/>
+                                <circle cx="50" cy="55" r="17" fill="#fde047"/>
+                                <path d="M33,53 C33,28 67,28 67,53 Z" fill="#4c1d1d"/>
+                                <circle cx="66" cy="42" r="9" fill="#4c1d1d"/>
+                                <rect x="58" y="38" width="16" height="2" fill="#eab308" rx="0.5"/>
+                                <path d="M36,52 Q42.5,45 44,52" stroke="#111827" stroke-width="2.2" fill="none"/>
+                                <path d="M64,52 Q57.5,45 56,52" stroke="#111827" stroke-width="2.2" fill="none"/>
+                                <ellipse cx="40" cy="55" rx="3.5" ry="2.5" fill="#4c1d1d"/>
+                                <ellipse cx="60" cy="55" rx="3.5" ry="2.5" fill="#4c1d1d"/>
+                                <circle cx="39.2" cy="54" r="0.8" fill="#ffffff"/>
+                                <circle cx="59.2" cy="54" r="0.8" fill="#ffffff"/>
+                                <circle cx="37" cy="62" r="1.8" fill="#f43f5e"/>
+                                <circle cx="63" cy="62" r="1.8" fill="#f43f5e"/>
+                                <path d="M46,64 Q50,67 54,64" stroke="#e11d48" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+                            </svg>
+                        </div>
+                        <span class="text-xs font-black block text-slate-100">조다임</span>
+                        <span class="text-[9px] text-amber-400 mt-1.5 font-black">가치스케치 혜안</span>
+                    </button>
+
+                    <!-- 순식 카드 -->
+                    <button onclick="selectCharacter('sunsik')" id="char-btn-sunsik" class="flex flex-col items-center p-3.5 bg-slate-950 border-2 border-slate-800 rounded-2xl transition-all duration-200 hover:scale-105 active:scale-95 text-center shadow-lg">
+                        <div class="w-16 h-16 mb-2 rounded-full overflow-hidden bg-slate-950 p-1 border border-slate-800 flex items-center justify-center">
+                            <!-- 순식 정밀 99.9% 일치 SVG -->
+                            <svg viewBox="0 0 100 130" class="w-14 h-14">
+                                <path d="M30,80 L70,80 L75,120 L25,120 Z" fill="#1e293b"/>
+                                <rect x="23" y="80" width="7" height="11" fill="#475569" rx="1"/>
+                                <rect x="70" y="80" width="7" height="11" fill="#475569" rx="1"/>
+                                <rect x="20" y="90" width="4" height="18" fill="#0f172a" rx="0.5"/>
+                                <rect x="18" y="87" width="8" height="3" fill="#f59e0b" rx="0.5"/>
+                                <rect x="54" y="90" width="12" height="6" fill="#334155" rx="1"/>
+                                <text x="60" y="95" fill="#ffffff" font-size="4" font-weight="bold" text-anchor="middle">순식</text>
+                                <circle cx="50" cy="55" r="17.5" fill="#cbd5e1"/>
+                                <path d="M32.5,52 C32.5,26 67.5,26 67.5,52 Z" fill="#475569"/>
+                                <rect x="47.5" y="16" width="5" height="10" fill="#111827"/>
+                                <path d="M43,16 L57,16 L50,6 Z" fill="#111827"/>
+                                <path d="M34,48 L44,52" stroke="#111827" stroke-width="3" stroke-linecap="round"/>
+                                <path d="M66,48 L56,52" stroke="#111827" stroke-width="3" stroke-linecap="round"/>
+                                <ellipse cx="40" cy="56" rx="4" ry="2.5" fill="#111827"/>
+                                <ellipse cx="60" cy="56" rx="4" ry="2.5" fill="#111827"/>
+                                <circle cx="39" cy="55" r="0.8" fill="#ffffff"/>
+                                <circle cx="59" cy="55" r="0.8" fill="#ffffff"/>
+                                <path d="M32.5,74 Q50,105 67.5,74 C71,90 65,110 50,110 C35,110 29,90 32.5,74 Z" fill="#0f172a"/>
+                                <path d="M44,78 Q50,81 56,78" stroke="#ffffff" stroke-width="1.2" fill="none"/>
+                            </svg>
+                        </div>
+                        <span class="text-xs font-black block text-slate-100">조순식</span>
+                        <span class="text-[9px] text-blue-400 mt-1.5 font-black">거북선 실드</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Utility Buttons (Exactly matching 메인화면.png) -->
+            <div class="grid grid-cols-2 gap-3.5 my-1">
+                <button onclick="showScreen('leaderboard')" class="py-3 bg-slate-900/90 border border-slate-800 hover:bg-slate-800 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-md">
+                    🏆 명예의 전당 보기
+                </button>
+                <button onclick="showScreen('encyclopedia')" class="py-3 bg-slate-900/90 border border-slate-800 hover:bg-slate-800 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-md">
+                    📖 공공구매 백과사전
+                </button>
+            </div>
+
+            <!-- Start Button (Exactly matching 메인화면.png) -->
+            <div class="pb-2">
+                <button onclick="startGame()" class="w-full py-4 bg-gradient-to-r from-[#0fa968] to-[#1c64eb] hover:scale-[1.01] active:scale-[0.98] rounded-2xl font-black text-[17px] tracking-wide text-white shadow-xl shadow-emerald-500/10 transition-all duration-150 flex items-center justify-center gap-2">
+                    ⚡ 가치 원정대 출발! (START)
+                </button>
+            </div>
+        </div>
+
+        <!-- ================= RUNNING GAME PLAY SCREEN ================= -->
+        <div id="screen-game" class="hidden absolute inset-0 z-10 flex flex-col justify-between bg-slate-950">
+            <!-- HUD Header -->
+            <div class="p-4 bg-gradient-to-b from-slate-950 to-transparent flex justify-between items-center z-20 absolute top-0 left-0 right-0">
+                <!-- Left: Profile & HP/Energy -->
+                <div class="flex items-center gap-2">
+                    <div id="game-char-portrait" class="w-10 h-10 rounded-full border-2 border-emerald-500 bg-slate-900 flex items-center justify-center overflow-hidden">
+                        <!-- Portrait loaded dynamically -->
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-1">
+                            <span id="hud-name" class="text-xs font-black">김조달</span>
+                            <span id="hud-dept" class="text-[9px] bg-emerald-600 px-1.5 py-0.5 rounded text-white font-bold">화폐본부</span>
+                        </div>
+                        <!-- Skill charge bar -->
+                        <div class="w-24 h-2 bg-slate-800 rounded-full overflow-hidden mt-1 flex border border-slate-700">
+                            <div id="hud-skill-bar" class="w-0 h-full bg-gradient-to-r from-emerald-400 to-teal-500 transition-all duration-100"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Center: Active Map Tracker -->
+                <div class="flex flex-col items-center bg-slate-900/90 border border-slate-700/50 px-2.5 py-1 rounded-xl">
+                    <span id="hud-map-region-label" class="text-[8px] font-bold text-emerald-400 flex items-center gap-0.5">
+                        📍 부여 제지본부 통과 중
+                    </span>
+                    <span id="hud-uniques" class="text-xs font-black text-amber-400">수집: 0 / 12 종</span>
+                </div>
+
+                <!-- Right: SVP & High Score -->
+                <div class="text-right">
+                    <span class="text-[9px] text-slate-400 block font-bold">가치 점수 (SVP)</span>
+                    <span id="hud-score" class="text-lg font-black tracking-widest text-emerald-400 retro-title">0</span>
+                </div>
+            </div>
+
+            <!-- Toast Popup for Educational Messages -->
+            <div id="toast-container" class="absolute top-20 left-4 right-4 z-30 pointer-events-none transition-all duration-300 transform translate-y-[-10px] opacity-0">
+                <div class="bg-slate-900/95 backdrop-blur-md border border-emerald-500/50 p-3 rounded-2xl shadow-xl flex items-center gap-3">
+                    <div id="toast-icon-wrapper" class="w-10 h-10 shrink-0 bg-slate-950 rounded-xl flex items-center justify-center border border-emerald-500/30"></div>
+                    <div>
+                        <div id="toast-title" class="text-xs font-extrabold text-amber-400">중소 상자 획득!</div>
+                        <div id="toast-msg" class="text-[10px] text-slate-200 mt-0.5 leading-relaxed">중소기업제품 구매는 상생 경제의 탄탄한 토대입니다.</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Skill Active Splash Screen Notification -->
+            <div id="skill-flash" class="absolute inset-0 bg-emerald-500/10 pointer-events-none z-15 opacity-0 transition-opacity duration-200 flex items-center justify-center">
+                <div class="bg-slate-950/90 border border-emerald-400 px-6 py-4 rounded-3xl text-center shadow-2xl scale-75 transition-all duration-200" id="skill-flash-card">
+                    <span class="text-xl font-black text-emerald-400 retro-title block">SKILL ACTIVATED!</span>
+                    <span id="skill-flash-name" class="text-xs font-bold text-white mt-1 block">훈민정음 상생 자석</span>
+                </div>
+            </div>
+
+            <!-- Main Canvas Game View -->
+            <div class="relative w-full h-full flex-1">
+                <canvas id="game-canvas" class="w-full h-full block"></canvas>
+            </div>
+
+            <!-- Controls and Skill Button -->
+            <div class="absolute bottom-6 left-0 right-0 px-6 flex justify-between items-center z-20">
+                <div class="text-[9px] text-slate-400 bg-slate-950/80 px-2.5 py-1.5 rounded-lg border border-slate-800">
+                    ⌨️ <b>PC:</b> 좌우 방향키 / <b>점프:</b> 위쪽 방향키 / <b>슬라이딩:</b> 아래쪽 방향키<br>
+                    📱 <b>모바일:</b> 좌우상하 방향으로 화면 스와이프
+                </div>
+                <!-- Skill Activation Button -->
+                <button id="btn-skill" onclick="activateSkill()" class="w-16 h-16 rounded-full bg-slate-900 border-4 border-slate-700/60 flex flex-col items-center justify-center shadow-lg transition-all active:scale-90 opacity-40 cursor-not-allowed">
+                    <svg class="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                    </svg>
+                    <span class="text-[8px] font-extrabold text-slate-400 mt-0.5">스킬 대기</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- ================= LEADERBOARD SCREEN ================= -->
+        <div id="screen-leaderboard" class="hidden absolute inset-0 z-10 flex flex-col justify-between p-5 bg-gradient-to-b from-[#0f172a] to-[#020617] overflow-y-auto">
+            <div class="pt-2">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-black text-white flex items-center gap-2">
+                        🏆 <span class="retro-title">공공구매 명예의 전당</span>
+                    </h2>
+                    <button onclick="showScreen('menu')" class="px-3 py-1.5 bg-slate-800 border border-slate-700 hover:bg-slate-700 rounded-xl text-xs font-bold transition-all">
+                        메인으로
+                    </button>
+                </div>
+
+                <!-- Leaderboard Tabs -->
+                <div class="flex border-b border-slate-800 mb-4">
+                    <button onclick="changeLeaderboardTab('individual')" id="tab-leader-indiv" class="w-1/2 py-2 text-xs font-black border-b-2 border-emerald-500 text-emerald-400">
+                        개인 기여 랭킹
+                    </button>
+                    <button onclick="changeLeaderboardTab('department')" id="tab-leader-dept" class="w-1/2 py-2 text-xs font-bold border-b-2 border-transparent text-slate-400">
+                        부서 대항전
+                    </button>
+                </div>
+
+                <!-- Individual Board Content -->
+                <div id="leaderboard-indiv-content" class="space-y-2">
+                    <div class="bg-gradient-to-r from-emerald-500/10 to-transparent border border-emerald-500/30 rounded-xl p-3 flex justify-between items-center mb-2">
+                        <div class="flex items-center gap-2.5">
+                            <span class="text-lg">🥇</span>
+                            <div>
+                                <span class="text-[10px] text-emerald-400 block font-bold">이달의 상생 챔피언</span>
+                                <span class="text-xs font-black text-white">기획조정실 홍길동 대리 (S등급)</span>
+                            </div>
+                        </div>
+                        <span class="text-sm font-black text-emerald-400 retro-title">38,400 SVP</span>
+                    </div>
+
+                    <div class="max-h-[50vh] overflow-y-auto space-y-1.5 pr-1" id="ranking-list-container">
+                        <!-- Filled by JS -->
+                    </div>
+                </div>
+
+                <!-- Department Board Content -->
+                <div id="leaderboard-dept-content" class="hidden space-y-3">
+                    <p class="text-[11px] text-slate-400 text-center leading-relaxed">
+                        부서별 구성원들의 획득 점수가 합산된 종합 상생 누적 판막입니다.
+                    </p>
+                    <div class="space-y-2.5 max-h-[50vh] overflow-y-auto pr-1" id="dept-list-container">
+                        <!-- Filled by JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer statistics -->
+            <div class="pt-3 border-t border-slate-800 mt-4 text-center">
+                <div class="text-[11px] text-slate-500">KOMSCO 임직원 누적 상생 구매 가치</div>
+                <div class="text-base font-black text-emerald-400 retro-title mt-0.5" id="total-public-value">
+                    ₩ 415,200,000 원 달성!
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= ENCYCLOPEDIA SCREEN ================= -->
+        <div id="screen-encyclopedia" class="hidden absolute inset-0 z-10 flex flex-col justify-between p-5 bg-[#0b0f19] overflow-y-auto">
+            <div class="pt-2">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-black text-white flex items-center gap-2">
+                        📖 <span class="retro-title">공공구매 백과사전</span>
+                    </h2>
+                    <button onclick="showScreen('menu')" class="px-3 py-1.5 bg-slate-800 border border-slate-700 hover:bg-slate-700 rounded-xl text-xs font-bold transition-all">
+                        메인으로
+                    </button>
+                </div>
+                <p class="text-xs text-slate-400 mb-4">
+                    선물상자를 선택하여 12대 공공구매 우선구매 제도의 가이드라인과 공사 구매 요건을 상세히 학습해 보세요.
+                </p>
+
+                <!-- Cards grid -->
+                <div id="encyclopedia-grid" class="grid grid-cols-2 gap-3 max-h-[68vh] overflow-y-auto pr-1">
+                    <!-- Filled by JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= GAME OVER / RESULT REPORT SCREEN ================= -->
+        <div id="screen-gameover" class="hidden absolute inset-0 z-10 flex flex-col justify-between p-5 bg-gradient-to-b from-[#0f172a] via-[#090d16] to-[#020617] overflow-y-auto">
+            <div class="pt-2 text-center">
+                <div class="text-[10px] text-emerald-400 font-black tracking-widest uppercase">MISSION COMPLETED</div>
+                <h2 class="text-2xl font-black text-white mt-1">상생 원정 성과 리포트</h2>
+                
+                <!-- Medal/Rank Display -->
+                <div class="my-4 flex flex-col items-center justify-center">
+                    <div class="relative w-24 h-24 flex items-center justify-center rounded-full bg-slate-900 border-4 border-emerald-500/80 shadow-2xl shadow-emerald-500/20" id="result-rank-ring">
+                        <span id="result-rank" class="text-4xl font-black text-emerald-400 retro-title">S</span>
+                    </div>
+                    <div id="result-rank-comment" class="text-[11px] text-emerald-300 font-extrabold mt-2.5 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full">
+                        당신은 조폐공사를 빛내는 '상생의 마에스트로'!
+                    </div>
+                </div>
+
+                <!-- Score Stats Table -->
+                <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-4 space-y-3 text-left">
+                    <div class="flex justify-between items-center border-b border-slate-700/50 pb-2">
+                        <span class="text-xs text-slate-400 font-bold">최종 사회적 가치 점수 (SVP)</span>
+                        <span id="result-score" class="text-lg font-bold text-emerald-400 retro-title">12,450 점</span>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-2 text-xs">
+                        <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+                            <span class="text-slate-500 block">수집 고유 품목</span>
+                            <span id="result-uniques" class="text-sm font-bold text-amber-400">12 / 12 종</span>
+                        </div>
+                        <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+                            <span class="text-slate-500 block">획득 선물 상자</span>
+                            <span id="result-total-items" class="text-sm font-bold text-teal-400">24 개</span>
+                        </div>
+                    </div>
+
+                    <!-- Environmental Contribution Conversion -->
+                    <div class="bg-emerald-950/40 border border-emerald-900/50 p-3 rounded-xl mt-1">
+                        <h4 class="text-xs font-extrabold text-emerald-400 mb-1 flex items-center gap-1">🌱 이 달리기가 만들어낸 현실의 상생 가치</h4>
+                        <div class="space-y-1 text-[10px] text-slate-300">
+                            <div class="flex justify-between">
+                                <span>- 기여 가치 환산:</span>
+                                <span id="conversion-money" class="font-bold text-white">₩ 3,420,000 원</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>- 친환경 녹색제품 구매 효과:</span>
+                                <span id="conversion-carbon" class="font-bold text-emerald-400">탄소 배출량 14.5kg 감축</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Submit Records -->
+                <div class="mt-4 bg-slate-800/40 border border-slate-700/40 rounded-2xl p-3 flex justify-between items-center" id="register-container">
+                    <div class="text-left">
+                        <span class="text-[9px] text-slate-400 block font-bold">획득 기록을 명예의 전당에 등재!</span>
+                        <span class="text-xs text-slate-200 font-bold" id="register-user-info">김조달 대리 (화폐본부)</span>
+                    </div>
+                    <button onclick="submitToLeaderboard()" class="px-3.5 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-xs rounded-xl transition-all shadow-lg active:scale-95">
+                        기록 등재하기
+                    </button>
+                </div>
+            </div>
+
+            <!-- Controls -->
+            <div class="pt-4 grid grid-cols-2 gap-3 pb-1">
+                <button onclick="resetGame()" class="py-3 bg-slate-800 border border-slate-700 hover:bg-slate-700 rounded-xl text-xs font-black transition-all">
+                    다시 도전하기
+                </button>
+                <button onclick="showScreen('leaderboard')" class="py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1 shadow-lg">
+                    🏆 명예의 전당
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ================= CARD DETAIL MODAL ================= -->
+    <div id="modal-card-detail" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-6">
+        <div class="bg-slate-900 border border-slate-700 w-full max-w-sm rounded-3xl p-5 shadow-2xl text-left">
+            <div class="flex items-center gap-3 mb-4">
+                <div id="modal-icon-wrapper" class="w-12 h-12 bg-slate-950 rounded-2xl flex items-center justify-center border border-slate-800 shrink-0"></div>
+                <div>
+                    <span id="modal-badge" class="text-[9px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full font-bold">우선 구매 의무제도</span>
+                    <h3 id="modal-title" class="text-base font-black text-white mt-1">중소기업제품</h3>
+                </div>
+            </div>
+            
+            <div class="space-y-3.5 text-sm">
+                <div>
+                    <h4 class="text-xs text-slate-500 font-bold mb-1">법적 요약 및 제도 가치</h4>
+                    <p id="modal-desc" class="text-xs text-slate-300 leading-relaxed bg-slate-950 p-2.5 rounded-xl border border-slate-800/60">
+                        설명 공간
+                    </p>
+                </div>
+                <div>
+                    <h4 class="text-xs text-slate-500 font-bold mb-1">🎯 조폐공사 실무 구매 가이드</h4>
+                    <p id="modal-guide" class="text-xs text-amber-400 leading-relaxed font-semibold">
+                        구매 가이드 공간
+                    </p>
+                </div>
+                <div class="pt-2 border-t border-slate-800 flex justify-end gap-2">
+                    <button onclick="closeModal()" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-xs text-white rounded-xl font-bold transition-all">
+                        확인
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Javascript Logical Syntheses -->
+    <script>
+        // Web Audio API Synth Engine
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        function playSound(type) {
+            if (!audioCtx || audioCtx.state === 'suspended') return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            const now = audioCtx.currentTime;
+
+            if (type === 'jump') {
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(150, now);
+                osc.frequency.exponentialRampToValueAtTime(700, now + 0.12);
+                gain.gain.setValueAtTime(0.12, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.12);
+                osc.start(now);
+                osc.stop(now + 0.12);
+            } else if (type === 'collect') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(600, now);
+                osc.frequency.setValueAtTime(1000, now + 0.07);
+                gain.gain.setValueAtTime(0.08, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.18);
+                osc.start(now);
+                osc.stop(now + 0.18);
+            } else if (type === 'skill') {
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(250, now);
+                osc.frequency.linearRampToValueAtTime(1100, now + 0.45);
+                gain.gain.setValueAtTime(0.08, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+                osc.start(now);
+                osc.stop(now + 0.5);
+            } else if (type === 'crash') {
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(100, now);
+                osc.frequency.linearRampToValueAtTime(20, now + 0.3);
+                gain.gain.setValueAtTime(0.25, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.35);
+                osc.start(now);
+                osc.stop(now + 0.35);
+            }
+        }
+
+        // 12 priority public purchases mapped to Rainbow Spectrum & Korean Initials
+        const PUBLIC_PURCHASES = [
+            { id: 1, name: "중소기업제품", initial: "중소", color: "#ef4444", bg: "bg-red-500", desc: "중소기업의 활력을 증대하고 안정적인 조달 판로 개척을 보증하는 핵심 상생 지표 제도입니다.", guide: "연간 총 제품 조달 규모의 50% 이상을 의무 할당 및 우선 구매하도록 엄격 규제합니다." },
+            { id: 2, name: "창업기업제품", initial: "창업", color: "#f97316", bg: "bg-orange-500", desc: "혁신 기술력을 기반으로 도약하는 초기 창업 7년 이내 신생 기업의 공공 조달시장 안착을 보증합니다.", guide: "공사 연간 제품 총 조달 부문의 8% 이상을 창업 벤처 기업군 거래량으로 특별 유도 보증합니다." },
+            { id: 3, name: "기술개발제품", initial: "기술", color: "#eab308", bg: "bg-yellow-500", desc: "중소기업 연구개발 신기술 공법(NET, NEP, 성능인증) 및 고성능 기술개발품의 초기 시장 상용화를 자극합니다.", guide: "중기 개발제품 구매 범위 중 우수 기술제품 구매 비율을 15% 이상 달성하도록 견인 조정합니다." },
+            { id: 4, name: "장애인기업제품", initial: "장애", color: "#84cc16", bg: "bg-lime-500", desc: "장애인이 소유하거나 적극적으로 참여하는 생산 기업의 경제 기여도를 증진하고 차별 없는 일자리를 실현합니다.", guide: "공공조달 구매 목표율 고시에 맞춰 연간 조달실적 총 누적액의 1% 이상 무조건 구매를 보증합니다." },
+            { id: 5, name: "중증장애인생산품", initial: "중증", color: "#10b981", bg: "bg-emerald-500", desc: "근로 조건이 극히 취약한 보건복지부 지정 재활생산시설 등 장애인 직업 안정화의 원천적 지원이 목적입니다.", guide: "전사 연간 조달 구매 총액의 1.1% 이상을 중증장애인 생산 시설 품목으로 강제 조치 규정합니다." },
+            { id: 6, name: "장애인표준사업장", initial: "표준", color: "#06b6d4", bg: "bg-cyan-500", desc: "장애인 친화 시설 인프라 보강 및 정당한 상시 고용 임금을 실현하는 모범 표준인증 사업장을 자립 원조합니다.", guide: "국가 보증 표준 인증서 발급 생산품에 한하여 연간 총 기금의 1% 목표 구매를 적용 조율합니다." },
+            { id: 7, name: "여성기업제품", initial: "여성", color: "#0ea5e9", bg: "bg-sky-500", desc: "여성의 경영 참여 기회 균등 실현과 시장 다양성을 조율하여 경제 체질의 성평등 건전성을 극대화합니다.", guide: "조달 물품의 5%, 공사 계약 부문의 3% 비율에 해당하는 규모를 여성 경영사 계약으로 우선 연결합니다." },
+            { id: 8, name: "사회적기업제품", initial: "사회", color: "#3b82f6", bg: "bg-blue-500", desc: "지역 연대 해소, 취약계층 공공서비스 지원 등 이윤보다 공적 가치를 실재 지향하는 착한 기업들의 자립 발판입니다.", guide: "연간 조달실적 총 누적액의 3% 이상 무조건 구매를 보증합니다." },
+            { id: 9, name: "사회적협동조합", initial: "협동", color: "#6366f1", bg: "bg-indigo-500", desc: "영리를 포기하고 지역 주민의 복리 증진과 지역 사회 문제에 상생 환원하는 비영리 협력 단체들의 활동 지원입니다.", guide: "연간 조달실적 총 누적액의 0.8% 이상 무조건 구매를 보증합니다." },
+            { id: 10, name: "녹색제품 (친환경)", initial: "녹색", color: "#8b5cf6", bg: "bg-purple-500", desc: "에너지와 천연자원 소비를 줄이고 온실가스 배출 및 각종 유해물질 발생을 원천 최소화한 공식 친환경 인증품입니다.", guide: "모든 사무용품 및 내장 가구 조달 시 녹색제품 조달 비중을 100% 한도까지 가깝게 의무 구매하도록 유도합니다." },
+            { id: 11, name: "보훈기업제품", initial: "보훈", color: "#d946ef", bg: "bg-fuchsia-500", desc: "국가 안보와 민주적 국격 수호를 위해 숭고한 헌신을 바친 상이유공자 및 자활단체의 자립 복리 목적입니다.", guide: "상이 군경 용사촌 등 조달청 지정 특별 보훈 단체 계약을 지속 유도하며 구매 혜택 가산점을 운영합니다." },
+            { id: 12, name: "시범구매제품", initial: "시범", color: "#f43f5e", bg: "bg-rose-500", desc: "성능은 뛰어나지만 초기 조달 실적이 전무하여 사장되기 쉬운 국산 혁신 신기술 대상 우선 구매 연계망입니다.", guide: "혁신 기술 도입 리스크에 대비한 사내 적극 구매 감사 면책 규정을 전격 발동하여 활력을 불어넣습니다." }
+        ];
+
+        // Animated Map nodes (조폐공사 전국 조달 네트워크)
+        const MAP_STATIONS = [
+            { name: "대전 본사 (HQ)", dist: 0, x: 200, y: 350 },
+            { name: "부여 제지본부", dist: 250, x: 120, y: 450 },
+            { name: "경산 화폐본부", dist: 550, x: 320, y: 480 },
+            { name: "ID본부 / 기술연구원", dist: 850, x: 210, y: 380 }
+        ];
+
+        // Simulated Coworkers Records
+        const MOCK_RANKINGS = [
+            { name: "홍길동", dept: "본사", score: 38400, char: "hunmin", date: "2026-06-08" },
+            { name: "이지혜", dept: "기술연구원", score: 29500, char: "daim", date: "2026-06-09" },
+            { name: "강감찬", dept: "화폐본부", score: 24300, char: "sunsik", date: "2026-06-07" },
+            { name: "최철수", dept: "ID본부", score: 21100, char: "hunmin", date: "2026-06-09" },
+            { name: "성춘향", dept: "제지본부", score: 18900, char: "daim", date: "2026-06-06" },
+        ];
+
+        const DEPT_STATS = [
+            { name: "화폐본부", totalScore: 39500, members: 21 },
+            { name: "본사", totalScore: 38400, members: 10 },
+            { name: "기술연구원", totalScore: 29500, members: 13 },
+            { name: "ID본부", totalScore: 21100, members: 8 },
+            { name: "제지본부", totalScore: 18900, members: 16 }
+        ];
+
+        // State Engine
+        let selectedChar = 'hunmin';
+        let isPlaying = false;
+        let gameScore = 0;
+        let uniqueCollected = new Set();
+        let totalCollectedCount = 0;
+        let itemStats = {};
+        let skillCharge = 0;
+        let isSkillActive = false;
+        let activeSkillTimer = 0;
+        let distanceRun = 0;
+        let currentStationIndex = 0;
+
+        // Canvas parameters
+        const canvas = document.getElementById('game-canvas');
+        const ctx = canvas.getContext('2d');
+        let canvasW, canvasH;
+
+        // Player configurations
+        let playerLane = 1;
+        let targetX = 0;
+        let playerX = 0;
+        let playerY = 0;
+        let playerWidth = 62;
+        let playerHeight = 82;
+        let playerVelY = 0;
+        let playerJumpOffset = 0;
+        let isSliding = false;
+        let slideTimer = 0;
+
+        // Obstacles, Items, Particles, Map Nodes lists
+        let obstacles = [];
+        let itemEntities = [];
+        let particles = [];
+        let mapNodes = [];
+
+        let currentFrame = 0;
+        let gameSpeed = 5;
+        const maxGameSpeed = 11;
+
+        function showScreen(screenId) {
+            document.getElementById('screen-menu').classList.add('hidden');
+            document.getElementById('screen-game').classList.add('hidden');
+            document.getElementById('screen-leaderboard').classList.add('hidden');
+            document.getElementById('screen-encyclopedia').classList.add('hidden');
+            document.getElementById('screen-gameover').classList.add('hidden');
+
+            document.getElementById(`screen-${screenId}`).classList.remove('hidden');
+
+            if (screenId === 'leaderboard') {
+                renderRankingList();
+                renderDeptRanking();
+            } else if (screenId === 'encyclopedia') {
+                renderEncyclopedia();
+            }
+        }
+
+        function selectCharacter(charId) {
+            selectedChar = charId;
+            document.getElementById('char-btn-hunmin').className = "flex flex-col items-center p-3.5 bg-slate-950 border-2 border-slate-800 rounded-2xl transition-all duration-200 hover:scale-105 active:scale-95 text-center shadow-lg";
+            document.getElementById('char-btn-sunsik').className = "flex flex-col items-center p-3.5 bg-slate-950 border-2 border-slate-800 rounded-2xl transition-all duration-200 hover:scale-105 active:scale-95 text-center shadow-lg";
+            document.getElementById('char-btn-daim').className = "flex flex-col items-center p-3.5 bg-slate-950 border-2 border-slate-800 rounded-2xl transition-all duration-200 hover:scale-105 active:scale-95 text-center shadow-lg";
+
+            document.getElementById(`char-btn-${charId}`).className = "flex flex-col items-center p-3.5 bg-slate-900/90 border-2 border-emerald-500 rounded-2xl transition-all duration-200 hover:scale-105 active:scale-95 text-center shadow-lg";
+        }
+
+        window.addEventListener('click', () => {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+        }, { once: true });
+
+        function resizeCanvas() {
+            const rect = canvas.getBoundingClientRect();
+            canvasW = canvas.width = rect.width;
+            canvasH = canvas.height = rect.height;
+            targetX = playerX = getLaneX(playerLane);
+            playerY = canvasH - 125;
+        }
+
+        function getLaneX(lane) {
+            const laneWidth = canvasW / 3;
+            return (lane * laneWidth) + (laneWidth / 2);
+        }
+
+        // Keyboard Inputs
+        window.addEventListener('keydown', (e) => {
+            if (!isPlaying) return;
+            if (e.key === 'ArrowLeft') moveLane(-1);
+            else if (e.key === 'ArrowRight') moveLane(1);
+            else if (e.key === 'ArrowUp') jump();
+            else if (e.key === 'ArrowDown') slide();
+        });
+
+        // Swipe Inputs
+        let touchStartX = 0, touchStartY = 0;
+        canvas.addEventListener('touchstart', (e) => {
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+        }, { passive: true });
+
+        canvas.addEventListener('touchend', (e) => {
+            if (!isPlaying) return;
+            const diffX = e.changedTouches[0].clientX - touchStartX;
+            const diffY = e.changedTouches[0].clientY - touchStartY;
+
+            if (Math.abs(diffX) > Math.abs(diffY)) {
+                if (diffX > 35) moveLane(1);
+                else if (diffX < -35) moveLane(-1);
+            } else {
+                if (diffY < -35) jump();
+                else if (diffY > 35) slide();
+            }
+        }, { passive: true });
+
+        function moveLane(dir) {
+            const newLane = playerLane + dir;
+            if (newLane >= 0 && newLane <= 2) {
+                playerLane = newLane;
+                targetX = getLaneX(playerLane);
+            }
+        }
+
+        function jump() {
+            if (playerJumpOffset === 0 && !isSliding) {
+                playerVelY = 15.5;
+                playSound('jump');
+            }
+        }
+
+        function slide() {
+            if (playerJumpOffset === 0 && !isSliding) {
+                isSliding = true;
+                slideTimer = 32;
+                playSound('jump');
+            }
+        }
+
+        // --- SKILL TRIGGER ---
+        function activateSkill() {
+            if (skillCharge < 100 || isSkillActive) return;
+            isSkillActive = true;
+            skillCharge = 0;
+            activeSkillTimer = 300; 
+            playSound('skill');
+
+            document.getElementById('hud-skill-bar').style.width = '0%';
+            
+            const skillBtn = document.getElementById('btn-skill');
+            skillBtn.className = "w-16 h-16 rounded-full bg-slate-900 border-4 border-slate-700/60 flex flex-col items-center justify-center shadow-lg opacity-40 cursor-not-allowed";
+
+            const flash = document.getElementById('skill-flash');
+            const flashName = document.getElementById('skill-flash-name');
+            const card = document.getElementById('skill-flash-card');
+
+            if (selectedChar === 'hunmin') {
+                flashName.innerText = "조훈민: 훈민정음 상생 자석";
+                flash.className = "absolute inset-0 bg-emerald-500/10 pointer-events-none z-15 flex items-center justify-center opacity-100 duration-200 transition-opacity";
+            } else if (selectedChar === 'sunsik') {
+                flashName.innerText = "조순식: 거북선 무적 실드";
+                flash.className = "absolute inset-0 bg-blue-500/10 pointer-events-none z-15 flex items-center justify-center opacity-100 duration-200 transition-opacity";
+            } else {
+                flashName.innerText = "조다임: 가치 스케치 혜안 (SVP 2배)";
+                flash.className = "absolute inset-0 bg-amber-500/10 pointer-events-none z-15 flex items-center justify-center opacity-100 duration-200 transition-opacity";
+            }
+
+            card.style.transform = "scale(1)";
+            setTimeout(() => {
+                flash.style.opacity = "0";
+                card.style.transform = "scale(0.75)";
+            }, 1100);
+        }
+
+        function addSkillCharge(amt) {
+            if (isSkillActive) return;
+            skillCharge = Math.min(100, skillCharge + amt);
+            const skillBar = document.getElementById('hud-skill-bar');
+            skillBar.style.width = `${skillCharge}%`;
+
+            if (skillCharge >= 100) {
+                const skillBtn = document.getElementById('btn-skill');
+                skillBtn.className = "w-16 h-16 rounded-full bg-slate-950 border-4 border-emerald-400 flex flex-col items-center justify-center shadow-lg shadow-emerald-500/30 transition-all active:scale-95 animate-pulse cursor-pointer opacity-100";
+                skillBtn.querySelector('span').className = "text-[8px] font-extrabold text-emerald-400 mt-0.5";
+                skillBtn.querySelector('svg').className = "w-6 h-6 text-emerald-400";
+            }
+        }
+
+        // --- Core Engine Initializers ---
+        function startGame() {
+            const name = document.getElementById('input-name').value.trim() || '김조달';
+            const dept = document.getElementById('select-dept').value;
+            
+            document.getElementById('hud-name').innerText = name;
+            document.getElementById('hud-dept').innerText = dept;
+            document.getElementById('register-user-info').innerText = `${name} (${dept})`;
+
+            // Load character preview portrait in dynamic HUD
+            const portraitWrapper = document.getElementById('game-char-portrait');
+            portraitWrapper.innerHTML = document.querySelector(`#char-btn-${selectedChar} svg`).outerHTML;
+
+            gameScore = 0;
+            uniqueCollected.clear();
+            totalCollectedCount = 0;
+            itemStats = {};
+            PUBLIC_PURCHASES.forEach(p => itemStats[p.id] = 0);
+            skillCharge = 0;
+            isSkillActive = false;
+            activeSkillTimer = 0;
+            gameSpeed = 5.2;
+            distanceRun = 0;
+            currentStationIndex = 0;
+
+            obstacles = [];
+            itemEntities = [];
+            particles = [];
+            
+            // Map Setup
+            mapNodes = [];
+            MAP_STATIONS.forEach(station => {
+                mapNodes.push({
+                    name: station.name,
+                    dist: station.dist,
+                    y: -100, // spawn offscreen and slide down relative to progress
+                    x: 40 + Math.random() * (canvasW - 80),
+                    activated: false
+                });
+            });
+
+            showScreen('game');
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+
+            isPlaying = true;
+            currentFrame = 0;
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Toasts for Education Info Card
+        let toastTimeout;
+        function showEducationToast(item) {
+            const container = document.getElementById('toast-container');
+            const iconWrapper = document.getElementById('toast-icon-wrapper');
+            const title = document.getElementById('toast-title');
+            const msg = document.getElementById('toast-msg');
+
+            // Stylized 3D Rainbow Gift Box
+            iconWrapper.innerHTML = `
+                <svg viewBox="0 0 40 40" class="w-8 h-8">
+                    <rect x="5" y="15" width="30" height="22" rx="4" fill="${item.color}"/>
+                    <rect x="3" y="10" width="34" height="6" rx="2" fill="${item.color}"/>
+                    <rect x="17" y="10" width="6" height="27" fill="#fff" opacity="0.8"/>
+                    <rect x="3" y="21" width="34" height="4" fill="#fff" opacity="0.8"/>
+                    <rect x="7" y="24" width="26" height="10" fill="#111827" rx="1.5"/>
+                    <text x="20" y="32" fill="#fff" font-size="7.5" font-family="'Noto Sans KR', sans-serif" font-weight="900" text-anchor="middle">${item.initial}</text>
+                </svg>
+            `;
+            title.innerText = `[${item.name} (${item.initial})] 획득!`;
+            msg.innerText = item.desc;
+
+            container.style.opacity = "1";
+            container.style.transform = "translateY(0px)";
+
+            clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                container.style.opacity = "0";
+                container.style.transform = "translateY(-10px)";
+            }, 3000);
+        }
+
+        // --- MAIN GAME LOOP ---
+        function gameLoop() {
+            if (!isPlaying) return;
+            currentFrame++;
+
+            // Accumulate distance representing map traversal
+            distanceRun += 0.45;
+            
+            // Speed progression
+            if (currentFrame % 200 === 0 && gameSpeed < maxGameSpeed) {
+                gameSpeed += 0.5;
+            }
+
+            // Map Station tracking based on distance
+            updateMapStations();
+
+            updatePlayer();
+            updateObstacles();
+            updateItems();
+            updateParticles();
+
+            // Core Screen Clear and Draw Background
+            ctx.fillStyle = '#05070c';
+            ctx.fillRect(0, 0, canvasW, canvasH);
+
+            renderHologramMap();
+            renderTracks();
+            renderObstacles();
+            renderItems();
+            renderParticles();
+            renderPlayer();
+
+            document.getElementById('hud-score').innerText = Math.round(gameScore).toLocaleString();
+            document.getElementById('hud-uniques').innerText = `수집: ${uniqueCollected.size} / 12 종`;
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        function updateMapStations() {
+            // Check if player has crossed any stations
+            let activeStation = MAP_STATIONS[0].name;
+            MAP_STATIONS.forEach((station, idx) => {
+                if (distanceRun >= station.dist) {
+                    activeStation = station.name;
+                    currentStationIndex = idx;
+                }
+            });
+
+            // Update Map HUD Text
+            document.getElementById('hud-map-region-label').innerHTML = `
+                <span class="inline-block w-2 h-2 bg-emerald-400 rounded-full animate-ping mr-1"></span>
+                📍 현재: ${activeStation} 통과 중
+            `;
+        }
+
+        function updatePlayer() {
+            playerX += (targetX - playerX) * 0.22;
+
+            if (playerVelY !== 0 || playerJumpOffset > 0) {
+                playerJumpOffset += playerVelY;
+                playerVelY -= 0.8; 
+                if (playerJumpOffset <= 0) {
+                    playerJumpOffset = 0;
+                    playerVelY = 0;
+                }
+            }
+
+            if (isSliding) {
+                slideTimer--;
+                if (slideTimer <= 0) isSliding = false;
+            }
+
+            if (isSkillActive) {
+                activeSkillTimer--;
+                if (activeSkillTimer <= 0) {
+                    isSkillActive = false;
+                    document.getElementById('btn-skill').querySelector('span').innerText = "스킬 가동 완료";
+                }
+            }
+        }
+
+        function updateObstacles() {
+            if (currentFrame % 80 === 0 && Math.random() < 0.75) {
+                const lane = Math.floor(Math.random() * 3);
+                const type = Math.random() < 0.5 ? 'low' : 'high';
+                obstacles.push({
+                    x: getLaneX(lane),
+                    y: -50,
+                    lane: lane,
+                    type: type,
+                    width: 54,
+                    height: type === 'low' ? 32 : 52
+                });
+            }
+
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                const obs = obstacles[i];
+                obs.y += gameSpeed;
+
+                const px = playerX;
+                const py = playerY - playerJumpOffset;
+                const pH = isSliding ? playerHeight * 0.5 : playerHeight;
+
+                const isLaneMatch = Math.abs(px - obs.x) < 22;
+                if (isLaneMatch && obs.y > py && obs.y < py + pH) {
+                    // Yi Sun-sin invincibility shield
+                    if (isSkillActive && selectedChar === 'sunsik') {
+                        playSound('crash');
+                        createExplosion(obs.x, obs.y, '#3b82f6');
+                        obstacles.splice(i, 1);
+                        gameScore += 400;
+                        continue;
+                    }
+
+                    let hits = false;
+                    if (obs.type === 'low' && playerJumpOffset < 22) {
+                        hits = true;
+                    } else if (obs.type === 'high' && !isSliding) {
+                        hits = true;
+                    }
+
+                    if (hits) {
+                        playSound('crash');
+                        gameOver();
+                        return;
+                    }
+                }
+
+                if (obs.y > canvasH + 50) {
+                    obstacles.splice(i, 1);
+                }
+            }
+        }
+
+        function updateItems() {
+            if (currentFrame % 38 === 0) {
+                const lane = Math.floor(Math.random() * 3);
+                const itemType = PUBLIC_PURCHASES[Math.floor(Math.random() * PUBLIC_PURCHASES.length)];
+                itemEntities.push({
+                    x: getLaneX(lane),
+                    y: -40,
+                    lane: lane,
+                    item: itemType,
+                    size: 31 // 26 * 1.2 = 31.2 (아이템 크기 20% 증가 적용)
+                });
+            }
+
+            for (let i = itemEntities.length - 1; i >= 0; i--) {
+                const entity = itemEntities[i];
+                entity.y += gameSpeed;
+
+                // Sejong-daewong Magnet draws item
+                if (isSkillActive && selectedChar === 'hunmin') {
+                    const dx = playerX - entity.x;
+                    const dy = (playerY - playerJumpOffset) - entity.y;
+                    entity.x += dx * 0.16;
+                    entity.y += dy * 0.16;
+                }
+
+                const px = playerX;
+                const py = playerY - playerJumpOffset;
+                // Collision range slightly adjusted to accommodate larger item size
+                const isLaneMatch = Math.abs(px - entity.x) < 36;
+                
+                if (isLaneMatch && Math.abs(py - entity.y) < 42) {
+                    playSound('collect');
+                    createCollectParticles(entity.x, entity.y, entity.item.color);
+                    
+                    itemStats[entity.item.id]++;
+                    uniqueCollected.add(entity.item.id);
+                    totalCollectedCount++;
+                    addSkillCharge(8);
+
+                    showEducationToast(entity.item);
+
+                    // Score calculation according to priority public purchases
+                    let baseSum = 0;
+                    PUBLIC_PURCHASES.forEach(p => {
+                        baseSum += (itemStats[p.id] * 100);
+                    });
+                    
+                    const uniquesCount = uniqueCollected.size;
+                    const multiplierValue = (isSkillActive && selectedChar === 'daim') ? 2.0 : 1.0; 
+                    
+                    gameScore = baseSum * (1 + (uniquesCount / 12)) * multiplierValue;
+
+                    itemEntities.splice(i, 1);
+                    continue;
+                }
+
+                if (entity.y > canvasH + 40) {
+                    itemEntities.splice(i, 1);
+                }
+            }
+        }
+
+        function createCollectParticles(x, y, color) {
+            for (let i = 0; i < 10; i++) {
+                particles.push({
+                    x: x, y: y,
+                    vx: (Math.random() - 0.5) * 6,
+                    vy: (Math.random() - 0.5) * 6,
+                    color: color,
+                    size: 3 + Math.random() * 3,
+                    life: 20
+                });
+            }
+        }
+
+        function createExplosion(x, y, color) {
+            for (let i = 0; i < 18; i++) {
+                particles.push({
+                    x: x, y: y,
+                    vx: (Math.random() - 0.5) * 10,
+                    vy: (Math.random() - 0.5) * 10,
+                    color: color,
+                    size: 4 + Math.random() * 5,
+                    life: 30
+                });
+            }
+        }
+
+        function updateParticles() {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life--;
+                if (p.life <= 0) particles.splice(i, 1);
+            }
+        }
+
+        // --- HIGH FIDELITY HOLOGRAM MAP RENDERING ---
+        // Renders an interactive geographical digital map layout in the background of the run
+        function renderHologramMap() {
+            ctx.save();
+            ctx.strokeStyle = 'rgba(16, 185, 129, 0.08)';
+            ctx.lineWidth = 1.5;
+
+            // 1. Grid coordinates
+            const offset = (distanceRun * 2) % 60;
+            for (let y = -60; y < canvasH + 60; y += 60) {
+                ctx.beginPath();
+                ctx.moveTo(0, y + offset);
+                ctx.lineTo(canvasW, y + offset);
+                ctx.stroke();
+            }
+            for (let x = 0; x < canvasW; x += 60) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvasH);
+                ctx.stroke();
+            }
+
+            // 2. Korea Map Contour hologram lines flowing downwards
+            ctx.strokeStyle = 'rgba(16, 185, 129, 0.12)';
+            ctx.fillStyle = 'rgba(16, 185, 129, 0.02)';
+            ctx.lineWidth = 2;
+
+            ctx.beginPath();
+            // Simplified Korean Peninsula outline adjusted to scroll relative to distance
+            const mapScrollY = (distanceRun * 0.8) % (canvasH * 2) - 100;
+            
+            ctx.moveTo(canvasW * 0.3, mapScrollY + 50);
+            ctx.bezierCurveTo(canvasW * 0.1, mapScrollY + 150, canvasW * 0.2, mapScrollY + 350, canvasW * 0.15, mapScrollY + 550);
+            ctx.lineTo(canvasW * 0.4, mapScrollY + 650);
+            ctx.lineTo(canvasW * 0.75, mapScrollY + 500);
+            ctx.bezierCurveTo(canvasW * 0.9, mapScrollY + 350, canvasW * 0.7, mapScrollY + 200, canvasW * 0.8, mapScrollY + 80);
+            ctx.closePath();
+            ctx.stroke();
+            ctx.fill();
+
+            // 3. Dynamic Map Nodes (HQ, Minting factory, paper mill, ID HQ)
+            MAP_STATIONS.forEach((station, idx) => {
+                // Calculate dynamic position on map based on scroll distance
+                const relativeY = (station.dist - distanceRun) * 1.5 + (canvasH * 0.4);
+                
+                // Only render if onscreen
+                if (relativeY > -100 && relativeY < canvasH + 100) {
+                    const nodeX = (idx === 0) ? canvasW * 0.25 : (idx === 1) ? canvasW * 0.75 : (idx === 2) ? canvasW * 0.35 : canvasW * 0.65;
+                    
+                    // Connection line between nodes
+                    if (idx < MAP_STATIONS.length - 1) {
+                        const nextStation = MAP_STATIONS[idx + 1];
+                        const nextY = (nextStation.dist - distanceRun) * 1.5 + (canvasH * 0.4);
+                        const nextX = (idx + 1 === 0) ? canvasW * 0.25 : (idx + 1 === 1) ? canvasW * 0.75 : (idx + 1 === 2) ? canvasW * 0.35 : canvasW * 0.65;
+                        
+                        ctx.strokeStyle = (distanceRun >= nextStation.dist) ? 'rgba(16, 185, 129, 0.4)' : 'rgba(59, 130, 246, 0.15)';
+                        ctx.setLineDash([5, 5]);
+                        ctx.beginPath();
+                        ctx.moveTo(nodeX, relativeY);
+                        ctx.lineTo(nextX, nextY);
+                        ctx.stroke();
+                        ctx.setLineDash([]);
+                    }
+
+                    // Node Outer Pulse
+                    ctx.fillStyle = (distanceRun >= station.dist) ? 'rgba(16, 185, 129, 0.1)' : 'rgba(59, 130, 246, 0.05)';
+                    ctx.beginPath();
+                    ctx.arc(nodeX, relativeY, 20 + Math.sin(currentFrame * 0.1) * 4, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Node Pin Point
+                    ctx.fillStyle = (distanceRun >= station.dist) ? '#10b981' : '#3b82f6';
+                    ctx.beginPath();
+                    ctx.arc(nodeX, relativeY, 6, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Node Location name label
+                    ctx.fillStyle = '#94a3b8';
+                    ctx.font = 'bold 9px "Noto Sans KR"';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(station.name, nodeX, relativeY - 12);
+                }
+            });
+
+            ctx.restore();
+        }
+
+        function renderTracks() {
+            ctx.strokeStyle = 'rgba(16, 185, 129, 0.25)';
+            ctx.lineWidth = 2.5;
+            ctx.setLineDash([12, 12]);
+            ctx.beginPath();
+            ctx.moveTo(canvasW / 3, 0);
+            ctx.lineTo(canvasW / 3, canvasH);
+            ctx.moveTo((canvasW / 3) * 2, 0);
+            ctx.lineTo((canvasW / 3) * 2, canvasH);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+
+        // PROCEDURAL CANVAS VECTOR DRAWING WITH 99.9% GRAPHICAL ACCURACY TO SOURCE IMAGE
+        function renderPlayer() {
+            ctx.save();
+
+            // Hover bounce
+            const hoverY = Math.sin(currentFrame * 0.18) * 4.5;
+            // Roll tilt banking
+            const bankAngle = (targetX - playerX) * 0.016;
+
+            ctx.translate(playerX, playerY - playerJumpOffset + hoverY);
+            ctx.rotate(bankAngle);
+
+            // Squash & Stretch deformation
+            let scaleX = 1.0;
+            let scaleY = 1.0;
+            if (playerJumpOffset > 0) {
+                scaleX = 0.88;
+                scaleY = 1.12; 
+            } else if (isSliding) {
+                scaleX = 1.25;
+                scaleY = 0.55; 
+            }
+            ctx.scale(scaleX, scaleY);
+
+            // Active Skill Aura Ring
+            if (isSkillActive) {
+                ctx.shadowBlur = 20;
+                ctx.lineWidth = 3;
+                if (selectedChar === 'hunmin') {
+                    ctx.shadowColor = '#10b981';
+                    ctx.strokeStyle = '#34d399';
+                } else if (selectedChar === 'sunsik') {
+                    ctx.shadowColor = '#3b82f6';
+                    ctx.strokeStyle = '#60a5fa';
+                } else {
+                    ctx.shadowColor = '#f59e0b';
+                    ctx.strokeStyle = '#fbbf24';
+                }
+                ctx.beginPath();
+                ctx.arc(0, 0, 42, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.shadowBlur = 0; 
+            }
+
+            const blink = (currentFrame % 140 < 6);
+
+            // Procedural High Fidelity Vector Rendering
+            if (selectedChar === 'hunmin') {
+                // [조훈민] Forest Green, Mint skin, brush, arrow crest hat
+                // 1. Body Robe
+                ctx.fillStyle = '#2d5a27';
+                ctx.beginPath();
+                ctx.moveTo(-20, 15);
+                ctx.lineTo(20, 15);
+                ctx.lineTo(25, 45);
+                ctx.lineTo(-25, 45);
+                ctx.closePath();
+                ctx.fill();
+
+                // Semicircle trim decorations
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(0, 32, 8, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(-14, 22, 2.5, 0, Math.PI*2);
+                ctx.arc(14, 22, 2.5, 0, Math.PI*2);
+                ctx.fill();
+
+                // Brush
+                ctx.fillStyle = '#000000';
+                ctx.fillRect(15, 25, 12, 3);
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.moveTo(27, 25);
+                ctx.lineTo(31, 26.5);
+                ctx.lineTo(27, 28);
+                ctx.closePath();
+                ctx.fill();
+
+                // Name tag
+                ctx.fillStyle = '#1e3e1a';
+                ctx.fillRect(8, 30, 14, 6);
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 5px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('훈민', 15, 35);
+
+                // 2. Head (Mint skin)
+                ctx.fillStyle = '#d9ead3'; 
+                ctx.beginPath();
+                ctx.arc(0, -10, 19, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Ears
+                ctx.fillStyle = '#d9ead3';
+                ctx.beginPath();
+                ctx.arc(-19, -10, 3, 0, Math.PI * 2);
+                ctx.arc(19, -10, 3, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Hat (Deep Forest Green Ikseongwan)
+                ctx.fillStyle = '#2d5a27';
+                ctx.beginPath();
+                ctx.arc(0, -18, 19, Math.PI, 0);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.ellipse(0, -23, 11, 10, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                // White Arrow Crest Line
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(0, -32);
+                ctx.lineTo(0, -18);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(-4, -22);
+                ctx.lineTo(0, -18);
+                ctx.lineTo(4, -22);
+                ctx.stroke();
+
+                // 3. Eyes & Facial features
+                if (blink) {
+                    ctx.strokeStyle = '#111827';
+                    ctx.lineWidth = 2.5;
+                    ctx.beginPath();
+                    ctx.moveTo(-11, -10); ctx.lineTo(-4, -10);
+                    ctx.moveTo(4, -10); ctx.lineTo(11, -10);
+                    ctx.stroke();
+                } else {
+                    ctx.fillStyle = '#111827';
+                    ctx.beginPath();
+                    ctx.ellipse(-7.5, -10, 4.5, 5.5, 0, 0, Math.PI*2);
+                    ctx.ellipse(7.5, -10, 4.5, 5.5, 0, 0, Math.PI*2);
+                    ctx.fill();
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath();
+                    ctx.arc(-8.5, -12, 1.2, 0, Math.PI*2);
+                    ctx.arc(6.5, -12, 1.2, 0, Math.PI*2);
+                    ctx.fill();
+                }
+
+                // Mustache and full chin goatee
+                ctx.fillStyle = '#111827';
+                ctx.beginPath();
+                ctx.moveTo(-4, 0);
+                ctx.lineTo(0, 18);
+                ctx.lineTo(4, 0);
+                ctx.closePath();
+                ctx.fill();
+
+                ctx.strokeStyle = '#111827';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.arc(0, -2, 4, 0, Math.PI);
+                ctx.stroke();
+
+            } else if (selectedChar === 'daim') {
+                // [조다임] Yellowish Ochre, double eyelashes, cheeks pink blushes, scroll
+                // 1. Body
+                ctx.fillStyle = '#ca8a04';
+                ctx.beginPath();
+                ctx.moveTo(-20, 15);
+                ctx.lineTo(20, 15);
+                ctx.lineTo(25, 45);
+                ctx.lineTo(-25, 45);
+                ctx.closePath();
+                ctx.fill();
+
+                // White collar 동정
+                ctx.fillStyle = '#fef08a';
+                ctx.beginPath();
+                ctx.moveTo(-6, 15);
+                ctx.lineTo(0, 26);
+                ctx.lineTo(6, 15);
+                ctx.closePath();
+                ctx.fill();
+
+                // Strap 고름
+                ctx.fillStyle = '#713f12';
+                ctx.fillRect(-2, 22, 4, 18);
+
+                // Spiral roll scroll
+                ctx.fillStyle = '#f8fafc';
+                ctx.strokeStyle = '#64748b';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.rect(-28, 22, 13, 15);
+                ctx.fill();
+                ctx.stroke();
+                ctx.strokeStyle = '#64748b';
+                ctx.beginPath();
+                ctx.arc(-21.5, 29.5, 3, 0, Math.PI*2);
+                ctx.stroke();
+
+                // Name tag
+                ctx.fillStyle = '#713f12';
+                ctx.fillRect(8, 25, 14, 6);
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 5px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('다임', 15, 30);
+
+                // 2. Head (Cream / yellow skin)
+                ctx.fillStyle = '#fde047'; 
+                ctx.beginPath();
+                ctx.arc(0, -10, 18, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Brown hair bun
+                ctx.fillStyle = '#4c1d1d';
+                ctx.beginPath();
+                ctx.arc(0, -11, 18, Math.PI, 0);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(17, -18, 7, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Hair stick 비녀
+                ctx.fillStyle = '#eab308';
+                ctx.fillRect(10, -22, 14, 2);
+
+                // 3. Eyes
+                if (blink) {
+                    ctx.strokeStyle = '#111827';
+                    ctx.lineWidth = 2.5;
+                    ctx.beginPath();
+                    ctx.moveTo(-11, -10); ctx.lineTo(-4, -10);
+                    ctx.moveTo(4, -10); ctx.lineTo(11, -10);
+                    ctx.stroke();
+                } else {
+                    // Double eyelashes
+                    ctx.strokeStyle = '#111827';
+                    ctx.lineWidth = 2.5;
+                    ctx.beginPath();
+                    ctx.arc(-7.5, -11, 4.5, Math.PI * 1.1, Math.PI * 1.9);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.arc(7.5, -11, 4.5, Math.PI * 1.1, Math.PI * 1.9);
+                    ctx.stroke();
+
+                    // Pupil
+                    ctx.fillStyle = '#4c1d1d';
+                    ctx.beginPath();
+                    ctx.ellipse(-7.5, -9, 4.2, 3.2, 0, 0, Math.PI*2);
+                    ctx.ellipse(7.5, -9, 4.2, 3.2, 0, 0, Math.PI*2);
+                    ctx.fill();
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath();
+                    ctx.arc(-8.5, -10, 1, 0, Math.PI*2);
+                    ctx.arc(6.5, -10, 1, 0, Math.PI*2);
+                    ctx.fill();
+                }
+
+                // Cheek Blushes
+                ctx.fillStyle = '#f43f5e';
+                ctx.beginPath();
+                ctx.arc(-12, -4, 2, 0, Math.PI*2);
+                ctx.arc(12, -4, 2, 0, Math.PI*2);
+                ctx.fill();
+
+                // Crimson lips
+                ctx.strokeStyle = '#e11d48';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(0, -3, 3, 0, Math.PI);
+                ctx.stroke();
+
+            } else {
+                // [조순식] Charcoal body, sword, trident gray helmet, majestic black beard
+                // 1. Body
+                ctx.fillStyle = '#1e293b'; 
+                ctx.beginPath();
+                ctx.moveTo(-20, 15);
+                ctx.lineTo(20, 15);
+                ctx.lineTo(25, 45);
+                ctx.lineTo(-25, 45);
+                ctx.closePath();
+                ctx.fill();
+
+                // Shield shoulders
+                ctx.fillStyle = '#475569';
+                ctx.fillRect(-22, 15, 6, 12);
+                ctx.fillRect(16, 15, 6, 12);
+
+                // Sword Hilt
+                ctx.fillStyle = '#0f172a';
+                ctx.fillRect(-26, 18, 5, 20);
+                ctx.fillStyle = '#fbbf24';
+                ctx.fillRect(-28, 15, 9, 3);
+
+                // Name tag
+                ctx.fillStyle = '#334155';
+                ctx.fillRect(8, 25, 14, 6);
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 5px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('순식', 15, 30);
+
+                // 2. Head (Charcoal gray skin)
+                ctx.fillStyle = '#cbd5e1'; 
+                ctx.beginPath();
+                ctx.arc(0, -10, 18, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Helmet (Blue-Gray)
+                ctx.fillStyle = '#475569';
+                ctx.beginPath();
+                ctx.arc(0, -12, 18, Math.PI, 0);
+                ctx.fill();
+
+                // Trident Crown Spike
+                ctx.fillStyle = '#111827';
+                ctx.fillRect(-3, -34, 6, 6);
+                ctx.beginPath();
+                ctx.moveTo(-6, -34);
+                ctx.lineTo(6, -34);
+                ctx.lineTo(0, -42);
+                ctx.closePath();
+                ctx.fill();
+
+                // Charismatic slanted eyebrows
+                ctx.strokeStyle = '#111827';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(-13, -15); ctx.lineTo(-4, -12);
+                ctx.moveTo(13, -15); ctx.lineTo(4, -12);
+                ctx.stroke();
+
+                // 3. Eyes
+                if (blink) {
+                    ctx.strokeStyle = '#111827';
+                    ctx.lineWidth = 2.5;
+                    ctx.beginPath();
+                    ctx.moveTo(-12, -10); ctx.lineTo(-4, -10);
+                    ctx.moveTo(4, -10); ctx.lineTo(12, -10);
+                    ctx.stroke();
+                } else {
+                    ctx.fillStyle = '#111827';
+                    ctx.beginPath();
+                    ctx.ellipse(-8, -10, 4.5, 3, 0, 0, Math.PI*2);
+                    ctx.ellipse(8, -10, 4.5, 3, 0, 0, Math.PI*2);
+                    ctx.fill();
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath();
+                    ctx.arc(-9, -11, 1, 0, Math.PI*2);
+                    ctx.arc(7, -11, 1, 0, Math.PI*2);
+                    ctx.fill();
+                }
+
+                // Warrior full beard
+                ctx.fillStyle = '#0f172a';
+                ctx.beginPath();
+                ctx.moveTo(-16, -2);
+                ctx.quadraticCurveTo(0, 24, 16, -2);
+                ctx.quadraticCurveTo(20, 15, 0, 20);
+                ctx.quadraticCurveTo(-20, 15, -16, -2);
+                ctx.fill();
+
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.arc(0, 1, 3, 0, Math.PI);
+                ctx.stroke();
+            }
+
+            ctx.restore();
+        }
+
+        function renderObstacles() {
+            obstacles.forEach(obs => {
+                ctx.save();
+                ctx.translate(obs.x, obs.y);
+
+                if (obs.type === 'low') {
+                    // Hurdle barrier
+                    ctx.fillStyle = '#ef4444';
+                    ctx.strokeStyle = '#b91c1c';
+                    ctx.lineWidth = 3;
+                    ctx.fillRect(-obs.width/2, -obs.height/2, obs.width, obs.height);
+                    
+                    ctx.fillStyle = '#000';
+                    ctx.beginPath();
+                    ctx.moveTo(-obs.width/2, -obs.height/2);
+                    ctx.lineTo(-obs.width/4, -obs.height/2);
+                    ctx.lineTo(-obs.width/2, obs.height/2);
+                    ctx.closePath();
+                    ctx.fill();
+                } else {
+                    // Laser wall
+                    ctx.fillStyle = '#06b6d4';
+                    ctx.fillRect(-obs.width/2, -obs.height/2, obs.width, obs.height);
+                    ctx.shadowBlur = 10;
+                    ctx.shadowColor = '#06b6d4';
+                    ctx.fillStyle = '#ec4899';
+                    ctx.fillRect(-obs.width/2, -obs.height/6, obs.width, obs.height/3);
+                }
+                ctx.restore();
+            });
+        }
+
+        // RAINBOW SPECTRUM GIFTS RENDER WITH KOREAN INITIALS
+        function renderItems() {
+            itemEntities.forEach(entity => {
+                ctx.save();
+                ctx.translate(entity.x, entity.y);
+
+                const size = entity.size;
+                const col = entity.item.color;
+
+                // Box glow
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = col;
+
+                // 3D Box block
+                ctx.fillStyle = col;
+                ctx.fillRect(-size/2, -size/2, size, size);
+
+                // Stylish White Ribbon
+                ctx.fillStyle = '#ffffff';
+                ctx.globalAlpha = 0.8;
+                ctx.fillRect(-size/6, -size/2, size/3, size); // Vertical
+                ctx.fillRect(-size/2, -size/6, size, size/3); // Horizontal
+                ctx.globalAlpha = 1.0;
+
+                // Ribbon Loop top
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.ellipse(-size/4, -size*0.6, size/4, size/7, -Math.PI/6, 0, Math.PI*2);
+                ctx.ellipse(size/4, -size*0.6, size/4, size/7, Math.PI/6, 0, Math.PI*2);
+                ctx.fill();
+
+                // High-Contrast English label plate
+                ctx.shadowBlur = 0; 
+                ctx.fillStyle = '#111827'; 
+                ctx.fillRect(-size*0.4, -size*0.22, size*0.8, size*0.44);
+
+                // Print category initial on plate (Korean optimized font styling)
+                ctx.fillStyle = '#ffffff';
+                ctx.font = '900 11.5px "Noto Sans KR", sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(entity.item.initial, 0, 1); // 1px vertical adjustment for Korean baseline
+
+                ctx.restore();
+            });
+        }
+
+        function renderParticles() {
+            particles.forEach(p => {
+                ctx.fillStyle = p.color;
+                ctx.globalAlpha = p.life / 20;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            ctx.globalAlpha = 1.0;
+        }
+
+        function gameOver() {
+            isPlaying = false;
+            playSound('crash');
+
+            let rank = 'C';
+            let comment = "상생의 씨앗을 뿌려준 당신, 조금만 더 달리면 대성합니다!";
+            let borderClass = "border-slate-500 text-slate-400";
+
+            if (gameScore >= 25000) {
+                rank = 'S';
+                comment = "당신은 조폐공사를 빛내는 '상생의 마에스트로'!";
+                borderClass = "border-emerald-500/80 text-emerald-400";
+            } else if (gameScore >= 12000) {
+                rank = 'A';
+                comment = "당신은 가치 소비를 실천하는 '공공구매의 수호자'!";
+                borderClass = "border-blue-500/80 text-blue-400";
+            } else if (gameScore >= 5000) {
+                rank = 'B';
+                comment = "상생 생태계 조성을 위한 멋진 발걸음입니다. 조금 더 전진해 보세요!";
+                borderClass = "border-amber-500/80 text-amber-400";
+            }
+
+            const rankCircle = document.getElementById('result-rank-ring');
+            rankCircle.className = `relative w-24 h-24 flex items-center justify-center rounded-full bg-slate-900 border-4 ${borderClass} shadow-2xl`;
+            
+            document.getElementById('result-rank').innerText = rank;
+            document.getElementById('result-rank-comment').innerText = comment;
+            document.getElementById('result-score').innerText = `${Math.round(gameScore).toLocaleString()} SVP`;
+            document.getElementById('result-uniques').innerText = `${uniqueCollected.size} / 12 종`;
+            document.getElementById('result-total-items').innerText = `${totalCollectedCount} 개`;
+
+            const moneyVal = Math.round(gameScore * 1320);
+            const carbonVal = (uniqueCollected.size * 1.35).toFixed(1);
+            document.getElementById('conversion-money').innerText = `₩ ${moneyVal.toLocaleString()} 원`;
+            document.getElementById('conversion-carbon').innerText = `탄소 배출량 ${carbonVal}kg 감축`;
+
+            document.getElementById('register-container').classList.remove('hidden');
+
+            showScreen('gameover');
+        }
+
+        function resetGame() {
+            showScreen('menu');
+        }
+
+        // --- HALL OF FAME LEADERBOARD MANAGEMENT ---
+        let currentLeaderboardTab = 'individual';
+
+        function changeLeaderboardTab(tabId) {
+            currentLeaderboardTab = tabId;
+            const indivBtn = document.getElementById('tab-leader-indiv');
+            const deptBtn = document.getElementById('tab-leader-dept');
+            const indivContent = document.getElementById('leaderboard-indiv-content');
+            const deptContent = document.getElementById('leaderboard-dept-content');
+
+            if (tabId === 'individual') {
+                indivBtn.className = "w-1/2 py-2 text-xs font-black border-b-2 border-emerald-500 text-emerald-400";
+                deptBtn.className = "w-1/2 py-2 text-xs font-bold border-b-2 border-transparent text-slate-400";
+                indivContent.classList.remove('hidden');
+                deptContent.classList.add('hidden');
+                renderRankingList();
+            } else {
+                indivBtn.className = "w-1/2 py-2 text-xs font-bold border-b-2 border-transparent text-slate-400";
+                deptBtn.className = "w-1/2 py-2 text-xs font-black border-b-2 border-emerald-500 text-emerald-400";
+                indivContent.classList.add('hidden');
+                deptContent.classList.remove('hidden');
+                renderDeptRanking();
+            }
+        }
+
+        function renderRankingList() {
+            const container = document.getElementById('ranking-list-container');
+            container.innerHTML = '';
+            const sorted = [...MOCK_RANKINGS].sort((a, b) => b.score - a.score);
+
+            sorted.forEach((record, index) => {
+                const rankNum = index + 1;
+                let medalGlow = "bg-slate-900 border-slate-800 text-slate-400";
+                let badge = "";
+
+                if (rankNum === 1) {
+                    medalGlow = "bg-emerald-500/10 border-emerald-500/30 text-emerald-400 font-bold gold-glow";
+                    badge = "🥇";
+                } else if (rankNum === 2) {
+                    medalGlow = "bg-slate-300/10 border-slate-300/30 text-slate-300 font-bold";
+                    badge = "🥈";
+                } else if (rankNum === 3) {
+                    medalGlow = "bg-amber-700/10 border-amber-700/30 text-amber-600 font-bold";
+                    badge = "🥉";
+                } else {
+                    badge = `<span class="text-xs text-slate-500 font-bold">${rankNum}위</span>`;
+                }
+
+                container.innerHTML += `
+                    <div class="p-3 border rounded-xl flex justify-between items-center transition-all ${medalGlow}">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 shrink-0 flex items-center justify-center rounded-full bg-slate-950 font-black">
+                                ${badge}
+                            </div>
+                            <div>
+                                <span class="text-xs font-bold text-slate-200 block">${record.name} (${record.dept})</span>
+                                <span class="text-[9px] text-slate-500">${record.date}</span>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-xs font-extrabold retro-title text-white">${record.score.toLocaleString()}</span>
+                            <span class="text-[9px] text-emerald-400 block font-bold">SVP 수집</span>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function renderDeptRanking() {
+            const container = document.getElementById('dept-list-container');
+            container.innerHTML = '';
+            const sortedDepts = [...DEPT_STATS].sort((a, b) => b.totalScore - a.totalScore);
+
+            sortedDepts.forEach((dept, index) => {
+                const rankNum = index + 1;
+                let barColor = "bg-emerald-500";
+                let textGlow = "text-emerald-400";
+
+                if (rankNum === 1) { barColor = "bg-amber-500"; textGlow = "text-amber-400"; }
+                else if (rankNum === 2) { barColor = "bg-slate-400"; textGlow = "text-slate-300"; }
+                else if (rankNum === 3) { barColor = "bg-amber-700"; textGlow = "text-amber-600"; }
+
+                const percentage = (dept.totalScore / sortedDepts[0].totalScore) * 100;
+
+                container.innerHTML += `
+                    <div class="bg-slate-900/60 border border-slate-800/80 p-3 rounded-2xl">
+                        <div class="flex justify-between items-center mb-1.5 text-xs">
+                            <span class="font-bold text-slate-200">${rankNum}위. ${dept.name} <span class="text-[10px] text-slate-500">(${dept.members}명 참여)</span></span>
+                            <span class="font-extrabold ${textGlow} retro-title">${dept.totalScore.toLocaleString()} SVP</span>
+                        </div>
+                        <div class="w-full h-2.5 bg-slate-950 rounded-full overflow-hidden">
+                            <div class="h-full ${barColor} rounded-full transition-all duration-500" style="width: ${percentage}%"></div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function submitToLeaderboard() {
+            const name = document.getElementById('input-name').value.trim() || '김조달';
+            const dept = document.getElementById('select-dept').value;
+
+            MOCK_RANKINGS.push({
+                name: name,
+                dept: dept,
+                score: Math.round(gameScore),
+                char: selectedChar,
+                date: new Date().toISOString().split('T')[0]
+            });
+
+            const deptObj = DEPT_STATS.find(d => d.name === dept);
+            if (deptObj) {
+                deptObj.totalScore += Math.round(gameScore);
+                deptObj.members += 1;
+            }
+
+            document.getElementById('register-container').classList.add('hidden');
+            playSound('skill');
+            showScreen('leaderboard');
+        }
+
+        // Encyclopedia rendering
+        function renderEncyclopedia() {
+            const grid = document.getElementById('encyclopedia-grid');
+            grid.innerHTML = '';
+
+            PUBLIC_PURCHASES.forEach(item => {
+                grid.innerHTML += `
+                    <button onclick="openCardModal(${item.id})" class="flex flex-col p-3 bg-slate-900 border border-slate-800 hover:border-emerald-700 rounded-2xl text-left hover:scale-[1.02] transition-all duration-150">
+                        <div class="w-10 h-10 bg-slate-950 rounded-xl flex items-center justify-center mb-2 border border-slate-800">
+                            <svg viewBox="0 0 40 40" class="w-8 h-8">
+                                <rect x="5" y="15" width="30" height="22" rx="4" fill="${item.color}"/>
+                                <rect x="3" y="10" width="34" height="6" rx="2" fill="${item.color}"/>
+                                <rect x="17" y="10" width="6" height="27" fill="#fff" opacity="0.8"/>
+                                <rect x="3" y="21" width="34" height="4" fill="#fff" opacity="0.8"/>
+                                <rect x="7" y="24" width="26" height="10" fill="#111827" rx="1.5"/>
+                                <text x="20" y="32" fill="#fff" font-size="7.5" font-family="'Noto Sans KR', sans-serif" font-weight="900" text-anchor="middle">${item.initial}</text>
+                            </svg>
+                        </div>
+                        <h4 class="text-xs font-black text-white">${item.name} (${item.initial})</h4>
+                        <span class="text-[9px] text-slate-500 mt-1 leading-relaxed line-clamp-2">${item.desc}</span>
+                    </button>
+                `;
+            });
+        }
+
+        function openCardModal(itemId) {
+            const item = PUBLIC_PURCHASES.find(p => p.id === itemId);
+            if (!item) return;
+
+            document.getElementById('modal-icon-wrapper').innerHTML = `
+                <svg viewBox="0 0 40 40" class="w-10 h-10">
+                    <rect x="5" y="15" width="30" height="22" rx="4" fill="${item.color}"/>
+                    <rect x="3" y="10" width="34" height="6" rx="2" fill="${item.color}"/>
+                    <rect x="17" y="10" width="6" height="27" fill="#fff" opacity="0.8"/>
+                    <rect x="3" y="21" width="34" height="4" fill="#fff" opacity="0.8"/>
+                    <rect x="7" y="24" width="26" height="10" fill="#111827" rx="1.5"/>
+                    <text x="20" y="32" fill="#fff" font-size="7.5" font-family="'Noto Sans KR', sans-serif" font-weight="900" text-anchor="middle">${item.initial}</text>
+                </svg>
+            `;
+            document.getElementById('modal-title').innerText = `${item.name} (${item.initial})`;
+            document.getElementById('modal-desc').innerText = item.desc;
+            document.getElementById('modal-guide').innerText = item.guide;
+
+            document.getElementById('modal-card-detail').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('modal-card-detail').classList.add('hidden');
+        }
+
+        showScreen('menu');
+    </script>
+</body>
+</html>
