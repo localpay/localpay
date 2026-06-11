@@ -246,8 +246,6 @@
 </div>
 </div>
 
-<!-- 민감 설정값은 token.js 에서 로드 (절대 Git에 커밋하지 마세요) -->
-<script src="token.js"></script>
 <script>
 // ============================================================
 // CONSTANTS & DATA
@@ -280,9 +278,17 @@ const MAP_STATIONS = [
 ];
 
 // ============================================================
-// PERSISTENT SCORE STORAGE (Remote: https://localpay.github.io/localpay/score.txt)
+// PERSISTENT SCORE STORAGE (JSONBin.io)
 // ============================================================
-const SCORE_URL = "https://localpay.github.io/localpay/score.txt";
+// ※ JSONBin.io 무료 서비스를 사용합니다.
+//   아래 두 값을 JSONBin에서 발급받은 값으로 교체하세요:
+//   JSONBIN_BIN_ID  : Bin ID (숫자+문자 혼합)
+//   JSONBIN_API_KEY : API Key ($2b$10$... 형태)
+// ─────────────────────────────────────────────────────────────
+const JSONBIN_BIN_ID  = "6a2a60ecda38895dfeaba5ce";
+const JSONBIN_API_KEY = "$2a$10$m7G5pXX3trEYFVwemmNXYun0/A8blUKscu24twOEnkvCowx3BjfUm";
+const JSONBIN_URL = `https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`;
+
 const DEFAULT_RANKINGS = [
     {name:"서영훈",dept:"본사",score:38400,date:"2026-06-08"},
     {name:"정은교",dept:"본사",score:29500,date:"2026-06-09"},
@@ -295,73 +301,43 @@ const DEFAULT_DEPT_STATS = [
     {name:"기술연구원",total:29500,members:13},{name:"ID본부",total:21100,members:8},{name:"제지본부",total:18900,members:16}
 ];
 
-let _scoreCache = null; // 메모리 캐시
+let _scoreCache = null;
 
 async function loadScoreData() {
     if (_scoreCache) return _scoreCache;
     try {
-        const res = await fetch(SCORE_URL + "?nocache=" + Date.now());
+        const res = await fetch(JSONBIN_URL + "/latest", {
+            headers: { "X-Master-Key": JSONBIN_API_KEY }
+        });
         if (!res.ok) throw new Error("fetch failed");
-        const text = await res.text();
-        const data = JSON.parse(text.trim());
+        const json = await res.json();
+        const data = json.record;
         _scoreCache = data;
         return data;
     } catch(e) {
-        console.warn("원격 점수 불러오기 실패, 기본값 사용:", e);
+        console.warn("JSONBin 점수 불러오기 실패, 기본값 사용:", e);
         return { rankings: JSON.parse(JSON.stringify(DEFAULT_RANKINGS)), deptStats: JSON.parse(JSON.stringify(DEFAULT_DEPT_STATS)) };
     }
 }
 
-// ── GitHub API 설정 ──────────────────────────────────────────
-// ※ 민감 정보는 token.js 파일에서 불러옵니다.
-//   token.js 파일이 같은 폴더에 있어야 하며, .gitignore에 반드시 추가하세요.
-// ─────────────────────────────────────────────────────────────
-// GITHUB_TOKEN, GITHUB_OWNER, GITHUB_REPO, GITHUB_PATH 는
-// token.js 에서 전역 변수로 선언됩니다.
-const GITHUB_API = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_PATH}`;
-
-async function getFileSha() {
-    try {
-        const res = await fetch(GITHUB_API, {
-            headers: { Authorization: `token ${GITHUB_TOKEN}`, Accept: "application/vnd.github.v3+json" }
-        });
-        if (!res.ok) return null;
-        const json = await res.json();
-        return json.sha || null;
-    } catch(e) { return null; }
-}
-
 async function saveScoreData(data) {
     _scoreCache = data;
-    if (!GITHUB_TOKEN) {
-        console.warn("GITHUB_TOKEN 미설정 — 세션 메모리에만 저장됩니다.");
-        return;
-    }
     try {
-        const sha = await getFileSha();
-        const body = {
-            message: "점수 업데이트 (게임 자동 커밋)",
-            content: btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2)))),
-            committer: { name: "JopamsBot", email: "bot@jopams.game" }
-        };
-        if (sha) body.sha = sha;   // 기존 파일이면 sha 필요
-        const res = await fetch(GITHUB_API, {
+        const res = await fetch(JSONBIN_URL, {
             method: "PUT",
             headers: {
-                Authorization: `token ${GITHUB_TOKEN}`,
-                Accept: "application/vnd.github.v3+json",
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
+                "X-Master-Key": JSONBIN_API_KEY
             },
-            body: JSON.stringify(body)
+            body: JSON.stringify(data)
         });
         if (res.ok) {
-            console.log("✅ GitHub score.txt 업데이트 성공");
+            console.log("✅ JSONBin 점수 저장 성공");
         } else {
-            const err = await res.json();
-            console.warn("GitHub API 저장 실패:", err.message);
+            console.warn("JSONBin 저장 실패:", res.status);
         }
     } catch(e) {
-        console.warn("GitHub API 저장 오류 (세션 메모리 유지):", e);
+        console.warn("JSONBin 저장 오류 (세션 메모리 유지):", e);
     }
 }
 
