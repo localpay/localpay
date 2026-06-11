@@ -29,7 +29,7 @@
         <div class="flex gap-2">
             <input id="input-name" type="text" value="김조달" placeholder="이름 입력" class="w-1/2 px-3.5 py-2.5 bg-[#030918] border border-sky-900/40 rounded-xl text-xs focus:outline-none focus:border-sky-500 text-white font-bold">
             <select id="select-dept" class="w-1/2 px-3.5 py-2.5 bg-[#030918] border border-sky-900/40 rounded-xl text-xs focus:outline-none focus:border-sky-500 text-white font-bold">
-                <option>화폐본부</option><option>제지본부</option><option>ID본부</option><option>기술연구원</option><option>본사</option>
+                <option>본사</option><option>화폐본부</option><option>제지본부</option><option>ID본부</option><option>기술연구원</option>
             </select>
         </div>
     </div>
@@ -80,7 +80,7 @@
             <div>
                 <div class="flex items-center gap-1">
                     <span id="hud-name" class="text-xs font-black text-slate-100">김조달</span>
-                    <span id="hud-dept" class="text-[9px] bg-sky-600 px-1 py-0.5 rounded text-white font-bold leading-none">화폐본부</span>
+                    <span id="hud-dept" class="text-[9px] bg-sky-600 px-1 py-0.5 rounded text-white font-bold leading-none">본사</span>
                 </div>
                 <div class="w-20 h-1.5 bg-[#051126] rounded-full overflow-hidden mt-1 border border-sky-950">
                     <div id="hud-skill-bar" class="w-0 h-full bg-gradient-to-r from-sky-400 to-blue-500 transition-all duration-100"></div>
@@ -208,7 +208,7 @@
         <div id="reg-container" class="mt-4 bg-[#091630] border border-sky-900 rounded-2xl p-3.5 flex justify-between items-center">
             <div class="text-left">
                 <span class="text-[9px] text-slate-400 block font-bold">기록을 전당에 등록!</span>
-                <span id="reg-info" class="text-xs text-slate-200 font-bold">김조달 (화폐본부)</span>
+                <span id="reg-info" class="text-xs text-slate-200 font-bold">김조달 (본사)</span>
             </div>
             <button onclick="submitScore()" class="touch-manipulation px-3.5 py-2.5 bg-gradient-to-r from-sky-500 to-blue-500 text-slate-950 font-black text-xs rounded-xl active:scale-95">등재하기</button>
         </div>
@@ -286,8 +286,8 @@ let RANKINGS = [
 ];
 
 let DEPT_STATS = [
-    {name:"화폐본부",total:39500,members:21},{name:"본사",total:38400,members:10},
-    {name:"기술연구원",total:29500,members:13},{name:"ID본부",total:21100,members:8},{name:"제지본부",total:18900,members:16}
+    {name:"본사",total:39500,members:21},{name:"화폐본부",total:38400,members:10},
+    {name:"제지본부",total:29500,members:13},{name:"ID본부",total:21100,members:8},{name:"기술연구원",total:18900,members:16}
 ];
 
 // ============================================================
