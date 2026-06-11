@@ -68,6 +68,14 @@
     </div>
     <div class="pb-2">
         <button onclick="startGame()" class="touch-manipulation w-full py-4 bg-gradient-to-r from-sky-400 via-blue-500 to-indigo-600 active:scale-[0.97] rounded-2xl font-black text-base text-white shadow-xl">⚡ 가치 원정대 출발! (START)</button>
+        <div class="mt-3 flex items-center justify-center gap-1.5">
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-sky-500/10 border border-sky-500/25 rounded-full">
+                <span class="text-slate-500 text-[10px]">⚙️</span>
+                <span class="text-slate-500 text-[10px]">Developed by</span>
+                <span class="text-sky-400 text-[10px] font-black tracking-wide">박찬혁</span>
+                <span class="text-slate-600 text-[10px]">· 2026</span>
+            </span>
+        </div>
     </div>
 </div>
 
@@ -88,6 +96,7 @@
             </div>
         </div>
         <div class="flex flex-col items-center bg-slate-950/90 border border-sky-800/40 px-2 py-1 rounded-xl text-center">
+            <span id="hud-stage" class="text-[8px] font-black text-emerald-400">STAGE 1</span>
             <span id="hud-station" class="text-[8px] font-black text-sky-400">📍 대전 본사</span>
             <span id="hud-uniques" class="text-[10px] font-black text-amber-400 leading-none mt-0.5">수집: 0/12</span>
         </div>
@@ -113,6 +122,15 @@
         <div id="skill-card" class="bg-[#030c1b]/95 border border-sky-500 px-5 py-3 rounded-2xl text-center shadow-2xl scale-75 transition-transform duration-200">
             <span class="text-lg font-black text-sky-400 retro-title block">SKILL!</span>
             <span id="skill-name" class="text-xs font-bold text-white block"></span>
+        </div>
+    </div>
+
+    <!-- Stage Clear Overlay -->
+    <div id="stage-clear-overlay" class="hidden absolute inset-0 pointer-events-none z-30 flex items-center justify-center">
+        <div class="bg-[#030c1b]/95 border-2 border-emerald-400 px-8 py-4 rounded-3xl text-center shadow-2xl">
+            <span class="text-emerald-400 retro-title font-black text-2xl block">STAGE CLEAR!</span>
+            <span id="stage-clear-num" class="text-white font-black text-lg block mt-1"></span>
+            <span class="text-sky-300 text-xs block mt-1">12개 아이템 모두 수집! 다음 스테이지로!</span>
         </div>
     </div>
 
@@ -515,10 +533,12 @@ let skillCharge = 0;
 let isSkillActive = false;
 let skillTimer = 0;
 let distRun = 0;
-let gameSpeed = 5.2;
+let gameSpeed = 2.6; // 기존 5.2의 50%
 let frame = 0;
 let rafId = null;
 let ctrlMode = "touchpad";
+let currentStage = 1; // 현재 스테이지 (1~10)
+let stageClearTimer = 0; // 스테이지 클리어 표시 타이머
 
 let playerLane = 1, targetX = 0, playerX = 0, playerY = 0;
 let velY = 0, jumpOff = 0, isSliding = false, slideTimer = 0;
@@ -569,7 +589,8 @@ function startGame() {
     gameScore = 0; uniqueCollected.clear(); totalCollected = 0;
     itemCounts = {}; PUBLIC_PURCHASES.forEach(p => itemCounts[p.id] = 0);
     skillCharge = 0; isSkillActive = false; skillTimer = 0;
-    gameSpeed = 5.2; distRun = 0; frame = 0;
+    gameSpeed = 2.6; distRun = 0; frame = 0; // 기존 5.2의 50%
+    currentStage = 1; stageClearTimer = 0;
     obstacles = []; items = []; particles = [];
     playerLane = 1;
 
@@ -589,6 +610,7 @@ function startGame() {
 
     drawHUDPortrait(selectedChar);
     resetSkillBtn();
+    initSidePanels();
     isPlaying = true;
     playBGM(); // BGM 시작
     if (rafId) cancelAnimationFrame(rafId);
@@ -712,7 +734,18 @@ function gameLoop() {
     if (!isPlaying) return;
     frame++;
     distRun += 0.45;
-    if (frame % 200 === 0 && gameSpeed < 11) gameSpeed += 0.5;
+
+    // 스테이지 클리어 타이머 처리
+    if (stageClearTimer > 0) {
+        stageClearTimer--;
+        if (stageClearTimer === 0) {
+            document.getElementById("stage-clear-overlay").classList.add("hidden");
+            // 새 스테이지 시작: 아이템 수집 초기화
+            uniqueCollected.clear();
+            itemCounts = {}; PUBLIC_PURCHASES.forEach(p => itemCounts[p.id] = 0);
+            document.getElementById("hud-uniques").textContent = "수집: 0/12";
+        }
+    }
 
     updateStation();
     updatePlayer();
@@ -725,6 +758,7 @@ function gameLoop() {
 
     document.getElementById("hud-score").textContent = Math.round(gameScore).toLocaleString();
     document.getElementById("hud-uniques").textContent = "수집: " + uniqueCollected.size + "/12";
+    document.getElementById("hud-stage").textContent = "STAGE " + currentStage;
 
     rafId = requestAnimationFrame(gameLoop);
 }
@@ -753,15 +787,25 @@ function updateObstacles() {
     for (let i = obstacles.length-1; i >= 0; i--) {
         const o = obstacles[i];
         o.y += gameSpeed;
-        const pY = playerY - jumpOff;
-        const pH = isSliding ? 45 : 82;
-        if (Math.abs(playerX - o.x) < 22 && o.y > pY && o.y < pY + pH) {
-            if (isSkillActive && selectedChar === "sunsik") {
-                playSound("crash"); createExplosion(o.x, o.y, "#3b82f6");
-                obstacles.splice(i, 1); gameScore += 400; continue;
+        const pY = playerY - jumpOff;          // 캐릭터 발 Y (아래쪽)
+        const pTop = pY - (isSliding ? 22 : 38); // 캐릭터 머리 Y (위쪽) — sz=40 기준
+        const hitW = 11;                        // 가로 히트박스 반폭 (sz=40의 약 55%)
+        const oTop = o.y - o.h / 2;
+        const oBot = o.y + o.h / 2;
+
+        if (Math.abs(playerX - o.x) < hitW + o.w/2 - 4) {  // 가로 겹침 (양쪽 4px 관용)
+            const vertOverlap = pTop < oBot && pY > oTop;    // 세로 겹침
+            if (vertOverlap) {
+                if (isSkillActive && selectedChar === "sunsik") {
+                    playSound("crash"); createExplosion(o.x, o.y, "#3b82f6");
+                    obstacles.splice(i, 1); gameScore += 400; continue;
+                }
+                // low(땅 장애물): 지면 근처일 때만 충돌, 살짝만 떠도 통과
+                // high(공중 장애물): 슬라이드 안 했을 때만 충돌
+                const hit = (o.type === "low"  && jumpOff < 8) ||
+                            (o.type === "high" && !isSliding);
+                if (hit) { playSound("crash"); endGame(); return; }
             }
-            const hit = (o.type==="low" && jumpOff < 22) || (o.type==="high" && !isSliding);
-            if (hit) { playSound("crash"); endGame(); return; }
         }
         if (o.y > CH + 60) obstacles.splice(i, 1);
     }
@@ -777,9 +821,9 @@ function updateItems() {
         e.y += gameSpeed;
         if (isSkillActive && selectedChar === "hunmin") {
             const dx = playerX - e.x, dy = (playerY - jumpOff) - e.y;
-            e.x += dx * 0.15; e.y += dy * 0.15;
+            e.x += dx * 0.18; e.y += dy * 0.18;
         }
-        if (Math.abs(playerX - e.x) < 38 && Math.abs((playerY-jumpOff) - e.y) < 44) {
+        if (Math.abs(playerX - e.x) < 26 && Math.abs((playerY-jumpOff) - e.y) < 30) {
             playSound("collect");
             createParticles(e.x, e.y, e.item.color);
             itemCounts[e.item.id]++;
@@ -791,6 +835,21 @@ function updateItems() {
             PUBLIC_PURCHASES.forEach(p => base += itemCounts[p.id] * 100);
             const mult = (isSkillActive && selectedChar === "daim") ? 2 : 1;
             gameScore = base * (1 + uniqueCollected.size / 12) * mult;
+
+            // 12개 모두 수집 시 스테이지 클리어
+            if (uniqueCollected.size >= 12 && stageClearTimer === 0 && currentStage < 10) {
+                currentStage++;
+                // 스테이지마다 속도 5% 증가 (기준: 2.6)
+                gameSpeed = 2.6 * Math.pow(1.05, currentStage - 1);
+                stageClearTimer = 180; // 약 3초 표시
+                document.getElementById("stage-clear-num").textContent = "STAGE " + currentStage + " 시작!";
+                document.getElementById("stage-clear-overlay").classList.remove("hidden");
+            } else if (uniqueCollected.size >= 12 && currentStage >= 10) {
+                // 10스테이지 완료 → 게임 종료
+                playSound("skill");
+                setTimeout(() => endGame(), 500);
+            }
+
             items.splice(i, 1); continue;
         }
         if (e.y > CH + 50) items.splice(i, 1);
@@ -818,8 +877,48 @@ function updateScenery() {
             s.y = -80;
             s.x = Math.random()<.5 ? 15+Math.random()*20 : CW-(35+Math.random()*20);
             s.type = ["tree","block","cloud"][Math.floor(Math.random()*3)];
+            // 제품 패널도 랜덤으로 새로고침
+            s.productIdx = (s.productIdx + 1) % MINT_PRODUCTS.length;
         }
     });
+    // 사이드 제품 패널 스크롤
+    SIDE_PANELS.forEach(p => {
+        p.y += gameSpeed * 0.35;
+        if (p.y > CH + 80) {
+            p.y = -80;
+            p.idx = (p.idx + 1) % MINT_PRODUCTS.length;
+        }
+    });
+}
+
+// 조폐공사 제품 목록 (실제 제품 12종 + 추가)
+const MINT_PRODUCTS = [
+    { key:"hwapye",   name:"대한민국\n화폐",    color:"#16a34a",  accent:"#bbf7d0" },
+    { key:"yeogwon",  name:"차세대\n전자여권",  color:"#1d4ed8",  accent:"#bfdbfe" },
+    { key:"jumin",    name:"주민등록증",        color:"#7c3aed",  accent:"#ede9fe" },
+    { key:"goldbar",  name:"골드바",           color:"#ca8a04",  accent:"#fef08a" },
+    { key:"silverbar",name:"실버바",           color:"#64748b",  accent:"#e2e8f0" },
+    { key:"jiyeok",   name:"지역사랑\n상품권",  color:"#0891b2",  accent:"#bae6fd" },
+    { key:"onnuri",   name:"온누리\n상품권",    color:"#059669",  accent:"#a7f3d0" },
+    { key:"hunjang",  name:"훈장",             color:"#b45309",  accent:"#fde68a" },
+    { key:"medal",    name:"메달",             color:"#d97706",  accent:"#fef3c7" },
+    { key:"upyo",     name:"우표",             color:"#dc2626",  accent:"#fee2e2" },
+    { key:"mobshin",  name:"모바일\n신분증",    color:"#0284c7",  accent:"#bae6fd" },
+    { key:"mobhwa",   name:"모바일\n지역화폐",  color:"#15803d",  accent:"#bbf7d0" },
+];
+
+// 사이드 패널 초기화 (게임 영역 양쪽)
+let SIDE_PANELS = [];
+function initSidePanels() {
+    SIDE_PANELS = [];
+    const count = 6;
+    const gap = Math.max(80, CH / count); // 패널 간격
+    for (let i = 0; i < count; i++) {
+        // 왼쪽 사이드
+        SIDE_PANELS.push({ side:"left",  y: gap*i - 90, idx: i % MINT_PRODUCTS.length });
+        // 오른쪽 사이드
+        SIDE_PANELS.push({ side:"right", y: gap*i - 50, idx: (i + Math.floor(MINT_PRODUCTS.length/2)) % MINT_PRODUCTS.length });
+    }
 }
 
 // ============================================================
@@ -829,11 +928,334 @@ function render() {
     ctx.fillStyle = "#030c1b";
     ctx.fillRect(0, 0, CW, CH);
     renderTerrain();
+    renderSidePanels(); // 조폐공사 제품 사이드 패널
     renderTracks();
     renderObstaclesR();
     renderItemsR();
     renderParticlesR();
     renderPlayerR();
+}
+
+function renderSidePanels() {
+    SIDE_PANELS.forEach(p => {
+        const product = MINT_PRODUCTS[p.idx % MINT_PRODUCTS.length];
+        const cx = p.side === "left" ? 15 : CW - 15;
+        const w = 30, h = 68;
+        const px = cx - w / 2;
+        const py = p.y - h / 2;
+
+        ctx.save();
+
+        // 패널 배경
+        ctx.fillStyle = "rgba(4,14,32,0.92)";
+        ctx.beginPath();
+        ctx.roundRect(px, py, w, h, 6);
+        ctx.fill();
+
+        // 상단 색상 바
+        ctx.fillStyle = product.color;
+        ctx.beginPath();
+        ctx.roundRect(px + 2, py + 2, w - 4, 4, [3, 3, 0, 0]);
+        ctx.fill();
+
+        // 테두리
+        ctx.strokeStyle = product.color + "cc";
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.roundRect(px, py, w, h, 6);
+        ctx.stroke();
+
+        // 제품별 아이콘 그리기
+        const ix = cx, iy = py + 22;
+        drawMintProductIcon(ctx, product.key, ix, iy, product.color, product.accent);
+
+        // 제품명 (줄바꿈 지원)
+        ctx.fillStyle = "#e2e8f0";
+        ctx.font = "bold 5.5px 'Noto Sans KR', sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        const lines = product.name.split("\n");
+        const textY = py + h - (lines.length === 2 ? 14 : 9);
+        lines.forEach((line, i) => {
+            ctx.fillText(line, cx, textY + i * 9);
+        });
+
+        ctx.restore();
+    });
+}
+
+function drawMintProductIcon(c, key, cx, cy, color, accent) {
+    c.save();
+    c.translate(cx, cy);
+    const s = 11; // base scale
+
+    switch(key) {
+        case "hwapye": // 화폐 - 지폐 모양
+            c.fillStyle = color;
+            c.beginPath(); c.roundRect(-s*1.1, -s*.6, s*2.2, s*1.2, 2); c.fill();
+            c.fillStyle = accent;
+            c.beginPath(); c.roundRect(-s*.55, -s*.3, s*1.1, s*.6, 2); c.fill();
+            c.fillStyle = color;
+            c.font = `bold ${s*.7}px sans-serif`; c.textAlign="center"; c.textBaseline="middle";
+            c.fillText("₩", 0, 0);
+            // 지폐 테두리 선
+            c.strokeStyle = accent + "88"; c.lineWidth = .8;
+            c.beginPath(); c.roundRect(-s*1.1, -s*.6, s*2.2, s*1.2, 2); c.stroke();
+            break;
+
+        case "yeogwon": // 전자여권 - 책 형태
+            c.fillStyle = color;
+            c.beginPath(); c.roundRect(-s*.85, -s*1.05, s*1.7, s*2.1, 2); c.fill();
+            // 여권 문양 (원형)
+            c.strokeStyle = accent; c.lineWidth = .7;
+            c.beginPath(); c.arc(0, -s*.1, s*.55, 0, Math.PI*2); c.stroke();
+            c.beginPath(); c.arc(0, -s*.1, s*.3, 0, Math.PI*2); c.stroke();
+            // 가로선들
+            c.fillStyle = accent + "aa";
+            [-s*.55, -s*.35, -s*.15].forEach(yy => {
+                c.fillRect(-s*.5, yy + s*.75, s*1.0, 1.2);
+            });
+            // 칩 표시
+            c.fillStyle = accent;
+            c.beginPath(); c.roundRect(-s*.22, s*.6, s*.44, s*.3, 1); c.fill();
+            c.strokeStyle = color; c.lineWidth = .5;
+            c.beginPath(); c.moveTo(-s*.11, s*.6); c.lineTo(-s*.11, s*.9); c.stroke();
+            c.beginPath(); c.moveTo(0, s*.6); c.lineTo(0, s*.9); c.stroke();
+            c.beginPath(); c.moveTo(s*.11, s*.6); c.lineTo(s*.11, s*.9); c.stroke();
+            break;
+
+        case "jumin": // 주민등록증 - ID카드
+            c.fillStyle = color;
+            c.beginPath(); c.roundRect(-s*1.05, -s*.65, s*2.1, s*1.3, 2); c.fill();
+            // 태극 원
+            c.fillStyle = accent;
+            c.beginPath(); c.arc(-s*.55, 0, s*.38, 0, Math.PI*2); c.fill();
+            c.fillStyle = "#dc2626";
+            c.beginPath(); c.arc(-s*.55, -s*.19, s*.19, 0, Math.PI); c.fill();
+            c.fillStyle = "#1d4ed8";
+            c.beginPath(); c.arc(-s*.55, s*.19, s*.19, Math.PI, Math.PI*2); c.fill();
+            // 텍스트 줄
+            c.fillStyle = accent + "cc";
+            [s*-.28, s*.0, s*.28].forEach(yy => {
+                c.fillRect(-s*.05, yy-1, s*.95, 2);
+            });
+            break;
+
+        case "goldbar": // 골드바
+            // 그림자
+            c.fillStyle = "rgba(0,0,0,0.3)";
+            c.beginPath(); c.ellipse(s*.1, s*.85, s*.85, s*.28, 0, 0, Math.PI*2); c.fill();
+            // 바 본체
+            const grd = c.createLinearGradient(-s*.9, -s*.5, s*.9, s*.5);
+            grd.addColorStop(0, "#fbbf24");
+            grd.addColorStop(0.4, "#fef08a");
+            grd.addColorStop(0.6, "#f59e0b");
+            grd.addColorStop(1, "#92400e");
+            c.fillStyle = grd;
+            c.beginPath();
+            c.moveTo(-s*.7, -s*.6); c.lineTo(s*.7, -s*.6);
+            c.lineTo(s*.9, -s*.1); c.lineTo(s*.9, s*.5);
+            c.lineTo(-s*.9, s*.5); c.lineTo(-s*.9, -s*.1);
+            c.closePath(); c.fill();
+            // 상단면
+            const topG = c.createLinearGradient(-s*.7, -s*.6, s*.7, -s*.1);
+            topG.addColorStop(0, "#fef9c3");
+            topG.addColorStop(1, "#fde68a");
+            c.fillStyle = topG;
+            c.beginPath();
+            c.moveTo(-s*.7, -s*.6); c.lineTo(s*.7, -s*.6);
+            c.lineTo(s*.9, -s*.1); c.lineTo(-s*.9, -s*.1);
+            c.closePath(); c.fill();
+            // 양각 테두리
+            c.strokeStyle = "#92400e"; c.lineWidth = .7;
+            c.beginPath(); c.roundRect(-s*.75, -s*.05, s*1.5, s*.45, 1); c.stroke();
+            // 금 텍스트
+            c.fillStyle = "#78350f"; c.font = `bold ${s*.65}px sans-serif`;
+            c.textAlign = "center"; c.textBaseline = "middle";
+            c.fillText("Au", 0, s*.22);
+            break;
+
+        case "silverbar": // 실버바
+            const sgrd = c.createLinearGradient(-s*.9, -s*.5, s*.9, s*.5);
+            sgrd.addColorStop(0, "#94a3b8");
+            sgrd.addColorStop(0.4, "#f1f5f9");
+            sgrd.addColorStop(0.6, "#cbd5e1");
+            sgrd.addColorStop(1, "#334155");
+            c.fillStyle = sgrd;
+            c.beginPath();
+            c.moveTo(-s*.7, -s*.6); c.lineTo(s*.7, -s*.6);
+            c.lineTo(s*.9, -s*.1); c.lineTo(s*.9, s*.5);
+            c.lineTo(-s*.9, s*.5); c.lineTo(-s*.9, -s*.1);
+            c.closePath(); c.fill();
+            const stopG = c.createLinearGradient(-s*.7, -s*.6, s*.7, -s*.1);
+            stopG.addColorStop(0, "#f8fafc"); stopG.addColorStop(1, "#e2e8f0");
+            c.fillStyle = stopG;
+            c.beginPath();
+            c.moveTo(-s*.7, -s*.6); c.lineTo(s*.7, -s*.6);
+            c.lineTo(s*.9, -s*.1); c.lineTo(-s*.9, -s*.1);
+            c.closePath(); c.fill();
+            c.strokeStyle = "#475569"; c.lineWidth = .7;
+            c.beginPath(); c.roundRect(-s*.75, -s*.05, s*1.5, s*.45, 1); c.stroke();
+            c.fillStyle = "#334155"; c.font = `bold ${s*.65}px sans-serif`;
+            c.textAlign = "center"; c.textBaseline = "middle";
+            c.fillText("Ag", 0, s*.22);
+            break;
+
+        case "jiyeok": // 지역사랑 상품권 - 상품권 느낌
+            c.fillStyle = color;
+            c.beginPath(); c.roundRect(-s*.95, -s*.65, s*1.9, s*1.3, 3); c.fill();
+            // 물결 무늬
+            c.strokeStyle = accent + "66"; c.lineWidth = .8; c.setLineDash([2,2]);
+            c.beginPath(); c.roundRect(-s*.8, -s*.5, s*1.6, s*1.0, 2); c.stroke();
+            c.setLineDash([]);
+            // 하트 + 지역 표시
+            c.fillStyle = accent;
+            c.font = `${s*.85}px sans-serif`; c.textAlign="center"; c.textBaseline="middle";
+            c.fillText("♥", 0, s*.05);
+            c.fillStyle = accent + "cc"; c.font = `bold ${s*.45}px 'Noto Sans KR',sans-serif`;
+            c.fillText("지역사랑", 0, -s*.38);
+            break;
+
+        case "onnuri": // 온누리 상품권
+            c.fillStyle = color;
+            c.beginPath(); c.roundRect(-s*.95, -s*.65, s*1.9, s*1.3, 3); c.fill();
+            c.strokeStyle = accent + "55"; c.lineWidth = .8; c.setLineDash([2,2]);
+            c.beginPath(); c.roundRect(-s*.8, -s*.5, s*1.6, s*1.0, 2); c.stroke();
+            c.setLineDash([]);
+            // 오누리 전통 무늬 (원)
+            c.strokeStyle = accent; c.lineWidth = 1;
+            c.beginPath(); c.arc(0, s*.1, s*.38, 0, Math.PI*2); c.stroke();
+            c.fillStyle = accent + "44"; c.fill();
+            c.fillStyle = accent; c.font = `bold ${s*.38}px 'Noto Sans KR',sans-serif`;
+            c.textAlign="center"; c.textBaseline="middle";
+            c.fillText("온누리", 0, s*.1);
+            break;
+
+        case "hunjang": // 훈장
+            // 별 형태
+            c.fillStyle = color;
+            for(let i=0;i<5;i++){
+                const a=-Math.PI/2+(i/5)*Math.PI*2;
+                const a2=a+Math.PI/5;
+                c.beginPath();
+                c.moveTo(Math.cos(a)*s*.85, Math.sin(a)*s*.85);
+                c.lineTo(Math.cos(a2)*s*.38, Math.sin(a2)*s*.38);
+                c.lineTo(Math.cos(a+Math.PI*2/5)*s*.85, Math.sin(a+Math.PI*2/5)*s*.85);
+                c.lineTo(0,0); c.closePath(); c.fill();
+            }
+            // 중앙 원
+            c.fillStyle = accent;
+            c.beginPath(); c.arc(0, 0, s*.35, 0, Math.PI*2); c.fill();
+            c.fillStyle = color; c.font = `bold ${s*.55}px sans-serif`;
+            c.textAlign="center"; c.textBaseline="middle";
+            c.fillText("★", 0, s*.04);
+            // 리본
+            c.fillStyle = "#dc2626";
+            c.beginPath(); c.moveTo(-s*.22, s*.85); c.lineTo(0, s*.4); c.lineTo(s*.22, s*.85);
+            c.lineTo(s*.1, s*1.05); c.lineTo(0, s*.85); c.lineTo(-s*.1, s*1.05); c.closePath(); c.fill();
+            break;
+
+        case "medal": // 메달
+            // 리본
+            c.fillStyle = "#3b82f6";
+            c.fillRect(-s*.25, -s*1.0, s*.5, s*.6);
+            c.fillStyle = "#1d4ed8";
+            c.fillRect(-s*.25, -s*.7, s*.5, s*.28);
+            // 메달 원
+            const mGrd = c.createRadialGradient(-s*.2, -s*.2, s*.05, 0, 0, s*.72);
+            mGrd.addColorStop(0, "#fef9c3");
+            mGrd.addColorStop(0.5, "#fbbf24");
+            mGrd.addColorStop(1, "#92400e");
+            c.fillStyle = mGrd;
+            c.beginPath(); c.arc(0, s*.2, s*.72, 0, Math.PI*2); c.fill();
+            c.strokeStyle = "#78350f"; c.lineWidth = 1;
+            c.beginPath(); c.arc(0, s*.2, s*.72, 0, Math.PI*2); c.stroke();
+            // 별
+            c.fillStyle = "#92400e"; c.font = `${s*.75}px sans-serif`;
+            c.textAlign="center"; c.textBaseline="middle";
+            c.fillText("★", 0, s*.22);
+            break;
+
+        case "upyo": // 우표
+            // 우표 테두리 (들쭉날쭉)
+            c.fillStyle = "#fff";
+            c.beginPath(); c.roundRect(-s*.95, -s*.95, s*1.9, s*1.9, 1); c.fill();
+            // 들쭉날쭉 효과
+            c.fillStyle = "rgba(4,14,32,0.9)";
+            const tStep = s*.22;
+            for(let xx=-s*.95;xx<s*.9;xx+=tStep){
+                c.beginPath(); c.arc(xx+tStep/2, -s*.95, tStep/2.6, 0, Math.PI*2); c.fill();
+                c.beginPath(); c.arc(xx+tStep/2,  s*.95, tStep/2.6, 0, Math.PI*2); c.fill();
+            }
+            for(let yy=-s*.95;yy<s*.9;yy+=tStep){
+                c.beginPath(); c.arc(-s*.95, yy+tStep/2, tStep/2.6, 0, Math.PI*2); c.fill();
+                c.beginPath(); c.arc( s*.95, yy+tStep/2, tStep/2.6, 0, Math.PI*2); c.fill();
+            }
+            // 우표 내용
+            c.fillStyle = color + "cc";
+            c.fillRect(-s*.65, -s*.65, s*1.3, s*1.3);
+            // 풍경 (산)
+            c.fillStyle = "#16a34a";
+            c.beginPath(); c.moveTo(-s*.55, s*.35); c.lineTo(-s*.2, -s*.1); c.lineTo(s*.1, s*.15); c.lineTo(s*.35, -s*.25); c.lineTo(s*.6, s*.35); c.closePath(); c.fill();
+            c.fillStyle = "#60a5fa";
+            c.fillRect(-s*.65, -s*.65, s*1.3, s*.38);
+            // 우표 액면
+            c.fillStyle = "#fff"; c.font = `bold ${s*.38}px sans-serif`;
+            c.textAlign="center"; c.textBaseline="middle";
+            c.fillText("★", 0, -s*.47);
+            break;
+
+        case "mobshin": // 모바일 신분증
+            // 스마트폰
+            c.fillStyle = "#1e293b";
+            c.beginPath(); c.roundRect(-s*.75, -s*1.05, s*1.5, s*2.1, 4); c.fill();
+            c.strokeStyle = "#475569"; c.lineWidth = .8;
+            c.beginPath(); c.roundRect(-s*.75, -s*1.05, s*1.5, s*2.1, 4); c.stroke();
+            // 화면
+            c.fillStyle = color;
+            c.beginPath(); c.roundRect(-s*.6, -s*.88, s*1.2, s*1.65, 2); c.fill();
+            // 신분증 아이콘
+            c.fillStyle = accent + "dd";
+            c.beginPath(); c.roundRect(-s*.45, -s*.72, s*.9, s*.62, 1); c.fill();
+            // 얼굴 원
+            c.fillStyle = color + "88";
+            c.beginPath(); c.arc(-s*.25, -s*.44, s*.18, 0, Math.PI*2); c.fill();
+            // 줄
+            c.fillStyle = color + "88";
+            [s*-.18, s*.0, s*.18].forEach(yy => c.fillRect(-s*.05, yy - s*.65, s*.42, 1.5));
+            // 하단 버튼
+            c.fillStyle = "#475569";
+            c.beginPath(); c.arc(0, s*.9, s*.12, 0, Math.PI*2); c.fill();
+            break;
+
+        case "mobhwa": // 모바일 지역화폐
+            c.fillStyle = "#1e293b";
+            c.beginPath(); c.roundRect(-s*.75, -s*1.05, s*1.5, s*2.1, 4); c.fill();
+            c.strokeStyle = "#475569"; c.lineWidth = .8;
+            c.beginPath(); c.roundRect(-s*.75, -s*1.05, s*1.5, s*2.1, 4); c.stroke();
+            // 화면
+            c.fillStyle = color;
+            c.beginPath(); c.roundRect(-s*.6, -s*.88, s*1.2, s*1.65, 2); c.fill();
+            // C 로고 (Chak 스타일)
+            c.strokeStyle = accent; c.lineWidth = 2.5;
+            c.beginPath(); c.arc(0, -s*.12, s*.42, Math.PI*.25, Math.PI*1.75); c.stroke();
+            c.fillStyle = accent;
+            c.beginPath(); c.arc(0, -s*.12, s*.18, 0, Math.PI*2); c.fill();
+            // 동전들
+            c.fillStyle = "#fbbf24";
+            [[-s*.3, s*.7], [0, s*.58], [s*.3, s*.7]].forEach(([xx,yy]) => {
+                c.beginPath(); c.ellipse(xx, yy, s*.16, s*.1, 0, 0, Math.PI*2); c.fill();
+            });
+            c.fillStyle = "#475569";
+            c.beginPath(); c.arc(0, s*.9, s*.12, 0, Math.PI*2); c.fill();
+            break;
+
+        default:
+            c.fillStyle = color;
+            c.beginPath(); c.arc(0, 0, s*.8, 0, Math.PI*2); c.fill();
+            break;
+    }
+    c.restore();
 }
 
 function renderTerrain() {
@@ -916,13 +1338,13 @@ function renderPlayerR() {
         ctx.shadowBlur=20;
         ctx.shadowColor = selectedChar==="hunmin"?"#10b981":selectedChar==="sunsik"?"#3b82f6":"#f59e0b";
         ctx.strokeStyle = selectedChar==="hunmin"?"#34d399":selectedChar==="sunsik"?"#60a5fa":"#fbbf24";
-        ctx.lineWidth=3;
-        ctx.beginPath(); ctx.arc(0,0,42,0,Math.PI*2); ctx.stroke();
+        ctx.lineWidth=2;
+        ctx.beginPath(); ctx.arc(0,0,24,0,Math.PI*2); ctx.stroke();
         ctx.shadowBlur=0;
     }
 
     // Draw character image (transparent PNG)
-    const sz = 80;
+    const sz = 40;
     const charImgEl = CHAR_IMGS[selectedChar];
     if (charImgEl && charImgEl.complete && charImgEl.naturalWidth > 0) {
         const aspect = charImgEl.naturalHeight / charImgEl.naturalWidth;
@@ -931,8 +1353,8 @@ function renderPlayerR() {
     } else {
         const colors = {hunmin:"#2d5a27",sunsik:"#475569",daim:"#ca8a04"};
         ctx.fillStyle = colors[selectedChar] || "#2d5a27";
-        ctx.beginPath(); ctx.arc(0,-10,20,0,Math.PI*2); ctx.fill();
-        ctx.beginPath(); ctx.moveTo(-16,10); ctx.lineTo(16,10); ctx.lineTo(20,45); ctx.lineTo(-20,45); ctx.closePath(); ctx.fill();
+        ctx.beginPath(); ctx.arc(0,-5,10,0,Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(-8,5); ctx.lineTo(8,5); ctx.lineTo(10,22); ctx.lineTo(-10,22); ctx.closePath(); ctx.fill();
     }
     ctx.restore();
 }
