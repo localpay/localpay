@@ -27,7 +27,7 @@
     <div class="bg-[#091630]/95 border border-sky-900/50 rounded-2xl p-4 shadow-lg">
         <h3 class="text-xs font-black text-slate-300 mb-2.5 flex items-center gap-1.5"><span class="text-sky-400 text-sm">👤</span> 참가 사원 정보 등록</h3>
         <div class="flex gap-2">
-            <input id="input-name" type="text" value="김조달" placeholder="이름 입력" class="w-1/2 px-3.5 py-2.5 bg-[#030918] border border-sky-900/40 rounded-xl text-xs focus:outline-none focus:border-sky-500 text-white font-bold">
+            <input id="input-name" type="text" value="조조달" placeholder="이름 입력" class="w-1/2 px-3.5 py-2.5 bg-[#030918] border border-sky-900/40 rounded-xl text-xs focus:outline-none focus:border-sky-500 text-white font-bold">
             <select id="select-dept" class="w-1/2 px-3.5 py-2.5 bg-[#030918] border border-sky-900/40 rounded-xl text-xs focus:outline-none focus:border-sky-500 text-white font-bold">
                 <option>본사</option><option>화폐본부</option><option>제지본부</option><option>ID본부</option><option>기술연구원</option>
             </select>
@@ -79,7 +79,7 @@
             <canvas id="hud-portrait" width="36" height="36" class="w-9 h-9 rounded-full border border-sky-500 bg-[#030d22]"></canvas>
             <div>
                 <div class="flex items-center gap-1">
-                    <span id="hud-name" class="text-xs font-black text-slate-100">김조달</span>
+                    <span id="hud-name" class="text-xs font-black text-slate-100">조조달</span>
                     <span id="hud-dept" class="text-[9px] bg-sky-600 px-1 py-0.5 rounded text-white font-bold leading-none">본사</span>
                 </div>
                 <div class="w-20 h-1.5 bg-[#051126] rounded-full overflow-hidden mt-1 border border-sky-950">
@@ -208,7 +208,7 @@
         <div id="reg-container" class="mt-4 bg-[#091630] border border-sky-900 rounded-2xl p-3.5 flex justify-between items-center">
             <div class="text-left">
                 <span class="text-[9px] text-slate-400 block font-bold">기록을 전당에 등록!</span>
-                <span id="reg-info" class="text-xs text-slate-200 font-bold">김조달 (본사)</span>
+                <span id="reg-info" class="text-xs text-slate-200 font-bold">조조달 (본사)</span>
             </div>
             <button onclick="submitScore()" class="touch-manipulation px-3.5 py-2.5 bg-gradient-to-r from-sky-500 to-blue-500 text-slate-950 font-black text-xs rounded-xl active:scale-95">등재하기</button>
         </div>
@@ -246,6 +246,8 @@
 </div>
 </div>
 
+<!-- 민감 설정값은 token.js 에서 로드 (절대 Git에 커밋하지 마세요) -->
+<script src="token.js"></script>
 <script>
 // ============================================================
 // CONSTANTS & DATA
@@ -285,8 +287,8 @@ const DEFAULT_RANKINGS = [
     {name:"서영훈",dept:"본사",score:38400,date:"2026-06-08"},
     {name:"정은교",dept:"본사",score:29500,date:"2026-06-09"},
     {name:"이보라",dept:"본사",score:24300,date:"2026-06-07"},
-    {name:"박찬혁",dept:"본사",score:21100,date:"2026-06-09"},
-    {name:"이규화",dept:"본사",score:18900,date:"2026-06-06"}
+    {name:"이규화",dept:"본사",score:21100,date:"2026-06-09"},
+    {name:"박찬혁",dept:"본사",score:18900,date:"2026-06-06"}
 ];
 const DEFAULT_DEPT_STATS = [
     {name:"본사",total:39500,members:21},{name:"화폐본부",total:38400,members:10},
@@ -311,17 +313,12 @@ async function loadScoreData() {
 }
 
 // ── GitHub API 설정 ──────────────────────────────────────────
-// ※ 아래 값을 실제 환경에 맞게 수정하세요:
-//   GITHUB_TOKEN  : GitHub Personal Access Token (repo 권한)
-//   GITHUB_OWNER  : 저장소 소유자 (예: "localpay")
-//   GITHUB_REPO   : 저장소 이름   (예: "localpay")
-//   GITHUB_PATH   : 파일 경로     (예: "score.txt")
+// ※ 민감 정보는 token.js 파일에서 불러옵니다.
+//   token.js 파일이 같은 폴더에 있어야 하며, .gitignore에 반드시 추가하세요.
 // ─────────────────────────────────────────────────────────────
-const GITHUB_TOKEN = "";          // ← 여기에 토큰 입력
-const GITHUB_OWNER = "localpay";
-const GITHUB_REPO  = "localpay";
-const GITHUB_PATH  = "score.txt";
-const GITHUB_API   = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_PATH}`;
+// GITHUB_TOKEN, GITHUB_OWNER, GITHUB_REPO, GITHUB_PATH 는
+// token.js 에서 전역 변수로 선언됩니다.
+const GITHUB_API = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_PATH}`;
 
 async function getFileSha() {
     try {
@@ -587,7 +584,7 @@ function selectCharacter(id) {
 // ============================================================
 function startGame() {
     if (isPlaying) return;
-    const name = (document.getElementById("input-name").value || "김조달").trim();
+    const name = (document.getElementById("input-name").value || "조조달").trim();
     const dept = document.getElementById("select-dept").value;
     document.getElementById("hud-name").textContent = name;
     document.getElementById("hud-dept").textContent = dept;
@@ -1052,7 +1049,7 @@ function endGame() {
 }
 
 async function submitScore() {
-    const name = (document.getElementById("input-name").value || "김조달").trim();
+    const name = (document.getElementById("input-name").value || "조조달").trim();
     const dept = document.getElementById("select-dept").value;
     RANKINGS.push({name, dept, score: Math.round(gameScore), date: new Date().toISOString().split("T")[0]});
     const d = DEPT_STATS.find(x => x.name === dept);
