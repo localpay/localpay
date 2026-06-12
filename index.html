@@ -365,16 +365,10 @@ const JSONBIN_BIN_ID  = "6a2a60ecda38895dfeaba5ce";
 const JSONBIN_API_KEY = "$2a$10$m7G5pXX3trEYFVwemmNXYun0/A8blUKscu24twOEnkvCowx3BjfUm";
 const JSONBIN_URL = `https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`;
 
-const DEFAULT_RANKINGS = [
-    {name:"서영훈",dept:"본사",score:38400,date:"2026-06-08"},
-    {name:"정은교",dept:"본사",score:29500,date:"2026-06-09"},
-    {name:"이보라",dept:"본사",score:24300,date:"2026-06-07"},
-    {name:"이규화",dept:"본사",score:21100,date:"2026-06-09"},
-    {name:"박찬혁",dept:"본사",score:18900,date:"2026-06-06"}
-];
+const DEFAULT_RANKINGS = [];
 const DEFAULT_DEPT_STATS = [
-    {name:"본사",total:39500,members:21},{name:"화폐본부",total:38400,members:10},
-    {name:"기술연구원",total:29500,members:13},{name:"ID본부",total:21100,members:8},{name:"제지본부",total:18900,members:16}
+    {name:"본사",total:0,members:0},{name:"화폐본부",total:0,members:0},
+    {name:"기술연구원",total:0,members:0},{name:"ID본부",total:0,members:0},{name:"제지본부",total:0,members:0}
 ];
 
 let _scoreCache = null;
@@ -426,9 +420,14 @@ let RANKINGS = JSON.parse(JSON.stringify(DEFAULT_RANKINGS));
 let DEPT_STATS = JSON.parse(JSON.stringify(DEFAULT_DEPT_STATS));
 
 // 비동기로 원격 데이터 로드
+const FAKE_NAMES = ["서영훈","정은교","이보라","이규화","박찬혁"];
 (async function() {
     const data = await loadScoreData();
-    if (data.rankings) RANKINGS = data.rankings;
+    if (data.rankings) {
+        // 구 가상 데이터만 있을 경우 빈 배열로 처리
+        const realEntries = data.rankings.filter(r => !FAKE_NAMES.includes(r.name));
+        RANKINGS = realEntries.length > 0 ? data.rankings : [];
+    }
     if (data.deptStats) DEPT_STATS = data.deptStats;
 })();
 
@@ -1656,9 +1655,10 @@ function endGame() {
 async function submitScore() {
     const name = (document.getElementById("input-name").value || "조조달").trim();
     const dept = document.getElementById("select-dept").value;
-    RANKINGS.push({name, dept, score: Math.round(gameScore), date: new Date().toISOString().split("T")[0]});
+    const finalScore = Math.round(accumulatedScore + gameScore);
+    RANKINGS.push({name, dept, score: finalScore, date: new Date().toISOString().split("T")[0]});
     const d = DEPT_STATS.find(x => x.name === dept);
-    if (d) { d.total += Math.round(gameScore); d.members++; }
+    if (d) { d.total += finalScore; d.members++; }
     await saveScoreData({rankings: RANKINGS, deptStats: DEPT_STATS});
     document.getElementById("reg-container").classList.add("hidden");
     playSound("skill");
@@ -1687,6 +1687,10 @@ function changeTab(id) {
 function renderRankings() {
     const c = document.getElementById("ranking-indiv");
     const sorted = [...RANKINGS].sort((a,b)=>b.score-a.score);
+    if (sorted.length === 0) {
+        c.innerHTML = `<div class="text-center py-10 text-slate-500 text-xs">아직 등록된 점수가 없습니다.<br>첫 번째 기록을 남겨보세요! 🏃</div>`;
+        return;
+    }
     c.innerHTML = sorted.map((r,i) => {
         const medals = ["🥇","🥈","🥉"];
         const badge = i < 3 ? medals[i] : `<span class="text-xs text-slate-500">${i+1}위</span>`;
@@ -1802,7 +1806,7 @@ function getBattleUrl() {
 
 function getShareText() {
     if (shareMode === "battle") {
-        const score = Math.round(gameScore);
+        const score = Math.round(accumulatedScore + gameScore);
         const name = (document.getElementById("input-name").value || "조조달").trim();
         return `⚔️ [조팸스 런 배틀] ${name}이(가) ${score.toLocaleString()} SVP 점수로 도전장을 보냈습니다! 당신은 이길 수 있나요?`;
     }
