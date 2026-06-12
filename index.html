@@ -19,7 +19,10 @@
 
 <!-- MAIN MENU -->
 <div id="screen-menu" class="absolute inset-0 z-10 flex flex-col justify-between p-5 bg-gradient-to-b from-[#0b1b3d] via-[#051126] to-[#020617]">
-    <div class="text-center pt-2">
+    <div class="text-center pt-2 relative">
+        <button onclick="openShareModal('game')" class="touch-manipulation absolute right-0 top-0 flex items-center gap-1 px-2.5 py-1.5 bg-sky-500/15 border border-sky-500/40 rounded-xl text-[10px] font-black text-sky-400 active:scale-95 hover:bg-sky-500/25 transition-all">
+            <span class="text-sm">📣</span><span>게임공유</span>
+        </button>
         <div class="inline-block px-4 py-1 bg-sky-500/10 border border-sky-500/30 rounded-full text-[11px] text-sky-400 font-bold mb-2">한국조폐공사 공공구매 의식 고취 프로젝트</div>
         <h1 class="text-3xl font-black tracking-tight text-white leading-tight">조팸스 런!<br><span class="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-blue-400 to-indigo-400 font-extrabold retro-title">공공구매 대작전</span></h1>
         <p class="text-[11px] text-sky-300 mt-1 font-medium">전국 조폐공사 거점을 완주하며 공공구매 아이템을 수집하세요!</p>
@@ -68,6 +71,7 @@
     </div>
     <div class="pb-2">
         <button onclick="startGame()" class="touch-manipulation w-full py-4 bg-gradient-to-r from-sky-400 via-blue-500 to-indigo-600 active:scale-[0.97] rounded-2xl font-black text-base text-white shadow-xl">⚡ 가치 원정대 출발! (START)</button>
+        <button onclick="openShareModal('battle')" class="touch-manipulation w-full mt-2 py-3 bg-gradient-to-r from-rose-500/80 to-pink-600/80 border border-rose-500/60 active:scale-[0.97] rounded-2xl font-black text-sm text-white shadow-lg flex items-center justify-center gap-2">⚔️ 내 점수 자랑하기 (배틀 초대)</button>
         <div class="mt-3 flex items-center justify-center gap-1.5">
             <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-sky-500/10 border border-sky-500/25 rounded-full">
                 <span class="text-slate-500 text-[10px]">⚙️</span>
@@ -103,6 +107,9 @@
         <div class="text-right">
             <span class="text-[8px] text-slate-400 block font-bold">SVP</span>
             <span id="hud-score" class="text-base font-black text-sky-400 retro-title">0</span>
+            <div id="hud-battle-info" class="hidden mt-0.5 text-[8px] text-rose-400 font-bold leading-tight">
+                <span>⚔️ </span><span id="hud-opp-score"></span>
+            </div>
         </div>
     </div>
 
@@ -231,9 +238,60 @@
             <button onclick="submitScore()" class="touch-manipulation px-3.5 py-2.5 bg-gradient-to-r from-sky-500 to-blue-500 text-slate-950 font-black text-xs rounded-xl active:scale-95">등재하기</button>
         </div>
     </div>
-    <div class="pt-4 grid grid-cols-2 gap-3 safe-pb mt-2">
+    <div class="pt-4 grid grid-cols-2 gap-3 mt-2">
         <button onclick="showScreen('menu')" class="touch-manipulation py-3 bg-slate-900 border border-slate-800 rounded-xl text-xs font-black">다시 도전</button>
         <button onclick="showScreen('leaderboard')" class="touch-manipulation py-3 bg-gradient-to-r from-sky-600 to-blue-600 rounded-xl text-xs font-black">🏆 전당 보기</button>
+    </div>
+    <button onclick="openShareModal('battle')" class="touch-manipulation w-full mt-2 py-3 bg-gradient-to-r from-rose-500 to-pink-600 rounded-xl text-xs font-black safe-pb flex items-center justify-center gap-2 shadow-lg">⚔️ 이 점수로 배틀 초대 링크 보내기</button>
+</div>
+
+<!-- SHARE / BATTLE MODAL -->
+<div id="share-modal" class="hidden fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-6">
+    <div class="bg-[#050e24] border border-sky-900/60 w-full max-w-sm rounded-3xl p-5 shadow-2xl">
+        <div class="flex items-center justify-between mb-4">
+            <div>
+                <span id="share-modal-badge" class="text-[9px] bg-sky-500/10 border border-sky-500/20 text-sky-400 px-2 py-0.5 rounded-full font-bold">게임 공유</span>
+                <h3 id="share-modal-title" class="text-base font-black text-white mt-1">게임 알리기</h3>
+                <p id="share-modal-sub" class="text-[10px] text-slate-400 mt-0.5">친구들에게 게임을 소개해 보세요!</p>
+            </div>
+            <button onclick="closeShareModal()" class="w-8 h-8 flex items-center justify-center rounded-xl bg-slate-900 border border-slate-700 text-slate-400 font-bold text-sm">✕</button>
+        </div>
+        <div id="share-battle-score" class="hidden mb-4 bg-rose-500/10 border border-rose-500/30 rounded-2xl p-3 text-center">
+            <div class="text-[10px] text-rose-300 font-bold mb-1">⚔️ 내 도전 점수</div>
+            <div id="share-score-display" class="text-2xl font-black text-white retro-title">0 SVP</div>
+            <div id="share-name-display" class="text-[10px] text-slate-400 mt-0.5"></div>
+        </div>
+        <div class="text-[10px] text-slate-500 font-bold mb-2 text-center">공유 수단을 선택하세요</div>
+        <div class="grid grid-cols-3 gap-2">
+            <button onclick="doShare('sms')" class="touch-manipulation flex flex-col items-center gap-1.5 p-3 bg-[#0a1e40] border border-sky-900/50 rounded-2xl active:scale-95">
+                <span class="text-2xl">💬</span><span class="text-[10px] font-bold text-slate-300">문자</span>
+            </button>
+            <button onclick="doShare('kakao')" class="touch-manipulation flex flex-col items-center gap-1.5 p-3 bg-[#3a2f00] border border-yellow-700/50 rounded-2xl active:scale-95">
+                <span class="text-2xl">💛</span><span class="text-[10px] font-bold text-yellow-300">카카오톡</span>
+            </button>
+            <button onclick="doShare('email')" class="touch-manipulation flex flex-col items-center gap-1.5 p-3 bg-[#0a1e40] border border-sky-900/50 rounded-2xl active:scale-95">
+                <span class="text-2xl">📧</span><span class="text-[10px] font-bold text-slate-300">이메일</span>
+            </button>
+            <button onclick="doShare('twitter')" class="touch-manipulation flex flex-col items-center gap-1.5 p-3 bg-[#0a1e40] border border-sky-900/50 rounded-2xl active:scale-95">
+                <span class="text-2xl">🐦</span><span class="text-[10px] font-bold text-slate-300">X(트위터)</span>
+            </button>
+            <button onclick="doShare('line')" class="touch-manipulation flex flex-col items-center gap-1.5 p-3 bg-[#042a05] border border-green-800/50 rounded-2xl active:scale-95">
+                <span class="text-2xl">💚</span><span class="text-[10px] font-bold text-green-300">라인</span>
+            </button>
+            <button onclick="doShare('copy')" class="touch-manipulation flex flex-col items-center gap-1.5 p-3 bg-[#0a1e40] border border-sky-900/50 rounded-2xl active:scale-95">
+                <span class="text-2xl">🔗</span><span class="text-[10px] font-bold text-slate-300">링크 복사</span>
+            </button>
+        </div>
+        <div id="share-copy-msg" class="hidden mt-3 text-center text-[11px] text-emerald-400 font-bold bg-emerald-500/10 border border-emerald-500/30 rounded-xl py-2">✅ 링크가 클립보드에 복사되었습니다!</div>
+    </div>
+</div>
+
+<!-- BATTLE WELCOME BANNER -->
+<div id="battle-banner" class="hidden absolute top-0 left-0 right-0 z-40 bg-gradient-to-r from-rose-600 to-pink-600 p-3 shadow-lg">
+    <div class="text-center">
+        <div class="text-[10px] font-bold text-rose-100">⚔️ 배틀 도전!</div>
+        <div id="battle-banner-text" class="text-xs font-black text-white"></div>
+        <div id="battle-opponent-score" class="text-[11px] text-rose-200 font-bold mt-0.5"></div>
     </div>
 </div>
 
@@ -611,6 +669,15 @@ function startGame() {
     drawHUDPortrait(selectedChar);
     resetSkillBtn();
     initSidePanels();
+
+    // 배틀 모드 HUD
+    if (battleOpponentData) {
+        document.getElementById("hud-battle-info").classList.remove("hidden");
+        document.getElementById("hud-opp-score").textContent = battleOpponentData.name + " " + battleOpponentData.score.toLocaleString() + "SVP";
+    } else {
+        document.getElementById("hud-battle-info").classList.add("hidden");
+    }
+
     isPlaying = true;
     playBGM(); // BGM 시작
     if (rafId) cancelAnimationFrame(rafId);
@@ -781,29 +848,30 @@ function updatePlayer() {
 
 function updateObstacles() {
     if (frame % 85 === 0 && Math.random() < 0.75) {
-        obstacles.push({x:getLaneX(Math.floor(Math.random()*3)), y:-60, type:Math.random()<0.5?"low":"high", w:54, h:0});
-        obstacles[obstacles.length-1].h = obstacles[obstacles.length-1].type==="low"?32:52;
+        // 장애물 타입: "hurdle"(낮은 허들, 슬라이드로 통과) 또는 "high"(높은 장벽, 점프로 통과)
+        const type = Math.random() < 0.6 ? "hurdle" : "high";
+        obstacles.push({x:getLaneX(Math.floor(Math.random()*3)), y:-60, type, w:54, h: type==="hurdle" ? 36 : 52});
     }
     for (let i = obstacles.length-1; i >= 0; i--) {
         const o = obstacles[i];
         o.y += gameSpeed;
-        const pY = playerY - jumpOff;          // 캐릭터 발 Y (아래쪽)
-        const pTop = pY - (isSliding ? 22 : 38); // 캐릭터 머리 Y (위쪽) — sz=40 기준
-        const hitW = 11;                        // 가로 히트박스 반폭 (sz=40의 약 55%)
+        const pY = playerY - jumpOff;
+        const pTop = pY - (isSliding ? 22 : 38);
+        const hitW = 11;
         const oTop = o.y - o.h / 2;
         const oBot = o.y + o.h / 2;
 
-        if (Math.abs(playerX - o.x) < hitW + o.w/2 - 4) {  // 가로 겹침 (양쪽 4px 관용)
-            const vertOverlap = pTop < oBot && pY > oTop;    // 세로 겹침
+        if (Math.abs(playerX - o.x) < hitW + o.w/2 - 4) {
+            const vertOverlap = pTop < oBot && pY > oTop;
             if (vertOverlap) {
                 if (isSkillActive && selectedChar === "sunsik") {
                     playSound("crash"); createExplosion(o.x, o.y, "#3b82f6");
                     obstacles.splice(i, 1); gameScore += 400; continue;
                 }
-                // low(땅 장애물): 지면 근처일 때만 충돌, 살짝만 떠도 통과
-                // high(공중 장애물): 슬라이드 안 했을 때만 충돌
-                const hit = (o.type === "low"  && jumpOff < 8) ||
-                            (o.type === "high" && !isSliding);
+                // hurdle: 슬라이드로 통과, 점프로도 통과(jumpOff>8)
+                // high: 슬라이드로 통과
+                const hit = (o.type === "hurdle" && !isSliding && jumpOff < 8) ||
+                            (o.type === "high"   && !isSliding);
                 if (hit) { playSound("crash"); endGame(); return; }
             }
         }
@@ -1362,17 +1430,77 @@ function renderPlayerR() {
 function renderObstaclesR() {
     obstacles.forEach(o => {
         ctx.save(); ctx.translate(o.x, o.y);
-        if (o.type==="low") {
-            ctx.fillStyle="#b91c1c"; ctx.fillRect(-o.w/2,-o.h/2,o.w,o.h);
-            ctx.fillStyle="#fff"; ctx.fillRect(-o.w/2,-o.h/6,o.w,o.h/3);
-            ctx.fillStyle="#000"; ctx.font="900 10px monospace"; ctx.textAlign="center"; ctx.textBaseline="middle";
-            ctx.fillText("TNT",0,1);
+        if (o.type === "hurdle") {
+            // 허들: 좌우 기둥 + 수평 바
+            const hw = o.w, hh = o.h;
+            const postW = 7, barH = 8;
+            const groundY = hh / 2;
+            const barY = -hh / 2 + barH / 2;
+
+            // 기둥 그림자
+            ctx.fillStyle = "rgba(0,0,0,0.35)";
+            ctx.fillRect(-hw/2 + 3, groundY - hh + 4, postW, hh);
+            ctx.fillRect( hw/2 - postW + 1, groundY - hh + 4, postW, hh);
+
+            // 좌측 기둥
+            const leftGrd = ctx.createLinearGradient(-hw/2, 0, -hw/2 + postW, 0);
+            leftGrd.addColorStop(0, "#f97316"); leftGrd.addColorStop(1, "#ea580c");
+            ctx.fillStyle = leftGrd;
+            ctx.beginPath(); ctx.roundRect(-hw/2, barY, postW, hh, 3); ctx.fill();
+
+            // 우측 기둥
+            const rightGrd = ctx.createLinearGradient(hw/2 - postW, 0, hw/2, 0);
+            rightGrd.addColorStop(0, "#ea580c"); rightGrd.addColorStop(1, "#f97316");
+            ctx.fillStyle = rightGrd;
+            ctx.beginPath(); ctx.roundRect(hw/2 - postW, barY, postW, hh, 3); ctx.fill();
+
+            // 수평 바 (상단)
+            const barGrd = ctx.createLinearGradient(0, barY, 0, barY + barH);
+            barGrd.addColorStop(0, "#fbbf24"); barGrd.addColorStop(0.5, "#f59e0b"); barGrd.addColorStop(1, "#d97706");
+            ctx.fillStyle = barGrd;
+            ctx.beginPath(); ctx.roundRect(-hw/2, barY, hw, barH, 3); ctx.fill();
+
+            // 바 하이라이트
+            ctx.fillStyle = "rgba(255,255,255,0.35)";
+            ctx.fillRect(-hw/2 + 4, barY + 1.5, hw - 8, 2.5);
+
+            // 기둥 스트라이프 (운동 허들 느낌)
+            ctx.fillStyle = "rgba(255,255,255,0.2)";
+            for (let sy = barY + barH + 5; sy < groundY - 5; sy += 9) {
+                ctx.fillRect(-hw/2 + 1, sy, postW - 2, 4);
+                ctx.fillRect(hw/2 - postW + 1, sy, postW - 2, 4);
+            }
+
+            // 기둥 하단 받침대
+            ctx.fillStyle = "#c2410c";
+            ctx.beginPath(); ctx.roundRect(-hw/2 - 3, groundY - 6, postW + 6, 6, 2); ctx.fill();
+            ctx.beginPath(); ctx.roundRect(hw/2 - postW - 3, groundY - 6, postW + 6, 6, 2); ctx.fill();
+
+            // 슬라이드 힌트 (아래 빈 공간에 화살표)
+            ctx.fillStyle = "rgba(251,191,36,0.7)";
+            ctx.font = "bold 9px sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+            ctx.fillText("↓", 0, (barY + groundY) / 2 + 3);
+
         } else {
-            ctx.fillStyle="#311042"; ctx.fillRect(-o.w/2,-o.h/2,o.w,o.h);
-            ctx.fillStyle="#a855f7"; ctx.fillRect(-o.w/2,-o.h/2,4,o.h); ctx.fillRect(o.w/2-4,-o.h/2,4,o.h);
-            ctx.shadowBlur=10; ctx.shadowColor="#ef4444";
-            ctx.fillStyle="#ef4444"; ctx.fillRect(-o.w/2,-o.h/12,o.w,o.h/6);
-            ctx.shadowBlur=0;
+            // high 장벽: 높은 에너지 게이트 (원래 고공 장애물)
+            const hw = o.w, hh = o.h;
+            ctx.fillStyle = "#1e0636";
+            ctx.beginPath(); ctx.roundRect(-hw/2, -hh/2, hw, hh, 6); ctx.fill();
+            // 좌우 네온 기둥
+            const gateColors = ["#a855f7","#7c3aed"];
+            [[-hw/2, gateColors[0]], [hw/2-5, gateColors[1]]].forEach(([px, col]) => {
+                ctx.fillStyle = col;
+                ctx.beginPath(); ctx.roundRect(px, -hh/2, 5, hh, 3); ctx.fill();
+            });
+            // 중앙 에너지 바
+            ctx.shadowBlur = 12; ctx.shadowColor = "#ef4444";
+            ctx.fillStyle = "#ef4444";
+            ctx.fillRect(-hw/2, -hh/16, hw, hh/8);
+            ctx.shadowBlur = 0;
+            // 위험 텍스트
+            ctx.fillStyle = "#fde047"; ctx.font = "bold 8px monospace";
+            ctx.textAlign = "center"; ctx.textBaseline = "middle";
+            ctx.fillText("⚡GATE", 0, -hh/2 + 10);
         }
         ctx.restore();
     });
@@ -1425,7 +1553,7 @@ function showToast(item) {
 // ============================================================
 function endGame() {
     isPlaying = false;
-    stopBGM(); // BGM 정지
+    stopBGM();
     if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
 
     let rank="C", comment="상생의 씨앗을 뿌려준 당신!", border="border-slate-500";
@@ -1436,12 +1564,26 @@ function endGame() {
 
     document.getElementById("rank-ring").className = "w-24 h-24 flex items-center justify-center rounded-full bg-slate-900 border-4 " + border + " shadow-2xl";
     document.getElementById("result-rank").textContent = rank;
-    document.getElementById("rank-comment").textContent = comment;
     document.getElementById("result-score").textContent = rs.toLocaleString() + " SVP";
     document.getElementById("result-uniques").textContent = uniqueCollected.size + " / 12 종";
     document.getElementById("result-total").textContent = totalCollected + " 개";
     document.getElementById("result-money").textContent = "₩ " + (rs * 1320).toLocaleString() + " 원";
     document.getElementById("result-carbon").textContent = (uniqueCollected.size * 1.35).toFixed(1) + "kg 감축";
+
+    // 배틀 결과
+    if (battleOpponentData) {
+        const won = rs > battleOpponentData.score;
+        const diff = Math.abs(rs - battleOpponentData.score);
+        comment = won
+            ? `🏆 승리! ${battleOpponentData.name}(${battleOpponentData.score.toLocaleString()})보다 ${diff.toLocaleString()} SVP 앞섰어요!`
+            : rs === battleOpponentData.score
+            ? `🤝 무승부! ${battleOpponentData.name}와 동점입니다!`
+            : `😤 아쉽게 패배! ${battleOpponentData.name}(${battleOpponentData.score.toLocaleString()})보다 ${diff.toLocaleString()} SVP 부족!`;
+        if (won) border = "border-amber-400";
+        document.getElementById("rank-ring").className = "w-24 h-24 flex items-center justify-center rounded-full bg-slate-900 border-4 " + border + " shadow-2xl";
+    }
+    document.getElementById("rank-comment").textContent = comment;
+
     document.getElementById("reg-container").classList.remove("hidden");
     showScreen("gameover");
 }
@@ -1536,6 +1678,142 @@ function openModal(id) {
     document.getElementById("modal").classList.remove("hidden");
 }
 function closeModal() { document.getElementById("modal").classList.add("hidden"); }
+
+// ============================================================
+// SHARE & BATTLE SYSTEM
+// ============================================================
+let shareMode = "game"; // "game" | "battle"
+let pendingBattleRoomId = null;
+let battleOpponentData = null;
+
+function openShareModal(mode) {
+    shareMode = mode;
+    const modal = document.getElementById("share-modal");
+    const badge = document.getElementById("share-modal-badge");
+    const title = document.getElementById("share-modal-title");
+    const sub = document.getElementById("share-modal-sub");
+    const battleScore = document.getElementById("share-battle-score");
+    const copyMsg = document.getElementById("share-copy-msg");
+
+    copyMsg.classList.add("hidden");
+
+    if (mode === "battle") {
+        badge.textContent = "⚔️ 배틀 초대";
+        badge.className = "text-[9px] bg-rose-500/10 border border-rose-500/20 text-rose-400 px-2 py-0.5 rounded-full font-bold";
+        title.textContent = "내 점수로 배틀 초대";
+        sub.textContent = "친구에게 배틀 링크를 보내 도전받으세요!";
+
+        const score = Math.round(gameScore);
+        const name = (document.getElementById("input-name").value || "조조달").trim();
+        const dept = document.getElementById("select-dept").value;
+
+        battleScore.classList.remove("hidden");
+        document.getElementById("share-score-display").textContent = score.toLocaleString() + " SVP";
+        document.getElementById("share-name-display").textContent = name + " (" + dept + ")";
+
+        // 배틀 룸 ID 생성 & JSONBin에 저장
+        pendingBattleRoomId = "battle_" + Date.now() + "_" + Math.random().toString(36).slice(2,7);
+        saveBattleScore(pendingBattleRoomId, { name, dept, score, date: new Date().toISOString().split("T")[0] });
+    } else {
+        badge.textContent = "📣 게임 공유";
+        badge.className = "text-[9px] bg-sky-500/10 border border-sky-500/20 text-sky-400 px-2 py-0.5 rounded-full font-bold";
+        title.textContent = "게임 알리기";
+        sub.textContent = "조폐공사 공공구매 게임을 소개해 보세요!";
+        battleScore.classList.add("hidden");
+        pendingBattleRoomId = null;
+    }
+    modal.classList.remove("hidden");
+}
+
+function closeShareModal() {
+    document.getElementById("share-modal").classList.add("hidden");
+}
+
+function getBattleUrl() {
+    const base = window.location.href.split("?")[0];
+    if (pendingBattleRoomId) return base + "?battle=" + pendingBattleRoomId;
+    return base;
+}
+
+function getShareText() {
+    if (shareMode === "battle") {
+        const score = Math.round(gameScore);
+        const name = (document.getElementById("input-name").value || "조조달").trim();
+        return `⚔️ [조팸스 런 배틀] ${name}이(가) ${score.toLocaleString()} SVP 점수로 도전장을 보냈습니다! 당신은 이길 수 있나요?`;
+    }
+    return "🏃 [조팸스 런: 공공구매 대작전] 조폐공사 공공구매 의식 고취 게임! 전국 거점을 달리며 아이템을 수집하세요! 🎮";
+}
+
+function doShare(method) {
+    const url = getBattleUrl();
+    const text = getShareText();
+    const fullMsg = text + "\n" + url;
+
+    if (method === "sms") {
+        window.location.href = "sms:?body=" + encodeURIComponent(fullMsg);
+    } else if (method === "kakao") {
+        // 카카오링크 SDK가 없으므로 카카오톡 앱 공유 (모바일) 또는 링크 복사
+        if (navigator.share) {
+            navigator.share({ title: "조팸스 런!", text, url }).catch(()=>{});
+        } else {
+            window.open("https://story.kakao.com/share?url=" + encodeURIComponent(url), "_blank");
+        }
+    } else if (method === "email") {
+        const subject = shareMode === "battle" ? "⚔️ 조팸스 런 배틀 도전!" : "🎮 조팸스 런 게임 추천!";
+        window.location.href = "mailto:?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(fullMsg);
+    } else if (method === "twitter") {
+        window.open("https://twitter.com/intent/tweet?text=" + encodeURIComponent(text) + "&url=" + encodeURIComponent(url), "_blank");
+    } else if (method === "line") {
+        window.open("https://social-plugins.line.me/lineit/share?url=" + encodeURIComponent(url) + "&text=" + encodeURIComponent(text), "_blank");
+    } else if (method === "copy") {
+        navigator.clipboard.writeText(fullMsg).then(() => {
+            const msg = document.getElementById("share-copy-msg");
+            msg.classList.remove("hidden");
+            setTimeout(() => msg.classList.add("hidden"), 2500);
+        }).catch(() => {
+            // fallback
+            const ta = document.createElement("textarea");
+            ta.value = fullMsg; document.body.appendChild(ta); ta.select();
+            document.execCommand("copy"); document.body.removeChild(ta);
+            const msg = document.getElementById("share-copy-msg");
+            msg.classList.remove("hidden");
+            setTimeout(() => msg.classList.add("hidden"), 2500);
+        });
+    }
+}
+
+// ── 배틀 점수 JSONBin 저장 ──
+async function saveBattleScore(roomId, data) {
+    try {
+        const existing = await loadScoreData();
+        if (!existing.battles) existing.battles = {};
+        existing.battles[roomId] = data;
+        await saveScoreData(existing);
+    } catch(e) { console.warn("배틀 저장 실패:", e); }
+}
+
+// ── 배틀 점수 불러오기 ──
+async function loadBattleScore(roomId) {
+    try {
+        const data = await loadScoreData();
+        return (data.battles && data.battles[roomId]) || null;
+    } catch(e) { return null; }
+}
+
+// ── URL 파라미터 체크 → 배틀 배너 표시 ──
+(async function checkBattleParam() {
+    const params = new URLSearchParams(window.location.search);
+    const roomId = params.get("battle");
+    if (!roomId) return;
+    const opp = await loadBattleScore(roomId);
+    if (!opp) return;
+    battleOpponentData = opp;
+    const banner = document.getElementById("battle-banner");
+    document.getElementById("battle-banner-text").textContent = `${opp.name} (${opp.dept})의 도전을 받았습니다!`;
+    document.getElementById("battle-opponent-score").textContent = `도전 점수: ${opp.score.toLocaleString()} SVP — 이 점수를 넘겨라!`;
+    banner.classList.remove("hidden");
+    // 게임 오버 시 배틀 결과 표시를 위해 HUD에도 반영
+})();
 
 // ============================================================
 // INIT
