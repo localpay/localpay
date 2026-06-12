@@ -855,9 +855,9 @@ function updatePlayer() {
 
 function updateObstacles() {
     if (frame % 85 === 0 && Math.random() < 0.75) {
-        // 장애물 타입: "hurdle"(낮은 허들, 슬라이드로 통과) 또는 "high"(높은 장벽, 점프로 통과)
-        const type = Math.random() < 0.6 ? "hurdle" : "high";
-        obstacles.push({x:getLaneX(Math.floor(Math.random()*3)), y:-60, type, w:54, h: type==="hurdle" ? 36 : 52});
+        // 장애물 타입: "hurdle"(낮은 허들, 슬라이드로 통과) 또는 "tnt"(TNT 폭탄, 점프로만 통과)
+        const type = Math.random() < 0.6 ? "hurdle" : "tnt";
+        obstacles.push({x:getLaneX(Math.floor(Math.random()*3)), y:-60, type, w: type==="tnt" ? 22 : 54, h: type==="hurdle" ? 36 : 22});
     }
     for (let i = obstacles.length-1; i >= 0; i--) {
         const o = obstacles[i];
@@ -867,26 +867,29 @@ function updateObstacles() {
         const pBot = pY + 6; // 발 아래 여유
         const hitW = 11;
 
-        if (Math.abs(playerX - o.x) < hitW + o.w/2 - 4) {
+        if (o.type === "tnt") {
+            // 💣 둥근 폭탄: 원형 충돌 판정 (반지름 11), 점프로만 통과
+            const bombR = 11;
+            const dx = playerX - o.x;
+            const dy = (playerY - jumpOff) - o.y;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+            if (dist < bombR + 10 && jumpOff < 20) {
+                if (isSkillActive && selectedChar === "sunsik") {
+                    playSound("crash"); createExplosion(o.x, o.y, "#f97316");
+                    obstacles.splice(i, 1); gameScore += 400; continue;
+                }
+                playSound("crash"); endGame(); return;
+            }
+        } else if (Math.abs(playerX - o.x) < hitW + o.w/2 - 4) {
             let hit = false;
-
             if (o.type === "hurdle") {
                 // 허들: 상단 바 영역만 충돌 (oTop ~ oTop+barH)
                 const barH = 8;
                 const hurdleBarTop = o.y - o.h / 2;
-                const hurdleBarBot = hurdleBarTop + barH + 4; // 여유 4px
-                // 플레이어가 슬라이딩이면 상단 바를 아래로 빠져나가므로 통과
-                // 점프 충분하면(jumpOff > 8) 바 위로 넘어감
+                const hurdleBarBot = hurdleBarTop + barH + 4;
                 const barOverlap = pTop < hurdleBarBot && pBot > hurdleBarTop;
                 if (barOverlap && !isSliding && jumpOff < 8) hit = true;
-            } else {
-                // high(gate): 게이트 전체 영역, 점프 충분하면(jumpOff>22) 통과
-                const oTop = o.y - o.h / 2;
-                const oBot = o.y + o.h / 2;
-                const vertOverlap = pTop < oBot && pBot > oTop;
-                if (vertOverlap && jumpOff < 22) hit = true;
             }
-
             if (hit) {
                 if (isSkillActive && selectedChar === "sunsik") {
                     playSound("crash"); createExplosion(o.x, o.y, "#3b82f6");
@@ -1511,25 +1514,58 @@ function renderObstaclesR() {
             ctx.fillText("↓", 0, (barY + groundY) / 2 + 3);
 
         } else {
-            // high 장벽: 높은 에너지 게이트 (원래 고공 장애물)
-            const hw = o.w, hh = o.h;
-            ctx.fillStyle = "#1e0636";
-            ctx.beginPath(); ctx.roundRect(-hw/2, -hh/2, hw, hh, 6); ctx.fill();
-            // 좌우 네온 기둥
-            const gateColors = ["#a855f7","#7c3aed"];
-            [[-hw/2, gateColors[0]], [hw/2-5, gateColors[1]]].forEach(([px, col]) => {
-                ctx.fillStyle = col;
-                ctx.beginPath(); ctx.roundRect(px, -hh/2, 5, hh, 3); ctx.fill();
-            });
-            // 중앙 에너지 바
-            ctx.shadowBlur = 12; ctx.shadowColor = "#ef4444";
-            ctx.fillStyle = "#ef4444";
-            ctx.fillRect(-hw/2, -hh/16, hw, hh/8);
+            // 💣 둥근 폭탄: 점프로만 통과
+            const r = 11; // 반지름 (원래 22px의 절반)
+
+            // 그림자
+            ctx.fillStyle = "rgba(0,0,0,0.4)";
+            ctx.beginPath(); ctx.ellipse(3, r*0.8, r*0.85, r*0.35, 0, 0, Math.PI*2); ctx.fill();
+
+            // 폭탄 본체 구체 (광택 그라디언트)
+            const bombGrd = ctx.createRadialGradient(-r*0.3, -r*0.35, r*0.05, 0, 0, r);
+            bombGrd.addColorStop(0, "#6b7280");
+            bombGrd.addColorStop(0.35, "#374151");
+            bombGrd.addColorStop(0.75, "#1f2937");
+            bombGrd.addColorStop(1, "#111827");
+            ctx.fillStyle = bombGrd;
+            ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI*2); ctx.fill();
+
+            // 광택 하이라이트 (상단 왼쪽)
+            const hlGrd = ctx.createRadialGradient(-r*0.32, -r*0.38, 0, -r*0.32, -r*0.38, r*0.55);
+            hlGrd.addColorStop(0, "rgba(255,255,255,0.45)");
+            hlGrd.addColorStop(1, "rgba(255,255,255,0)");
+            ctx.fillStyle = hlGrd;
+            ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI*2); ctx.fill();
+
+            // 심지 연결 꼭지 (상단 금속 링)
+            ctx.fillStyle = "#6b7280";
+            ctx.beginPath(); ctx.ellipse(0, -r+1, 3.5, 2.5, 0, 0, Math.PI*2); ctx.fill();
+            ctx.strokeStyle = "#9ca3af"; ctx.lineWidth = 0.8;
+            ctx.beginPath(); ctx.ellipse(0, -r+1, 3.5, 2.5, 0, 0, Math.PI*2); ctx.stroke();
+
+            // 심지 (구불구불)
+            ctx.strokeStyle = "#92400e"; ctx.lineWidth = 1.8; ctx.lineCap = "round";
+            ctx.beginPath();
+            ctx.moveTo(0, -r-1);
+            ctx.bezierCurveTo(4, -r-6, -3, -r-10, 1, -r-16);
+            ctx.stroke();
+
+            // 심지 불꽃 (깜빡임)
+            const flicker = 0.65 + Math.sin(frame * 0.4) * 0.35;
+            ctx.save();
+            ctx.globalAlpha = flicker;
+            ctx.shadowBlur = 7; ctx.shadowColor = "#f97316";
+            ctx.fillStyle = "#fbbf24";
+            ctx.beginPath(); ctx.ellipse(1, -r-18, 2.8, 4, 0.15, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = "#fff7ed";
+            ctx.beginPath(); ctx.ellipse(1, -r-19, 1.4, 2.2, 0.1, 0, Math.PI*2); ctx.fill();
             ctx.shadowBlur = 0;
-            // 위험 텍스트
-            ctx.fillStyle = "#fde047"; ctx.font = "bold 8px monospace";
-            ctx.textAlign = "center"; ctx.textBaseline = "middle";
-            ctx.fillText("⚡GATE", 0, -hh/2 + 10);
+            ctx.restore();
+
+            // 점프 힌트
+            ctx.fillStyle = "rgba(251,191,36,0.9)";
+            ctx.font = "bold 8px sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+            ctx.fillText("↑JUMP", 0, -r - 26);
         }
         ctx.restore();
     });
