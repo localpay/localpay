@@ -597,6 +597,7 @@ let rafId = null;
 let ctrlMode = "touchpad";
 let currentStage = 1; // 현재 스테이지 (1~10)
 let stageClearTimer = 0; // 스테이지 클리어 표시 타이머
+let accumulatedScore = 0; // 이전 스테이지까지의 누적 점수
 
 let playerLane = 1, targetX = 0, playerX = 0, playerY = 0;
 let velY = 0, jumpOff = 0, isSliding = false, slideTimer = 0;
@@ -644,7 +645,7 @@ function startGame() {
     document.getElementById("hud-dept").textContent = dept;
     document.getElementById("reg-info").textContent = name + " (" + dept + ")";
 
-    gameScore = 0; uniqueCollected.clear(); totalCollected = 0;
+    gameScore = 0; accumulatedScore = 0; uniqueCollected.clear(); totalCollected = 0;
     itemCounts = {}; PUBLIC_PURCHASES.forEach(p => itemCounts[p.id] = 0);
     skillCharge = 0; isSkillActive = false; skillTimer = 0;
     gameSpeed = 2.6; distRun = 0; frame = 0; // 기존 5.2의 50%
@@ -806,8 +807,14 @@ function gameLoop() {
     if (stageClearTimer > 0) {
         stageClearTimer--;
         if (stageClearTimer === 0) {
-            document.getElementById("stage-clear-overlay").classList.add("hidden");
-            // 새 스테이지 시작: 아이템 수집 초기화
+            // 강제 숨김 (오류 대비 이중 처리)
+            const overlay = document.getElementById("stage-clear-overlay");
+            overlay.classList.add("hidden");
+            overlay.style.display = "none";
+            setTimeout(() => { overlay.style.display = ""; }, 100);
+            // 새 스테이지 시작: 이전 점수 누적 후 아이템 수집만 초기화
+            accumulatedScore += Math.round(gameScore);
+            gameScore = 0;
             uniqueCollected.clear();
             itemCounts = {}; PUBLIC_PURCHASES.forEach(p => itemCounts[p.id] = 0);
             document.getElementById("hud-uniques").textContent = "수집: 0/12";
@@ -823,7 +830,7 @@ function gameLoop() {
 
     render();
 
-    document.getElementById("hud-score").textContent = Math.round(gameScore).toLocaleString();
+    document.getElementById("hud-score").textContent = Math.round(accumulatedScore + gameScore).toLocaleString();
     document.getElementById("hud-uniques").textContent = "수집: " + uniqueCollected.size + "/12";
     document.getElementById("hud-stage").textContent = "STAGE " + currentStage;
 
@@ -856,23 +863,36 @@ function updateObstacles() {
         const o = obstacles[i];
         o.y += gameSpeed;
         const pY = playerY - jumpOff;
-        const pTop = pY - (isSliding ? 22 : 38);
+        const pTop = pY - (isSliding ? 16 : 38); // 슬라이딩 시 히트박스 높이 축소
+        const pBot = pY + 6; // 발 아래 여유
         const hitW = 11;
-        const oTop = o.y - o.h / 2;
-        const oBot = o.y + o.h / 2;
 
         if (Math.abs(playerX - o.x) < hitW + o.w/2 - 4) {
-            const vertOverlap = pTop < oBot && pY > oTop;
-            if (vertOverlap) {
+            let hit = false;
+
+            if (o.type === "hurdle") {
+                // 허들: 상단 바 영역만 충돌 (oTop ~ oTop+barH)
+                const barH = 8;
+                const hurdleBarTop = o.y - o.h / 2;
+                const hurdleBarBot = hurdleBarTop + barH + 4; // 여유 4px
+                // 플레이어가 슬라이딩이면 상단 바를 아래로 빠져나가므로 통과
+                // 점프 충분하면(jumpOff > 8) 바 위로 넘어감
+                const barOverlap = pTop < hurdleBarBot && pBot > hurdleBarTop;
+                if (barOverlap && !isSliding && jumpOff < 8) hit = true;
+            } else {
+                // high(gate): 게이트 전체 영역, 점프 충분하면(jumpOff>22) 통과
+                const oTop = o.y - o.h / 2;
+                const oBot = o.y + o.h / 2;
+                const vertOverlap = pTop < oBot && pBot > oTop;
+                if (vertOverlap && jumpOff < 22) hit = true;
+            }
+
+            if (hit) {
                 if (isSkillActive && selectedChar === "sunsik") {
                     playSound("crash"); createExplosion(o.x, o.y, "#3b82f6");
                     obstacles.splice(i, 1); gameScore += 400; continue;
                 }
-                // hurdle: 슬라이드로 통과, 점프로도 통과(jumpOff>8)
-                // high: 슬라이드로 통과
-                const hit = (o.type === "hurdle" && !isSliding && jumpOff < 8) ||
-                            (o.type === "high"   && !isSliding);
-                if (hit) { playSound("crash"); endGame(); return; }
+                playSound("crash"); endGame(); return;
             }
         }
         if (o.y > CH + 60) obstacles.splice(i, 1);
@@ -911,7 +931,16 @@ function updateItems() {
                 gameSpeed = 2.6 * Math.pow(1.05, currentStage - 1);
                 stageClearTimer = 180; // 약 3초 표시
                 document.getElementById("stage-clear-num").textContent = "STAGE " + currentStage + " 시작!";
-                document.getElementById("stage-clear-overlay").classList.remove("hidden");
+                const overlay = document.getElementById("stage-clear-overlay");
+                overlay.classList.remove("hidden");
+                // 안전장치: 4초 후 강제 숨김 (타이머 오작동 대비)
+                clearTimeout(overlay._forceHideTimer);
+                overlay._forceHideTimer = setTimeout(() => {
+                    if (stageClearTimer > 0) {
+                        stageClearTimer = 0;
+                        overlay.classList.add("hidden");
+                    }
+                }, 4000);
             } else if (uniqueCollected.size >= 12 && currentStage >= 10) {
                 // 10스테이지 완료 → 게임 종료
                 playSound("skill");
@@ -1557,7 +1586,7 @@ function endGame() {
     if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
 
     let rank="C", comment="상생의 씨앗을 뿌려준 당신!", border="border-slate-500";
-    const rs = Math.round(gameScore);
+    const rs = Math.round(accumulatedScore + gameScore);
     if (rs >= 25000) { rank="S"; comment="조폐공사를 빛내는 '상생의 마에스트로'!"; border="border-emerald-500/80"; }
     else if (rs >= 12000) { rank="A"; comment="공공구매의 수호자!"; border="border-blue-500/80"; }
     else if (rs >= 5000) { rank="B"; comment="멋진 발걸음! 더 전진해 보세요!"; border="border-amber-500/80"; }
@@ -1703,7 +1732,7 @@ function openShareModal(mode) {
         title.textContent = "내 점수로 배틀 초대";
         sub.textContent = "친구에게 배틀 링크를 보내 도전받으세요!";
 
-        const score = Math.round(gameScore);
+        const score = Math.round(accumulatedScore + gameScore);
         const name = (document.getElementById("input-name").value || "조조달").trim();
         const dept = document.getElementById("select-dept").value;
 
