@@ -104,7 +104,8 @@
             <span id="hud-station" class="text-[8px] font-black text-sky-400">📍 대전 본사</span>
             <span id="hud-uniques" class="text-[10px] font-black text-amber-400 leading-none mt-0.5">수집: 0/12</span>
         </div>
-        <div class="text-right">
+        <div class="text-right flex flex-col items-end gap-1">
+            <button onclick="togglePause()" id="btn-pause" class="touch-manipulation w-7 h-7 flex items-center justify-center rounded-lg bg-slate-800/80 border border-slate-700/60 text-slate-300 text-xs font-black pointer-events-auto active:scale-90">⏸</button>
             <span class="text-[8px] text-slate-400 block font-bold">SVP</span>
             <span id="hud-score" class="text-base font-black text-sky-400 retro-title">0</span>
             <div id="hud-battle-info" class="hidden mt-0.5 text-[8px] text-rose-400 font-bold leading-tight">
@@ -138,6 +139,62 @@
             <span class="text-emerald-400 retro-title font-black text-2xl block">STAGE CLEAR!</span>
             <span id="stage-clear-num" class="text-white font-black text-lg block mt-1"></span>
             <span class="text-sky-300 text-xs block mt-1">12개 아이템 모두 수집! 다음 스테이지로!</span>
+        </div>
+    </div>
+
+    <!-- Pause Overlay -->
+    <div id="pause-overlay" class="hidden absolute inset-0 z-40 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center">
+        <div class="bg-[#050e24] border-2 border-sky-500/60 rounded-3xl p-7 text-center shadow-2xl w-64">
+            <div class="text-3xl mb-2">&#9208;</div>
+            <h3 class="text-lg font-black text-white retro-title mb-1">일시정지</h3>
+            <p class="text-[10px] text-slate-400 mb-5">게임이 멈췄습니다</p>
+            <button onclick="togglePause()" class="touch-manipulation w-full py-3 bg-gradient-to-r from-sky-500 to-blue-600 rounded-2xl font-black text-sm mb-2 active:scale-95">&#9654; 계속하기</button>
+            <button onclick="confirmQuit()" class="touch-manipulation w-full py-2.5 bg-slate-900 border border-slate-700 rounded-2xl font-bold text-xs text-slate-300 active:scale-95">&#128682; 메인으로</button>
+        </div>
+    </div>
+    <!-- Revival Overlay -->
+    <div id="revival-overlay" class="hidden absolute inset-0 bg-slate-950/90 backdrop-blur-sm flex items-center justify-center" style="z-index:45">
+        <div class="bg-[#050e24] border-2 border-rose-500/60 rounded-3xl p-6 text-center shadow-2xl w-72">
+            <div class="text-4xl mb-2">&#128148;</div>
+            <h3 class="text-lg font-black text-white mb-1">아쉽게 충돌!</h3>
+            <div id="revival-countdown" class="text-5xl font-black text-rose-400 retro-title my-3">3</div>
+            <button onclick="doRevive()" id="btn-revive" class="touch-manipulation w-full py-3 bg-gradient-to-r from-rose-500 to-pink-600 rounded-2xl font-black text-sm mb-2 active:scale-95">&#128170; 부활 (스킬 1회 소모)</button>
+            <button onclick="confirmEndGame()" class="touch-manipulation w-full py-2.5 bg-slate-900 border border-slate-700 rounded-2xl font-bold text-xs text-slate-300 active:scale-95">그냥 종료</button>
+        </div>
+    </div>
+    <!-- Tutorial Overlay -->
+    <div id="tutorial-overlay" class="hidden absolute inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center" style="z-index:50">
+        <div class="bg-[#050e24] border border-sky-500/50 rounded-3xl p-6 text-center shadow-2xl w-72">
+            <div class="text-3xl mb-2">&#127918;</div>
+            <h3 class="text-base font-black text-white mb-4">조작 방법</h3>
+            <div class="grid grid-cols-2 gap-2 text-left mb-4">
+                <div class="bg-slate-900/80 rounded-xl p-2.5 flex items-center gap-2"><span class="text-xl">&#9664;&#9654;</span><span class="text-[10px] text-slate-300 font-bold">좌우 이동</span></div>
+                <div class="bg-slate-900/80 rounded-xl p-2.5 flex items-center gap-2"><span class="text-xl">&#9650;</span><span class="text-[10px] text-slate-300 font-bold">점프 (폭탄 통과)</span></div>
+                <div class="bg-slate-900/80 rounded-xl p-2.5 flex items-center gap-2"><span class="text-xl">&#9660;</span><span class="text-[10px] text-slate-300 font-bold">슬라이드 (허들)</span></div>
+                <div class="bg-slate-900/80 rounded-xl p-2.5 flex items-center gap-2"><span class="text-xl">&#9889;</span><span class="text-[10px] text-slate-300 font-bold">스킬 발동</span></div>
+            </div>
+            <div class="text-[10px] text-slate-400 mb-4 bg-sky-950/40 rounded-xl p-2.5 text-left space-y-1">
+                <div>&#128163; <span class="text-slate-300 font-bold">폭탄</span> = 점프로 통과</div>
+                <div>&#127939; <span class="text-slate-300 font-bold">허들</span> = 슬라이드로 통과</div>
+                <div>&#11088; <span class="text-slate-300 font-bold">12종 아이템</span> 수집 = 스테이지 클리어</div>
+            </div>
+            <button onclick="closeTutorial()" class="touch-manipulation w-full py-3 bg-gradient-to-r from-sky-500 to-blue-600 rounded-2xl font-black text-sm active:scale-95">&#9889; 출발!</button>
+        </div>
+    </div>
+    <!-- Combo Display -->
+    <div id="combo-display" class="hidden absolute pointer-events-none text-center" style="top:38%;left:50%;transform:translateX(-50%);z-index:25">
+        <div id="combo-text" class="font-black retro-title text-3xl text-amber-400 drop-shadow-lg"></div>
+        <div id="combo-mult" class="text-sm font-black text-white mt-0.5"></div>
+    </div>
+    <!-- PB notify -->
+    <div id="pb-notify" class="hidden absolute pointer-events-none" style="top:5rem;left:50%;transform:translateX(-50%);z-index:25;white-space:nowrap">
+        <div class="bg-amber-500/90 border border-amber-300 rounded-full px-4 py-1.5 font-black text-xs text-slate-950 shadow-lg">&#127942; 신기록 갱신 중!</div>
+    </div>
+    <!-- Mission HUD -->
+    <div id="mission-banner" class="hidden absolute pointer-events-none" style="top:4.5rem;right:0.5rem;z-index:25">
+        <div class="bg-[#050e24]/95 border border-amber-500/40 rounded-xl p-2 text-right">
+            <div class="text-[8px] text-amber-400 font-black mb-1">&#128203; 오늘의 미션</div>
+            <div id="mission-list-hud" class="space-y-0.5"></div>
         </div>
     </div>
 
@@ -229,6 +286,15 @@
                     <div class="flex justify-between"><span>탄소 감축량:</span><span id="result-carbon" class="font-bold text-sky-400">0kg</span></div>
                 </div>
             </div>
+        </div>
+        <!-- PB & Mission result -->
+        <div id="pb-result-row" class="hidden mt-3 bg-amber-500/10 border border-amber-500/30 rounded-xl p-2.5 flex justify-between items-center">
+            <span class="text-[10px] text-amber-300 font-bold">&#127942; 개인 최고 기록</span>
+            <span id="pb-result-score" class="text-xs font-black text-amber-400 retro-title"></span>
+        </div>
+        <div id="mission-result" class="hidden mt-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-2.5">
+            <div class="text-[10px] text-emerald-400 font-black mb-1.5">&#128203; 오늘의 미션 결과</div>
+            <div id="mission-result-list" class="space-y-1 text-[10px]"></div>
         </div>
         <div id="reg-container" class="mt-4 bg-[#091630] border border-sky-900 rounded-2xl p-3.5 flex justify-between items-center">
             <div class="text-left">
@@ -582,6 +648,7 @@ function playSound(type) {
 // ============================================================
 let selectedChar = "hunmin";
 let isPlaying = false;
+let isPaused = false;
 let gameScore = 0;
 let uniqueCollected = new Set();
 let totalCollected = 0;
@@ -590,13 +657,56 @@ let skillCharge = 0;
 let isSkillActive = false;
 let skillTimer = 0;
 let distRun = 0;
-let gameSpeed = 2.6; // 기존 5.2의 50%
+let gameSpeed = 2.6;
 let frame = 0;
 let rafId = null;
 let ctrlMode = "touchpad";
-let currentStage = 1; // 현재 스테이지 (1~10)
-let stageClearTimer = 0; // 스테이지 클리어 표시 타이머
-let accumulatedScore = 0; // 이전 스테이지까지의 누적 점수
+let currentStage = 1;
+let stageClearTimer = 0;
+let accumulatedScore = 0;
+
+// #9 콤보 시스템
+let comboCount = 0;
+let comboTimer = 0;
+let comboMultiplier = 1;
+let comboHideTimer = 0;
+
+// #10 개인 최고 기록
+let personalBest = parseInt(localStorage.getItem("pb_score") || "0");
+let pbNotified = false;
+
+// #7 골든 아이템
+// golden items use same PUBLIC_PURCHASES pool but flagged golden
+
+// #11 일일 미션
+const MISSIONS_POOL = [
+    {id:"hurdle5",  desc:"허들 5개 넘기기",   target:5,  bonus:500,  stat:"hurdlePassed"},
+    {id:"items10",  desc:"아이템 10개 수집",   target:10, bonus:600,  stat:"itemsCollected"},
+    {id:"combo5",   desc:"5콤보 달성",         target:5,  bonus:800,  stat:"maxCombo"},
+    {id:"stage3",   desc:"스테이지 3 클리어",  target:3,  bonus:1200, stat:"stagesCleared"},
+    {id:"nodie",    desc:"스테이지1 무사 완주", target:1,  bonus:1000, stat:"stage1Clear"},
+    {id:"bomb3",    desc:"폭탄 3개 점프 통과", target:3,  bonus:700,  stat:"bombJumped"},
+];
+let todayMissions = [];
+let missionStats = {hurdlePassed:0, itemsCollected:0, maxCombo:0, stagesCleared:0, stage1Clear:0, bombJumped:0};
+let isFirstPlay = !localStorage.getItem("played_before");
+
+// #6 스테이지별 배경 테마
+const STAGE_THEMES = [
+    {bg:"#03091c", road:"#0a1628", accent:"#1e3a5f", label:"대전 본사"},      // 1
+    {bg:"#071a0d", road:"#0b2412", accent:"#1a4a1e", label:"부여 제지본부"},   // 2
+    {bg:"#1a0a03", road:"#2a1005", accent:"#5c2a08", label:"경산 화폐본부"},   // 3
+    {bg:"#04111a", road:"#071b28", accent:"#0e3a52", label:"ID본부"},         // 4
+    {bg:"#0f0a1a", road:"#180f28", accent:"#3b1a5c", label:"기술연구원"},      // 5
+    {bg:"#03091c", road:"#0a1628", accent:"#1e3a5f", label:"대전 본사 2"},    // 6
+    {bg:"#071a0d", road:"#0b2412", accent:"#1a4a1e", label:"제지본부 2"},      // 7
+    {bg:"#1a0a03", road:"#2a1005", accent:"#5c2a08", label:"화폐본부 2"},      // 8
+    {bg:"#04111a", road:"#071b28", accent:"#0e3a52", label:"ID본부 2"},       // 9
+    {bg:"#150818", road:"#200c24", accent:"#5a1080", label:"&#127882; 최종 결전"},  // 10
+];
+
+let revivalUsed = false;
+let revivalTimer = null;
 
 let playerLane = 1, targetX = 0, playerX = 0, playerY = 0;
 let velY = 0, jumpOff = 0, isSliding = false, slideTimer = 0;
@@ -647,15 +757,20 @@ function startGame() {
     gameScore = 0; accumulatedScore = 0; uniqueCollected.clear(); totalCollected = 0;
     itemCounts = {}; PUBLIC_PURCHASES.forEach(p => itemCounts[p.id] = 0);
     skillCharge = 0; isSkillActive = false; skillTimer = 0;
-    gameSpeed = 2.6; distRun = 0; frame = 0; // 기존 5.2의 50%
+    gameSpeed = 2.6; distRun = 0; frame = 0;
     currentStage = 1; stageClearTimer = 0;
     obstacles = []; items = []; particles = [];
-    playerLane = 1;
+    playerLane = 1; isPaused = false; revivalUsed = false;
+    comboCount = 0; comboTimer = 0; comboMultiplier = 1; comboHideTimer = 0;
+    pbNotified = false;
+    missionStats = {hurdlePassed:0, itemsCollected:0, maxCombo:0, stagesCleared:0, stage1Clear:0, bombJumped:0};
+
+    // 일일 미션 생성 (날짜 기반 시드 → 매일 동일 3개)
+    initDailyMissions();
 
     showScreen("game");
     resizeCanvas();
 
-    // Generate background scenery
     scenery = [];
     for (let i = 0; i < 10; i++) {
         scenery.push({
@@ -669,8 +784,8 @@ function startGame() {
     drawHUDPortrait(selectedChar);
     resetSkillBtn();
     initSidePanels();
+    updateMissionHUD();
 
-    // 배틀 모드 HUD
     if (battleOpponentData) {
         document.getElementById("hud-battle-info").classList.remove("hidden");
         document.getElementById("hud-opp-score").textContent = battleOpponentData.name + " " + battleOpponentData.score.toLocaleString() + "SVP";
@@ -679,9 +794,16 @@ function startGame() {
     }
 
     isPlaying = true;
-    playBGM(); // BGM 시작
+    playBGM();
     if (rafId) cancelAnimationFrame(rafId);
     rafId = requestAnimationFrame(gameLoop);
+
+    // 첫 플레이 또는 매번 튜토리얼
+    if (isFirstPlay) {
+        isFirstPlay = false;
+        localStorage.setItem("played_before", "1");
+        showTutorial();
+    }
 }
 
 function resizeCanvas() {
@@ -798,7 +920,7 @@ function resetSkillBtn() {
 // GAME LOOP
 // ============================================================
 function gameLoop() {
-    if (!isPlaying) return;
+    if (!isPlaying || isPaused) return;
     frame++;
     distRun += 0.45;
 
@@ -806,18 +928,34 @@ function gameLoop() {
     if (stageClearTimer > 0) {
         stageClearTimer--;
         if (stageClearTimer === 0) {
-            // 강제 숨김 (오류 대비 이중 처리)
             const overlay = document.getElementById("stage-clear-overlay");
             overlay.classList.add("hidden");
             overlay.style.display = "none";
             setTimeout(() => { overlay.style.display = ""; }, 100);
-            // 새 스테이지 시작: 이전 점수 누적 후 아이템 수집만 초기화
             accumulatedScore += Math.round(gameScore);
             gameScore = 0;
             uniqueCollected.clear();
             itemCounts = {}; PUBLIC_PURCHASES.forEach(p => itemCounts[p.id] = 0);
             document.getElementById("hud-uniques").textContent = "수집: 0/12";
         }
+    }
+
+    // 콤보 타이머 감소
+    if (comboTimer > 0) {
+        comboTimer--;
+        if (comboTimer === 0) { comboCount = 0; comboMultiplier = 1; }
+    }
+    if (comboHideTimer > 0) {
+        comboHideTimer--;
+        if (comboHideTimer === 0) document.getElementById("combo-display").classList.add("hidden");
+    }
+
+    // PB 체크
+    const curTotal = Math.round(accumulatedScore + gameScore);
+    if (!pbNotified && curTotal > personalBest && personalBest > 0) {
+        pbNotified = true;
+        document.getElementById("pb-notify").classList.remove("hidden");
+        setTimeout(() => document.getElementById("pb-notify").classList.add("hidden"), 3000);
     }
 
     updateStation();
@@ -829,7 +967,7 @@ function gameLoop() {
 
     render();
 
-    document.getElementById("hud-score").textContent = Math.round(accumulatedScore + gameScore).toLocaleString();
+    document.getElementById("hud-score").textContent = curTotal.toLocaleString();
     document.getElementById("hud-uniques").textContent = "수집: " + uniqueCollected.size + "/12";
     document.getElementById("hud-stage").textContent = "STAGE " + currentStage;
 
@@ -867,7 +1005,6 @@ function updateObstacles() {
         const hitW = 11;
 
         if (o.type === "tnt") {
-            // 💣 둥근 폭탄: 원형 충돌 판정 (반지름 11), 점프로만 통과
             const bombR = 11;
             const dx = playerX - o.x;
             const dy = (playerY - jumpOff) - o.y;
@@ -877,24 +1014,33 @@ function updateObstacles() {
                     playSound("crash"); createExplosion(o.x, o.y, "#f97316");
                     obstacles.splice(i, 1); gameScore += 400; continue;
                 }
-                playSound("crash"); endGame(); return;
+                playSound("crash"); triggerRevival(); return;
+            }
+            // 폭탄을 점프로 통과 (y 기준으로 지나쳤을 때)
+            if (!o._counted && o.y > playerY + 20 && jumpOff >= 20) {
+                o._counted = true;
+                missionStats.bombJumped++;
             }
         } else if (Math.abs(playerX - o.x) < hitW + o.w/2 - 4) {
             let hit = false;
             if (o.type === "hurdle") {
-                // 허들: 상단 바 영역만 충돌 (oTop ~ oTop+barH)
                 const barH = 8;
                 const hurdleBarTop = o.y - o.h / 2;
                 const hurdleBarBot = hurdleBarTop + barH + 4;
                 const barOverlap = pTop < hurdleBarBot && pBot > hurdleBarTop;
                 if (barOverlap && !isSliding && jumpOff < 8) hit = true;
+                // 허들 슬라이드 통과 카운팅
+                if (!o._counted && o.y > playerY + 10 && isSliding) {
+                    o._counted = true;
+                    missionStats.hurdlePassed++;
+                }
             }
             if (hit) {
                 if (isSkillActive && selectedChar === "sunsik") {
                     playSound("crash"); createExplosion(o.x, o.y, "#3b82f6");
                     obstacles.splice(i, 1); gameScore += 400; continue;
                 }
-                playSound("crash"); endGame(); return;
+                playSound("crash"); triggerRevival(); return;
             }
         }
         if (o.y > CH + 60) obstacles.splice(i, 1);
@@ -902,9 +1048,11 @@ function updateObstacles() {
 }
 
 function updateItems() {
+    // #7 골든 아이템 스폰 (5% 확률)
     if (frame % 40 === 0) {
+        const isGolden = Math.random() < 0.05;
         const item = PUBLIC_PURCHASES[Math.floor(Math.random()*12)];
-        items.push({x:getLaneX(Math.floor(Math.random()*3)), y:-40, item, size:34});
+        items.push({x:getLaneX(Math.floor(Math.random()*3)), y:-40, item, size: isGolden ? 38 : 34, golden: isGolden});
     }
     for (let i = items.length-1; i >= 0; i--) {
         const e = items[i];
@@ -915,40 +1063,59 @@ function updateItems() {
         }
         if (Math.abs(playerX - e.x) < 26 && Math.abs((playerY-jumpOff) - e.y) < 30) {
             playSound("collect");
-            createParticles(e.x, e.y, e.item.color);
+
+            // #7 골든 아이템 보너스
+            if (e.golden) {
+                createExplosion(e.x, e.y, "#fbbf24");
+                createExplosion(e.x, e.y, "#f59e0b");
+                gameScore += 500;
+                showGoldenToast();
+            } else {
+                createParticles(e.x, e.y, e.item.color);
+            }
+
             itemCounts[e.item.id]++;
             uniqueCollected.add(e.item.id);
             totalCollected++;
             addSkillCharge(8);
-            showToast(e.item);
+            if (!e.golden) showToast(e.item);
+
+            // #9 콤보 시스템
+            comboCount++;
+            comboTimer = 120; // 2초 안에 다음 수집해야 콤보 유지
+            missionStats.maxCombo = Math.max(missionStats.maxCombo, comboCount);
+            missionStats.itemsCollected++;
+            if (comboCount >= 3) {
+                comboMultiplier = comboCount >= 10 ? 2.0 : comboCount >= 5 ? 1.5 : 1.2;
+                showComboDisplay();
+            }
+
             let base = 0;
             PUBLIC_PURCHASES.forEach(p => base += itemCounts[p.id] * 100);
-            const mult = (isSkillActive && selectedChar === "daim") ? 2 : 1;
-            gameScore = base * (1 + uniqueCollected.size / 12) * mult;
+            const skillMult = (isSkillActive && selectedChar === "daim") ? 2 : 1;
+            gameScore = base * (1 + uniqueCollected.size / 12) * comboMultiplier * skillMult;
 
-            // 12개 모두 수집 시 스테이지 클리어
+            // 스테이지 클리어 체크
             if (uniqueCollected.size >= 12 && stageClearTimer === 0 && currentStage < 10) {
+                missionStats.stagesCleared++;
+                if (currentStage === 1) missionStats.stage1Clear = 1;
                 currentStage++;
-                // 스테이지마다 속도 5% 증가 (기준: 2.6)
                 gameSpeed = 2.6 * Math.pow(1.05, currentStage - 1);
-                stageClearTimer = 180; // 약 3초 표시
+                stageClearTimer = 180;
                 document.getElementById("stage-clear-num").textContent = "STAGE " + currentStage + " 시작!";
                 const overlay = document.getElementById("stage-clear-overlay");
                 overlay.classList.remove("hidden");
-                // 안전장치: 4초 후 강제 숨김 (타이머 오작동 대비)
                 clearTimeout(overlay._forceHideTimer);
                 overlay._forceHideTimer = setTimeout(() => {
-                    if (stageClearTimer > 0) {
-                        stageClearTimer = 0;
-                        overlay.classList.add("hidden");
-                    }
+                    if (stageClearTimer > 0) { stageClearTimer = 0; overlay.classList.add("hidden"); }
                 }, 4000);
             } else if (uniqueCollected.size >= 12 && currentStage >= 10) {
-                // 10스테이지 완료 → 게임 종료
-                playSound("skill");
-                setTimeout(() => endGame(), 500);
+                playSound("showEnding");
+                setTimeout(() => showEnding(), 400);
             }
 
+            checkMissions();
+            updateMissionHUD();
             items.splice(i, 1); continue;
         }
         if (e.y > CH + 50) items.splice(i, 1);
@@ -968,6 +1135,183 @@ function updateParticles() {
         const p=particles[i]; p.x+=p.vx; p.y+=p.vy; p.life--;
         if(p.life<=0)particles.splice(i,1);
     }
+}
+
+// ============================================================
+// #1 PAUSE
+// ============================================================
+function togglePause() {
+    if (!isPlaying) return;
+    isPaused = !isPaused;
+    document.getElementById("pause-overlay").classList.toggle("hidden", !isPaused);
+    document.getElementById("btn-pause").textContent = isPaused ? "▶" : "⏸";
+    if (!isPaused) { rafId = requestAnimationFrame(gameLoop); }
+    else { if (rafId) cancelAnimationFrame(rafId); }
+}
+function confirmQuit() {
+    isPaused = false;
+    document.getElementById("pause-overlay").classList.add("hidden");
+    isPlaying = false;
+    if (rafId) cancelAnimationFrame(rafId);
+    stopBGM();
+    showScreen("menu");
+}
+window.addEventListener("keydown", e => { if (e.key === "Escape" && isPlaying) togglePause(); });
+
+// ============================================================
+// #3 REVIVAL SYSTEM
+// ============================================================
+function triggerRevival() {
+    if (revivalUsed || skillCharge < 100) {
+        endGame(); return;
+    }
+    isPlaying = false;
+    if (rafId) cancelAnimationFrame(rafId);
+    const overlay = document.getElementById("revival-overlay");
+    overlay.classList.remove("hidden");
+    let count = 3;
+    document.getElementById("revival-countdown").textContent = count;
+    revivalTimer = setInterval(() => {
+        count--;
+        document.getElementById("revival-countdown").textContent = count;
+        if (count <= 0) {
+            clearInterval(revivalTimer);
+            // 자동 종료 (버튼 안 누르면)
+            overlay.classList.add("hidden");
+            endGame();
+        }
+    }, 1000);
+}
+function doRevive() {
+    clearInterval(revivalTimer);
+    document.getElementById("revival-overlay").classList.add("hidden");
+    revivalUsed = true;
+    skillCharge = 0;
+    document.getElementById("hud-skill-bar").style.width = "0%";
+    resetSkillBtn();
+    // 무적 2초
+    isSkillActive = true; skillTimer = 120;
+    isPlaying = true;
+    obstacles = obstacles.filter(o => o.y < playerY - 60);
+    rafId = requestAnimationFrame(gameLoop);
+}
+function confirmEndGame() {
+    clearInterval(revivalTimer);
+    document.getElementById("revival-overlay").classList.add("hidden");
+    endGame();
+}
+
+// ============================================================
+// #9 COMBO DISPLAY
+// ============================================================
+function showComboDisplay() {
+    const el = document.getElementById("combo-display");
+    const txt = document.getElementById("combo-text");
+    const mult = document.getElementById("combo-mult");
+    txt.textContent = comboCount + " COMBO!";
+    mult.textContent = "× " + comboMultiplier.toFixed(1) + " 점수 배율";
+    el.classList.remove("hidden");
+    el.style.transform = "translateX(-50%) scale(1.2)";
+    setTimeout(() => { el.style.transform = "translateX(-50%) scale(1)"; }, 150);
+    comboHideTimer = 90;
+}
+
+// ============================================================
+// #7 GOLDEN ITEM TOAST
+// ============================================================
+function showGoldenToast() {
+    const wrap = document.getElementById("toast-wrap");
+    document.getElementById("toast-title").textContent = "✨ LUCKY GOLDEN ITEM! +500 SVP";
+    document.getElementById("toast-msg").textContent = "반짝이는 황금 아이템을 획득했습니다!";
+    document.getElementById("toast-icon").innerHTML = '<span style="font-size:24px">⭐</span>';
+    wrap.style.opacity = "1"; wrap.style.transform = "translateY(0)";
+    setTimeout(() => { wrap.style.opacity = "0"; wrap.style.transform = "translateY(-8px)"; }, 2200);
+}
+
+// ============================================================
+// #11 DAILY MISSIONS
+// ============================================================
+function initDailyMissions() {
+    const today = new Date().toISOString().split("T")[0];
+    const seed = today.replace(/-/g,"");
+    const idx = [parseInt(seed)%6, (parseInt(seed)+2)%6, (parseInt(seed)+4)%6];
+    todayMissions = idx.map(i => ({...MISSIONS_POOL[i], done: false}));
+}
+function checkMissions() {
+    todayMissions.forEach(m => {
+        if (!m.done && missionStats[m.stat] >= m.target) {
+            m.done = true;
+            gameScore += m.bonus;
+            showMissionComplete(m);
+        }
+    });
+}
+function showMissionComplete(m) {
+    const wrap = document.getElementById("toast-wrap");
+    document.getElementById("toast-title").textContent = "📋 미션 완료! +" + m.bonus + " SVP";
+    document.getElementById("toast-msg").textContent = m.desc;
+    document.getElementById("toast-icon").innerHTML = '<span style="font-size:24px">✅</span>';
+    wrap.style.opacity = "1"; wrap.style.transform = "translateY(0)";
+    setTimeout(() => { wrap.style.opacity = "0"; wrap.style.transform = "translateY(-8px)"; }, 2200);
+}
+function updateMissionHUD() {
+    const el = document.getElementById("mission-list-hud");
+    if (!todayMissions.length) return;
+    document.getElementById("mission-banner").classList.remove("hidden");
+    el.innerHTML = todayMissions.map(m => {
+        const prog = Math.min(missionStats[m.stat], m.target);
+        const pct = Math.round(prog / m.target * 100);
+        const color = m.done ? "text-emerald-400" : "text-slate-300";
+        return `<div class="${color} text-[8px] font-bold">${m.done?"✅":"⬜"} ${m.desc} (${prog}/${m.target})</div>`;
+    }).join("");
+}
+
+// ============================================================
+// TUTORIAL
+// ============================================================
+function showTutorial() {
+    isPaused = true;
+    document.getElementById("tutorial-overlay").classList.remove("hidden");
+}
+function closeTutorial() {
+    document.getElementById("tutorial-overlay").classList.add("hidden");
+    isPaused = false;
+    rafId = requestAnimationFrame(gameLoop);
+}
+
+// ============================================================
+// #12 ENDING SEQUENCE (10 STAGE CLEAR)
+// ============================================================
+function showEnding() {
+    isPlaying = false;
+    if (rafId) cancelAnimationFrame(rafId);
+    stopBGM();
+    // 폭죽 파티클 버스트
+    for (let b = 0; b < 8; b++) {
+        setTimeout(() => {
+            const x = CW * (0.2 + Math.random() * 0.6);
+            const y = CH * (0.2 + Math.random() * 0.5);
+            const colors = ["#fbbf24","#ef4444","#22d3ee","#a855f7","#86efac","#f472b6"];
+            createExplosion(x, y, colors[Math.floor(Math.random()*colors.length)]);
+        }, b * 180);
+    }
+    // 엔딩 오버레이
+    setTimeout(() => {
+        const endEl = document.createElement("div");
+        endEl.id = "ending-overlay";
+        endEl.style.cssText = "position:absolute;inset:0;z-index:60;background:linear-gradient(160deg,#0a0020,#001a3a);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:2rem";
+        endEl.innerHTML = `
+            <div style="font-size:3rem;margin-bottom:0.5rem">&#127882;&#127882;&#127882;</div>
+            <div style="font-size:0.65rem;color:#38bdf8;font-weight:900;letter-spacing:0.15em;margin-bottom:0.25rem">ALL STAGES CLEARED!</div>
+            <h2 style="font-size:1.4rem;font-weight:900;color:#fff;font-family:Orbitron,sans-serif;margin-bottom:0.5rem">조폐공사<br>공공구매 완전 정복!</h2>
+            <p style="font-size:0.7rem;color:#94a3b8;margin-bottom:1rem">전국 5대 거점을 완주한 진정한 상생 원정대!</p>
+            <div style="background:rgba(14,165,233,0.1);border:1px solid rgba(14,165,233,0.4);border-radius:1rem;padding:0.75rem 1.5rem;margin-bottom:1.5rem">
+                <div style="font-size:0.7rem;color:#94a3b8">최종 SVP 점수</div>
+                <div style="font-size:1.75rem;font-weight:900;color:#38bdf8;font-family:Orbitron,sans-serif">${Math.round(accumulatedScore+gameScore).toLocaleString()}</div>
+            </div>
+            <button onclick="document.getElementById('ending-overlay').remove();endGame();" style="background:linear-gradient(to right,#0ea5e9,#6366f1);padding:0.85rem 2.5rem;border-radius:1rem;font-weight:900;font-size:0.85rem;border:none;color:white;cursor:pointer">&#128293; 결과 보기</button>`;
+        document.getElementById("screen-game").appendChild(endEl);
+    }, 1500);
 }
 function updateScenery() {
     scenery.forEach(s => {
@@ -1024,11 +1368,12 @@ function initSidePanels() {
 // RENDER
 // ============================================================
 function render() {
-    ctx.fillStyle = "#030c1b";
+    const theme = STAGE_THEMES[Math.min(currentStage - 1, STAGE_THEMES.length - 1)];
+    ctx.fillStyle = theme.bg;
     ctx.fillRect(0, 0, CW, CH);
-    renderTerrain();
-    renderSidePanels(); // 조폐공사 제품 사이드 패널
-    renderTracks();
+    renderTerrain(theme);
+    renderSidePanels();
+    renderTracks(theme);
     renderObstaclesR();
     renderItemsR();
     renderParticlesR();
@@ -1357,31 +1702,31 @@ function drawMintProductIcon(c, key, cx, cy, color, accent) {
     c.restore();
 }
 
-function renderTerrain() {
+function renderTerrain(theme) {
+    const tc = theme || {bg:"#03091c", road:"#0a1628", accent:"#1e3a5f"};
     const offset = (frame * gameSpeed * 0.4) % 40;
     for (let y = -40; y < CH + 40; y += 40) {
         const ry = y + offset;
         const seed = y;
-        drawBlock(15, ry, 30, 40, "#00f2fe", "#0284c7", seed);
-        drawBlock(CW-15, ry, 30, 40, "#00f2fe", "#0284c7", seed);
+        drawBlock(15, ry, 30, 40, tc.accent, tc.road, seed);
+        drawBlock(CW-15, ry, 30, 40, tc.accent, tc.road, seed);
     }
     scenery.forEach(s => {
         ctx.save(); ctx.translate(s.x, s.y); ctx.scale(s.sc, s.sc);
         if (s.type==="tree") {
             ctx.fillStyle="#1e293b"; ctx.fillRect(-4,10,8,20);
-            ctx.fillStyle="#0369a1"; ctx.fillRect(-18,-10,36,20);
-            ctx.fillStyle="#0ea5e9"; ctx.fillRect(-14,-22,28,16);
-            ctx.fillStyle="#38bdf8"; ctx.fillRect(-10,-32,20,12);
+            ctx.fillStyle=tc.road; ctx.fillRect(-18,-10,36,20);
+            ctx.fillStyle=tc.accent; ctx.fillRect(-14,-22,28,16);
+            ctx.fillStyle=tc.accent+"aa"; ctx.fillRect(-10,-32,20,12);
         } else if (s.type==="block") {
-            ctx.fillStyle="#0f172a"; ctx.fillRect(-10,-10,20,20);
-            ctx.fillStyle="#0369a1"; ctx.fillRect(-10,5,20,5);
-            ctx.fillStyle="#00f2fe"; ctx.fillRect(-4,-6,4,4); ctx.fillRect(2,2,4,4);
+            ctx.fillStyle=tc.road; ctx.fillRect(-10,-10,20,20);
+            ctx.fillStyle=tc.accent; ctx.fillRect(-10,5,20,5);
+            ctx.fillStyle="#00f2fe88"; ctx.fillRect(-4,-6,4,4); ctx.fillRect(2,2,4,4);
         } else {
-            ctx.fillStyle="rgba(14,165,233,0.25)"; ctx.fillRect(-20,-10,40,14); ctx.fillRect(-10,-18,26,10);
+            ctx.fillStyle=tc.accent+"44"; ctx.fillRect(-20,-10,40,14); ctx.fillRect(-10,-18,26,10);
         }
         ctx.restore();
     });
-    // Landmarks
     MAP_STATIONS.forEach((st, idx) => {
         const relY = (st.dist - distRun) * 1.5 + CH * 0.4;
         if (relY < -120 || relY > CH+120) return;
@@ -1393,7 +1738,7 @@ function renderTerrain() {
         ctx.fillStyle = distRun >= st.dist ? "#00f2fe" : "#3b82f6";
         ctx.beginPath(); ctx.arc(0,30,5,0,Math.PI*2); ctx.fill();
         ctx.fillStyle="#051126"; ctx.fillRect(-35,-45,70,14);
-        ctx.strokeStyle="#0284c7"; ctx.strokeRect(-35,-45,70,14);
+        ctx.strokeStyle=tc.accent; ctx.strokeRect(-35,-45,70,14);
         ctx.fillStyle="#fff"; ctx.font="bold 7px 'Noto Sans KR'"; ctx.textAlign="center"; ctx.fillText(st.name,0,-35);
         ctx.restore();
     });
@@ -1411,10 +1756,11 @@ function drawBlock(x, y, w, h, top, side, seed) {
     ctx.restore();
 }
 
-function renderTracks() {
-    ctx.fillStyle="#0b162a"; ctx.fillRect(30,0,CW-60,CH);
-    ctx.fillStyle="#0284c7"; ctx.fillRect(27,0,3,CH); ctx.fillRect(CW-30,0,3,CH);
-    ctx.strokeStyle="rgba(56,189,248,0.35)"; ctx.lineWidth=2.5; ctx.setLineDash([12,12]);
+function renderTracks(theme) {
+    const tc = theme || {road:"#0a1628", accent:"#1e3a5f"};
+    ctx.fillStyle=tc.road; ctx.fillRect(30,0,CW-60,CH);
+    ctx.fillStyle=tc.accent; ctx.fillRect(27,0,3,CH); ctx.fillRect(CW-30,0,3,CH);
+    ctx.strokeStyle=tc.accent+"88"; ctx.lineWidth=2.5; ctx.setLineDash([12,12]);
     ctx.beginPath();
     ctx.moveTo(CW/3,0); ctx.lineTo(CW/3,CH);
     ctx.moveTo(CW*2/3,0); ctx.lineTo(CW*2/3,CH);
@@ -1573,17 +1919,37 @@ function renderObstaclesR() {
 function renderItemsR() {
     items.forEach(e => {
         ctx.save(); ctx.translate(e.x, e.y);
-        const sz=e.size; const col=e.item.color;
-        ctx.shadowBlur=14; ctx.shadowColor=col;
-        ctx.fillStyle=col; ctx.fillRect(-sz/2,-sz/2,sz,sz);
+        const sz=e.size; const col = e.golden ? "#fbbf24" : e.item.color;
+
+        if (e.golden) {
+            // 골든 아이템: 회전 + 발광 + 별 모양 오라
+            ctx.rotate(frame * 0.06);
+            ctx.shadowBlur = 22; ctx.shadowColor = "#fbbf24";
+            // 별 오라
+            ctx.strokeStyle = "#fef08a"; ctx.lineWidth = 1.5; ctx.globalAlpha = 0.6 + Math.sin(frame*0.2)*0.4;
+            ctx.beginPath();
+            for (let s=0;s<5;s++) {
+                const a = (s*4*Math.PI/5) - Math.PI/2;
+                const ai = a + 2*Math.PI/5;
+                s===0 ? ctx.moveTo(Math.cos(a)*(sz*0.75), Math.sin(a)*(sz*0.75)) : ctx.lineTo(Math.cos(a)*(sz*0.75), Math.sin(a)*(sz*0.75));
+                ctx.lineTo(Math.cos(ai)*(sz*0.4), Math.sin(ai)*(sz*0.4));
+            }
+            ctx.closePath(); ctx.stroke();
+            ctx.globalAlpha = 1;
+        }
+
+        ctx.shadowBlur = e.golden ? 20 : 14; ctx.shadowColor = col;
+        ctx.fillStyle = col; ctx.fillRect(-sz/2,-sz/2,sz,sz);
         ctx.globalAlpha=0.8; ctx.fillStyle="#fff";
         ctx.fillRect(-sz/6,-sz/2,sz/3,sz); ctx.fillRect(-sz/2,-sz/6,sz,sz/3);
         ctx.globalAlpha=1;
         ctx.shadowBlur=0;
-        ctx.fillStyle="#111827"; ctx.fillRect(-sz*.44,-sz*.22,sz*.88,sz*.44);
-        ctx.fillStyle="#fff"; ctx.font="900 11px 'Noto Sans KR',sans-serif";
+        ctx.fillStyle = e.golden ? "#78350f" : "#111827";
+        ctx.fillRect(-sz*.44,-sz*.22,sz*.88,sz*.44);
+        ctx.fillStyle = e.golden ? "#fef9c3" : "#fff";
+        ctx.font="900 11px 'Noto Sans KR',sans-serif";
         ctx.textAlign="center"; ctx.textBaseline="middle";
-        ctx.fillText(e.item.initial,0,1);
+        ctx.fillText(e.golden ? "★" : e.item.initial, 0, 1);
         ctx.restore();
     });
 }
@@ -1647,6 +2013,26 @@ function endGame() {
         document.getElementById("rank-ring").className = "w-24 h-24 flex items-center justify-center rounded-full bg-slate-900 border-4 " + border + " shadow-2xl";
     }
     document.getElementById("rank-comment").textContent = comment;
+
+    // PB 저장
+    const finalScore = Math.round(accumulatedScore + gameScore);
+    if (finalScore > personalBest) {
+        personalBest = finalScore;
+        localStorage.setItem("pb_score", String(personalBest));
+    }
+    document.getElementById("pb-result-row").classList.remove("hidden");
+    document.getElementById("pb-result-score").textContent = personalBest.toLocaleString() + " SVP";
+
+    // 미션 결과 표시
+    if (todayMissions.length) {
+        document.getElementById("mission-result").classList.remove("hidden");
+        document.getElementById("mission-result-list").innerHTML = todayMissions.map(m =>
+            `<div class="flex justify-between items-center ${m.done ? "text-emerald-400" : "text-slate-500"}">
+                <span>${m.done ? "✅" : "⬜"} ${m.desc}</span>
+                <span class="font-bold">${m.done ? "+" + m.bonus + " SVP" : "미완료"}</span>
+            </div>`
+        ).join("");
+    }
 
     document.getElementById("reg-container").classList.remove("hidden");
     showScreen("gameover");
