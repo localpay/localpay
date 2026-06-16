@@ -1,0 +1,2132 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ClearDoc - NotebookLM Watermark Remover</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #111318;
+    --surface: #1c1f27;
+    --surface2: #252830;
+    --border: #2e323d;
+    --accent: #5b8df6;
+    --accent-dim: rgba(91,141,246,0.12);
+    --accent-hover: #7aa3f8;
+    --danger: #f05c5c;
+    --danger-dim: rgba(240,92,92,0.12);
+    --success: #4caf7d;
+    --success-dim: rgba(76,175,125,0.12);
+    --text: #e8eaf0;
+    --text-muted: #7a7f8e;
+    --text-dim: #4e5261;
+    --mono: 'JetBrains Mono', 'Fira Code', monospace;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    min-height: 100vh;
+    display: grid;
+    grid-template-rows: auto 1fr;
+  }
+
+  header {
+    padding: 20px 32px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .logo-icon {
+    width: 36px; height: 36px;
+    background: var(--accent-dim);
+    border: 1px solid var(--accent);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+  }
+
+  header h1 {
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  header p {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+
+  .badge {
+    margin-left: auto;
+    font-size: 11px;
+    font-family: var(--mono);
+    color: var(--accent);
+    background: var(--accent-dim);
+    border: 1px solid rgba(91,141,246,0.3);
+    padding: 3px 10px;
+    border-radius: 20px;
+  }
+
+  main {
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    overflow: hidden;
+    height: calc(100vh - 73px);
+  }
+
+  /* ── LEFT PANEL ── */
+  .left-panel {
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .panel-section {
+    padding: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .panel-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 12px;
+  }
+
+  /* Drop zone */
+  .dropzone {
+    border: 1.5px dashed var(--border);
+    border-radius: 12px;
+    padding: 28px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: var(--surface);
+  }
+  .dropzone:hover, .dropzone.drag-over {
+    border-color: var(--accent);
+    background: var(--accent-dim);
+  }
+  .dropzone-icon { font-size: 28px; margin-bottom: 8px; }
+  .dropzone h3 { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+  .dropzone p { font-size: 11px; color: var(--text-muted); }
+  #file-input { display: none; }
+
+  .file-loaded {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+  }
+  .file-loaded-icon { font-size: 22px; }
+  .file-loaded-name {
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .file-loaded-meta { font-size: 11px; color: var(--text-muted); }
+  .file-loaded-close {
+    margin-left: auto;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+    padding: 2px 4px;
+    border-radius: 4px;
+    transition: color 0.15s;
+  }
+  .file-loaded-close:hover { color: var(--danger); }
+
+  /* Filter section */
+  .filter-section {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+  }
+
+  .filter-group {
+    margin-bottom: 20px;
+  }
+
+  .filter-group-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .filter-group-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .filter-input-wrap {
+    position: relative;
+    margin-bottom: 8px;
+  }
+  .filter-input-wrap input[type="text"] {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 12px 8px 32px;
+    font-size: 12px;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.15s;
+    font-family: var(--mono);
+  }
+  .filter-input-wrap input[type="text"]:focus { border-color: var(--accent); }
+  .filter-input-wrap .input-icon {
+    position: absolute;
+    left: 10px; top: 50%;
+    transform: translateY(-50%);
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .coord-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .coord-field label {
+    display: block;
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+    font-family: var(--mono);
+  }
+  .coord-field input {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 7px 10px;
+    font-size: 12px;
+    color: var(--text);
+    outline: none;
+    font-family: var(--mono);
+    transition: border-color 0.15s;
+  }
+  .coord-field input:focus { border-color: var(--accent); }
+
+  .hint {
+    font-size: 10px;
+    color: var(--text-dim);
+    margin-top: 6px;
+    line-height: 1.5;
+  }
+
+  /* Toggle checkboxes */
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 0;
+  }
+  .toggle-row label {
+    font-size: 12px;
+    color: var(--text);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .toggle-row span { font-size: 11px; color: var(--text-muted); display: block; }
+
+  input[type="checkbox"].toggle {
+    appearance: none;
+    width: 34px; height: 18px;
+    background: var(--border);
+    border-radius: 9px;
+    position: relative;
+    cursor: pointer;
+    transition: background 0.2s;
+    flex-shrink: 0;
+  }
+  input[type="checkbox"].toggle::after {
+    content: '';
+    position: absolute;
+    width: 12px; height: 12px;
+    background: #fff;
+    border-radius: 50%;
+    top: 3px; left: 3px;
+    transition: transform 0.2s;
+  }
+  input[type="checkbox"].toggle:checked {
+    background: var(--accent);
+  }
+  input[type="checkbox"].toggle:checked::after {
+    transform: translateX(16px);
+  }
+
+  /* Action button */
+  .action-area {
+    padding: 16px 20px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .btn-primary {
+    width: 100%;
+    padding: 11px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, opacity 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .btn-primary:hover { background: var(--accent-hover); }
+  .btn-primary:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  .btn-secondary {
+    width: 100%;
+    padding: 9px;
+    background: var(--surface2);
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+  .btn-secondary:hover { color: var(--text); border-color: var(--text-muted); }
+  .btn-secondary:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  /* ── RIGHT PANEL ── */
+  .right-panel {
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    overflow: hidden;
+  }
+
+  .preview-header {
+    padding: 14px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .slide-nav {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .slide-nav button {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 4px 10px;
+    font-size: 12px;
+    transition: all 0.15s;
+  }
+  .slide-nav button:hover:not(:disabled) { color: var(--text); border-color: var(--text-muted); }
+  .slide-nav button:disabled { opacity: 0.3; cursor: not-allowed; }
+  .slide-nav span {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text-muted);
+    min-width: 60px;
+    text-align: center;
+  }
+
+  .detection-summary {
+    margin-left: auto;
+    font-size: 11px;
+    font-family: var(--mono);
+  }
+  .detection-count {
+    color: var(--danger);
+    font-weight: 700;
+  }
+  .detection-count.none { color: var(--success); }
+
+  /* Preview canvas */
+  .preview-body {
+    overflow: hidden;
+    position: relative;
+    background: #0a0b0f;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  #slide-canvas-wrap {
+    position: relative;
+    background: #fff;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+    overflow: hidden;
+  }
+
+  #slide-svg {
+    display: block;
+  }
+
+  .empty-state {
+    text-align: center;
+    color: var(--text-dim);
+  }
+  .empty-state .empty-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.3; }
+  .empty-state h3 { font-size: 14px; color: var(--text-muted); margin-bottom: 6px; }
+  .empty-state p { font-size: 12px; }
+
+  /* Log panel */
+  .log-panel {
+    border-top: 1px solid var(--border);
+    height: 140px;
+    overflow-y: auto;
+    padding: 10px 24px;
+    font-family: var(--mono);
+    font-size: 11px;
+    line-height: 1.7;
+  }
+  .log-line { display: flex; gap: 10px; }
+  .log-time { color: var(--text-dim); flex-shrink: 0; }
+  .log-msg.info { color: var(--text-muted); }
+  .log-msg.success { color: var(--success); }
+  .log-msg.warn { color: #e8a34c; }
+  .log-msg.error { color: var(--danger); }
+  .log-msg.system { color: var(--accent); }
+
+  /* SVG element overlay styles */
+  .el-hit {
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .el-hit:hover .el-overlay { opacity: 1 !important; }
+
+
+  .position-help {
+    margin-top: 8px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid rgba(91,141,246,0.25);
+    background: rgba(91,141,246,0.08);
+    color: var(--text-muted);
+    font-size: 10px;
+    line-height: 1.45;
+  }
+  .selection-box {
+    position: absolute;
+    border: 2px dashed #b7ff55;
+    background: rgba(183,255,85,0.14);
+    box-shadow: 0 0 0 9999px rgba(0,0,0,0.10), 0 0 16px rgba(183,255,85,0.35);
+    pointer-events: none;
+    z-index: 5;
+    display: none;
+  }
+  .selection-chip {
+    position: absolute;
+    right: 8px;
+    bottom: 8px;
+    z-index: 6;
+    background: rgba(17,19,24,.86);
+    color: #b7ff55;
+    border: 1px solid rgba(183,255,85,.35);
+    font: 10px var(--mono);
+    padding: 5px 8px;
+    border-radius: 6px;
+    pointer-events: none;
+  }
+  #slide-canvas-wrap.selectable {
+    cursor: crosshair;
+  }
+  #slide-canvas-wrap.selectable:active {
+    cursor: crosshair;
+  }
+
+  /* Toast */
+  #toast {
+    position: fixed;
+    bottom: 24px; right: 24px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 18px;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    transform: translateY(80px);
+    opacity: 0;
+    transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    z-index: 999;
+    max-width: 320px;
+  }
+  #toast.show { transform: translateY(0); opacity: 1; }
+  #toast.success { border-color: var(--success); }
+  #toast.error { border-color: var(--danger); }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-icon">🧹</div>
+  <div>
+    <h1>ClearDoc NotebookLM Watermark Remover</h1>
+    <p>PPTX 미리보기 기반 우측 하단 NotebookLM 워터마크를 실제 제거합니다</p>
+  </div>
+  <span class="badge">client-side · lossless package rewrite</span>
+</header>
+
+<main>
+  <!-- LEFT PANEL -->
+  <div class="left-panel">
+
+    <!-- File drop -->
+    <div class="panel-section">
+      <div class="panel-label">파일</div>
+      <div id="dropzone" class="dropzone" onclick="document.getElementById('file-input').click()"
+           ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
+        <div class="dropzone-icon">📂</div>
+        <h3>PPTX 파일을 드래그하거나 클릭하세요</h3>
+        <p>파일은 브라우저 안에서만 처리됩니다</p>
+      </div>
+      <div id="file-info" style="display:none"></div>
+      <input type="file" id="file-input" accept=".pptx" onchange="onFileSelect(event)">
+    </div>
+
+    <!-- Filters -->
+    <div class="filter-section">
+
+      <div class="filter-group">
+        <div class="filter-group-title">텍스트 키워드</div>
+        <div class="filter-input-wrap">
+          <span class="input-icon">🔤</span>
+          <input type="text" id="kw-text" placeholder="예) 기밀, DRAFT, 회사명...">
+        </div>
+        <p class="hint">입력한 단어를 포함한 텍스트 박스를 제거합니다. 쉼표로 여러 개 입력 가능.</p>
+      </div>
+
+      <div class="filter-group">
+        <div class="filter-group-title">이미지 파일명</div>
+        <div class="filter-input-wrap">
+          <span class="input-icon">🖼</span>
+          <input type="text" id="kw-img" placeholder="예) logo, watermark, stamp">
+        </div>
+        <p class="hint">PPTX 내부 미디어 파일명에 이 단어가 포함된 이미지를 제거합니다.</p>
+      </div>
+
+      <div class="filter-group">
+        <div class="filter-group-title">위치 필터 (슬라이드 비율 기준)</div>
+        <div class="coord-grid">
+          <div class="coord-field">
+            <label>X 시작 % (좌측)</label>
+            <input type="number" id="cx-min" placeholder="0" min="0" max="100">
+          </div>
+          <div class="coord-field">
+            <label>X 끝 % (우측)</label>
+            <input type="number" id="cx-max" placeholder="100" min="0" max="100">
+          </div>
+          <div class="coord-field">
+            <label>Y 시작 % (상단)</label>
+            <input type="number" id="cy-min" placeholder="0" min="0" max="100">
+          </div>
+          <div class="coord-field">
+            <label>Y 끝 % (하단)</label>
+            <input type="number" id="cy-max" placeholder="100" min="0" max="100">
+          </div>
+        </div>
+        <p class="hint">예: X 60~100 / Y 80~100 → 우측 하단 영역의 요소만 제거</p>
+        <div class="position-help">미리보기 화면에서 워터마크 위치를 클릭하거나 드래그하면 이 좌표가 자동 입력됩니다. 작은 워터마크는 클릭만 해도 주변 6% 영역이 자동 선택됩니다. 큰 배경 이미지는 선택 영역만 걸쳐도 전체 삭제되지 않도록 보호됩니다.</div>
+      </div>
+
+      <div class="filter-group">
+        <div class="filter-group-title">제거 대상</div>
+        <div class="toggle-row">
+          <label for="tgl-text">텍스트 박스</label>
+          <input type="checkbox" class="toggle" id="tgl-text" checked>
+        </div>
+        <div class="toggle-row">
+          <label for="tgl-img">이미지</label>
+          <input type="checkbox" class="toggle" id="tgl-img" checked>
+        </div>
+        <div class="toggle-row">
+          <label for="tgl-shape">빈 도형</label>
+          <input type="checkbox" class="toggle" id="tgl-shape">
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Actions -->
+    <div class="action-area">
+      <button class="btn-primary" id="btn-scan" onclick="runWatermarkAiRemoval()" disabled>
+        ⚡ lm.png 워터마크 AI 완전 제거
+      </button>
+      <button class="btn-secondary" id="btn-area-scan" onclick="scanSelectedAreaOnly()" disabled>
+        🎯 선택 영역 감지/표시
+      </button>
+      <button class="btn-primary" id="btn-apply" onclick="downloadCleanedPptx()" disabled style="background: var(--success);">
+        ⬇️ 무손실 정제 파일 다운로드
+      </button>
+      <button class="btn-secondary" id="btn-reset" onclick="resetAll()">
+        ↺ 초기화
+      </button>
+    </div>
+
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="right-panel">
+
+    <div class="preview-header">
+      <div class="slide-nav">
+        <button id="btn-prev" onclick="prevSlide()" disabled>‹</button>
+        <span id="slide-indicator">— / —</span>
+        <button id="btn-next" onclick="nextSlide()" disabled>›</button>
+      </div>
+      <div id="detection-summary" class="detection-summary" style="display:none"></div>
+    </div>
+
+    <div class="preview-body" id="preview-body">
+      <div class="empty-state">
+        <div class="empty-icon">🗂</div>
+        <h3>파일을 업로드하면 실제 이미지 기반 미리보기가 나타납니다</h3>
+        <p>워터마크 제거 후 미리보기와 다운로드 파일이 동시에 갱신됩니다</p>
+      </div>
+    </div>
+
+    <div class="log-panel" id="log-panel"></div>
+
+  </div>
+</main>
+
+<div id="toast"></div>
+
+<script>
+// ── State ──────────────────────────────────────────────────
+const state = {
+  zip: null,
+  fileName: '',
+  slideWidth: 9144000,
+  slideHeight: 5143500,
+  slides: [],
+  targets: [],
+  activeIdx: 0,
+  scanned: false,
+  mediaCache: {},
+  cleanedBlob: null,
+  cleanedFileName: '',
+  isCleaned: false,
+  selection: null,
+  dragStart: null,
+  preview: null,
+};
+
+const REL_NS = 'http://schemas.openxmlformats.org/package/2006/relationships';
+const OFFICE_REL_NS = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
+
+// ── Utils ──────────────────────────────────────────────────
+function log(msg, level = 'info') {
+  const panel = document.getElementById('log-panel');
+  const now = new Date().toTimeString().slice(0, 8);
+  const el = document.createElement('div');
+  el.className = 'log-line';
+  el.innerHTML = `<span class="log-time">${now}</span><span class="log-msg ${level}">${escHtml(msg)}</span>`;
+  panel.appendChild(el);
+  panel.scrollTop = panel.scrollHeight;
+}
+
+function toast(msg, type = 'info') {
+  const el = document.getElementById('toast');
+  el.className = `show ${type}`;
+  el.innerHTML = `<span>${type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️'}</span> ${escHtml(msg)}`;
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+function findAll(docOrEl, localName) {
+  const results = [];
+  const walk = (node) => {
+    if (!node) return;
+    if (node.nodeType === 1) {
+      const name = (node.localName || node.nodeName || '').split(':').pop().toLowerCase();
+      if (name === localName.toLowerCase()) results.push(node);
+    }
+    if (node.childNodes) Array.from(node.childNodes).forEach(walk);
+  };
+  walk(docOrEl);
+  return results;
+}
+
+function zipFileCaseInsensitive(zip, path) {
+  if (!zip || !path) return null;
+  const direct = zip.file(path);
+  if (direct) return direct;
+  const found = Object.keys(zip.files).find(k => k.toLowerCase() === path.toLowerCase());
+  return found ? zip.file(found) : null;
+}
+
+function getZipText(zip, path) {
+  const f = zipFileCaseInsensitive(zip, path);
+  if (f) return f.async('string');
+  throw new Error(`파일 없음: ${path}`);
+}
+
+function parseXml(str) {
+  const doc = new DOMParser().parseFromString(str, 'application/xml');
+  if (doc.getElementsByTagName('parsererror').length) throw new Error('XML 파싱 실패');
+  return doc;
+}
+
+function serializeXml(doc) {
+  return new XMLSerializer().serializeToString(doc);
+}
+
+function getOff(shape) {
+  const off = findAll(shape, 'off')[0];
+  const ext = findAll(shape, 'ext')[0];
+  if (!off || !ext) return null;
+  return {
+    x: parseInt(off.getAttribute('x'), 10) || 0,
+    y: parseInt(off.getAttribute('y'), 10) || 0,
+    cx: parseInt(ext.getAttribute('cx'), 10) || 0,
+    cy: parseInt(ext.getAttribute('cy'), 10) || 0,
+  };
+}
+
+function getText(shape) {
+  return findAll(shape, 't').map(n => n.textContent).join('').trim();
+}
+
+function getRelId(el) {
+  return el.getAttribute('r:embed') ||
+         el.getAttribute('r:link') ||
+         el.getAttributeNS(OFFICE_REL_NS, 'embed') ||
+         el.getAttributeNS(OFFICE_REL_NS, 'link') ||
+         el.getAttribute('embed') || '';
+}
+
+function relPath(ownerPath) {
+  const parts = ownerPath.split('/');
+  const name = parts.pop();
+  return `${parts.join('/')}/_rels/${name}.rels`;
+}
+
+function normalizePath(base, target) {
+  if (!target) return '';
+  if (/^https?:/i.test(target) || target.startsWith('/')) return target.replace(/^\//, '');
+  const parts = base.split('/').filter(Boolean);
+  const segs = target.split('/');
+  for (const s of segs) {
+    if (!s || s === '.') continue;
+    if (s === '..') parts.pop();
+    else parts.push(s);
+  }
+  return parts.join('/');
+}
+
+function mediaMime(path) {
+  const p = (path || '').toLowerCase();
+  if (p.endsWith('.jpg') || p.endsWith('.jpeg')) return 'image/jpeg';
+  if (p.endsWith('.gif')) return 'image/gif';
+  if (p.endsWith('.webp')) return 'image/webp';
+  if (p.endsWith('.svg')) return 'image/svg+xml';
+  return 'image/png';
+}
+
+async function mediaDataUrl(path) {
+  if (!path || /^https?:/i.test(path)) return '';
+  if (state.mediaCache[path]) return state.mediaCache[path];
+  const f = zipFileCaseInsensitive(state.zip, path);
+  if (!f) return '';
+  const b64 = await f.async('base64');
+  const url = `data:${mediaMime(path)};base64,${b64}`;
+  state.mediaCache[path] = url;
+  return url;
+}
+
+function isBottomRightSmall(box, W = state.slideWidth, H = state.slideHeight) {
+  if (!box) return false;
+  const right = (box.x + box.cx) / W;
+  const bottom = (box.y + box.cy) / H;
+  const centerX = (box.x + box.cx / 2) / W;
+  const centerY = (box.y + box.cy / 2) / H;
+  const width = box.cx / W;
+  const height = box.cy / H;
+  const area = width * height;
+  const anchored = (right >= 0.92 && bottom >= 0.92) || (centerX >= 0.82 && centerY >= 0.82);
+  const small = width <= 0.24 && height <= 0.16 && area <= 0.035;
+  return anchored && small;
+}
+
+function elementDescriptor(el) {
+  const cNvPr = findAll(el, 'cNvPr')[0];
+  return [
+    cNvPr?.getAttribute('name') || '',
+    cNvPr?.getAttribute('descr') || '',
+    cNvPr?.getAttribute('title') || '',
+    getText(el) || ''
+  ].join(' ').toLowerCase();
+}
+
+function isNotebookLmMedia(mediaPath, descriptor = '') {
+  const hay = `${mediaPath || ''} ${descriptor || ''}`.toLowerCase();
+  return hay.includes('lm.png') ||
+         hay.includes('notebooklm') ||
+         hay.includes('notebook lm') ||
+         hay.includes('watermark') ||
+         hay.includes('image_3f36f9') ||
+         /(^|[/_-])lm\.(png|jpg|jpeg|webp|svg)$/i.test(mediaPath || '');
+}
+
+function shouldRemoveNotebookTarget(el, mediaPath = '') {
+  const box = getOff(el);
+  const desc = elementDescriptor(el);
+  const named = isNotebookLmMedia(mediaPath, desc);
+  const bottom = isBottomRightSmall(box);
+  const isPic = (el.localName || '').toLowerCase() === 'pic';
+  // Strong: explicit NotebookLM/lm.png reference. Safe for any location.
+  if (named) return { remove: true, reason: 'lm.png/NotebookLM 관계 키 매치' };
+  // Fallback: NotebookLM slides place a tiny image at the bottom-right. Limit to pictures only.
+  if (isPic && bottom) return { remove: true, reason: '우측 하단 소형 이미지 앵커 매치' };
+  return { remove: false, reason: '' };
+}
+
+// ── File loading ────────────────────────────────────────────
+function onDragOver(e) { e.preventDefault(); document.getElementById('dropzone').classList.add('drag-over'); }
+function onDragLeave(e) { document.getElementById('dropzone').classList.remove('drag-over'); }
+function onDrop(e) { e.preventDefault(); document.getElementById('dropzone').classList.remove('drag-over'); const f = e.dataTransfer.files[0]; if (f) loadFile(f); }
+function onFileSelect(e) { const f = e.target.files[0]; if (f) loadFile(f); }
+
+async function loadFile(file) {
+  if (!file.name.toLowerCase().endsWith('.pptx')) { toast('.pptx 파일만 지원합니다', 'error'); return; }
+  resetState();
+  state.fileName = file.name;
+  log(`파일 로드: ${file.name}`, 'system');
+
+  try {
+    if (!window.JSZip) throw new Error('JSZip 라이브러리를 불러오지 못했습니다. 네트워크 연결을 확인해 주세요.');
+    const buf = await file.arrayBuffer();
+    state.zip = await JSZip.loadAsync(buf);
+
+    if (!zipFileCaseInsensitive(state.zip, '[Content_Types].xml') || !zipFileCaseInsensitive(state.zip, 'ppt/presentation.xml')) {
+      throw new Error('올바른 PPTX 구조가 아닙니다.');
+    }
+
+    try {
+      const presXml = parseXml(await getZipText(state.zip, 'ppt/presentation.xml'));
+      const sldSz = findAll(presXml, 'sldSz')[0];
+      if (sldSz) {
+        state.slideWidth = parseInt(sldSz.getAttribute('cx'), 10) || state.slideWidth;
+        state.slideHeight = parseInt(sldSz.getAttribute('cy'), 10) || state.slideHeight;
+      }
+    } catch(e) { log('슬라이드 크기 메타데이터를 찾지 못해 기본 16:9 크기를 사용합니다.', 'warn'); }
+
+    const slideFiles = Object.keys(state.zip.files)
+      .filter(n => /^ppt\/slides\/slide\d+\.xml$/i.test(n))
+      .sort((a, b) => parseInt((a.match(/slide(\d+)\.xml$/i)||[0,0])[1], 10) - parseInt((b.match(/slide(\d+)\.xml$/i)||[0,0])[1], 10));
+
+    for (const path of slideFiles) {
+      const xmlDoc = parseXml(await getZipText(state.zip, path));
+      const rels = await loadRels(state.zip, path);
+      state.slides.push({ path, xmlDoc, rels, model: null });
+    }
+
+    log(`슬라이드 ${state.slides.length}장 인식 완료`, 'success');
+    log('미리보기 엔진: 실제 PPTX 이미지 미디어를 SVG에 매핑합니다.', 'system');
+    showFileInfo(file);
+    document.getElementById('btn-scan').disabled = false;
+    document.getElementById('btn-area-scan').disabled = true;
+    document.getElementById('btn-apply').disabled = true;
+    state.activeIdx = 0;
+    await renderPreview();
+    updateNav();
+  } catch(err) {
+    log(`오류: ${err.message}`, 'error');
+    toast(err.message, 'error');
+  }
+}
+
+async function loadRels(zip, ownerPath) {
+  const rp = relPath(ownerPath);
+  const result = {};
+  if (!zipFileCaseInsensitive(zip, rp)) return result;
+  try {
+    const doc = parseXml(await getZipText(zip, rp));
+    const base = ownerPath.split('/').slice(0, -1).join('/');
+    findAll(doc, 'Relationship').forEach(rel => {
+      const id = rel.getAttribute('Id') || '';
+      const target = rel.getAttribute('Target') || '';
+      const type = rel.getAttribute('Type') || '';
+      const targetMode = rel.getAttribute('TargetMode') || '';
+      const resolved = targetMode.toLowerCase() === 'external' ? target : normalizePath(base, target);
+      if (id) result[id] = { id, target, type, resolved, node: rel, relDoc: doc, relPath: rp };
+    });
+  } catch(e) { log(`관계 파일 파싱 실패: ${rp}`, 'warn'); }
+  return result;
+}
+
+function showFileInfo(file) {
+  const dz = document.getElementById('dropzone');
+  const fi = document.getElementById('file-info');
+  dz.style.display = 'none';
+  fi.style.display = 'block';
+  fi.innerHTML = `<div class="file-loaded"><span class="file-loaded-icon">📊</span><div><div class="file-loaded-name">${escHtml(file.name)}</div><div class="file-loaded-meta">${state.slides.length}개 슬라이드 · ${(file.size/1024).toFixed(0)} KB</div></div><button class="file-loaded-close" onclick="resetAll()" title="파일 제거">✕</button></div>`;
+}
+
+
+// ── Preview Position Picker ─────────────────────────────────
+function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+function pct(n) { return Math.round(n * 10) / 10; }
+
+function setCoordInputsFromSelection(sel) {
+  document.getElementById('cx-min').value = pct(sel.xMin * 100);
+  document.getElementById('cx-max').value = pct(sel.xMax * 100);
+  document.getElementById('cy-min').value = pct(sel.yMin * 100);
+  document.getElementById('cy-max').value = pct(sel.yMax * 100);
+}
+
+function getSelectionFromInputs() {
+  const xMin = parseFloat(document.getElementById('cx-min').value);
+  const xMax = parseFloat(document.getElementById('cx-max').value);
+  const yMin = parseFloat(document.getElementById('cy-min').value);
+  const yMax = parseFloat(document.getElementById('cy-max').value);
+  if ([xMin,xMax,yMin,yMax].some(v => Number.isNaN(v))) return null;
+  return {
+    xMin: clamp(Math.min(xMin, xMax) / 100, 0, 1),
+    xMax: clamp(Math.max(xMin, xMax) / 100, 0, 1),
+    yMin: clamp(Math.min(yMin, yMax) / 100, 0, 1),
+    yMax: clamp(Math.max(yMin, yMax) / 100, 0, 1),
+  };
+}
+
+function eventToSlidePct(e) {
+  const wrap = document.getElementById('slide-canvas-wrap');
+  if (!wrap) return null;
+  const r = wrap.getBoundingClientRect();
+  const x = clamp((e.clientX - r.left) / r.width, 0, 1);
+  const y = clamp((e.clientY - r.top) / r.height, 0, 1);
+  return { x, y };
+}
+
+function renderSelectionOverlay() {
+  const box = document.getElementById('selection-box');
+  const chip = document.getElementById('selection-chip');
+  const sel = state.selection || getSelectionFromInputs();
+  if (!box || !chip || !sel) {
+    if (box) box.style.display = 'none';
+    if (chip) chip.style.display = 'none';
+    return;
+  }
+  const left = sel.xMin * 100;
+  const top = sel.yMin * 100;
+  const width = Math.max((sel.xMax - sel.xMin) * 100, 0.6);
+  const height = Math.max((sel.yMax - sel.yMin) * 100, 0.6);
+  box.style.cssText = `display:block;left:${left}%;top:${top}%;width:${width}%;height:${height}%;`;
+  chip.style.display = 'block';
+  chip.textContent = `선택 ${pct(sel.xMin*100)}-${pct(sel.xMax*100)}% / ${pct(sel.yMin*100)}-${pct(sel.yMax*100)}%`;
+}
+
+async function onPreviewPointerDown(e) {
+  if (!state.slides.length) return;
+  e.preventDefault();
+  const pt = eventToSlidePct(e);
+  if (!pt) return;
+  state.dragStart = pt;
+  state.selection = { xMin: pt.x, xMax: pt.x, yMin: pt.y, yMax: pt.y };
+  renderSelectionOverlay();
+  window.addEventListener('pointermove', onPreviewPointerMove);
+  window.addEventListener('pointerup', onPreviewPointerUp, { once: true });
+}
+
+function onPreviewPointerMove(e) {
+  if (!state.dragStart) return;
+  const pt = eventToSlidePct(e);
+  if (!pt) return;
+  state.selection = {
+    xMin: Math.min(state.dragStart.x, pt.x),
+    xMax: Math.max(state.dragStart.x, pt.x),
+    yMin: Math.min(state.dragStart.y, pt.y),
+    yMax: Math.max(state.dragStart.y, pt.y),
+  };
+  renderSelectionOverlay();
+}
+
+async function onPreviewPointerUp(e) {
+  window.removeEventListener('pointermove', onPreviewPointerMove);
+  if (!state.dragStart) return;
+  const pt = eventToSlidePct(e) || state.dragStart;
+  const dx = Math.abs(pt.x - state.dragStart.x);
+  const dy = Math.abs(pt.y - state.dragStart.y);
+  if (dx < 0.01 && dy < 0.01) {
+    // Click mode: create a small search window around the clicked point.
+    const padX = 0.03, padY = 0.035;
+    state.selection = {
+      xMin: clamp(pt.x - padX, 0, 1),
+      xMax: clamp(pt.x + padX, 0, 1),
+      yMin: clamp(pt.y - padY, 0, 1),
+      yMax: clamp(pt.y + padY, 0, 1),
+    };
+  } else {
+    state.selection = {
+      xMin: Math.min(state.dragStart.x, pt.x),
+      xMax: Math.max(state.dragStart.x, pt.x),
+      yMin: Math.min(state.dragStart.y, pt.y),
+      yMax: Math.max(state.dragStart.y, pt.y),
+    };
+  }
+  state.dragStart = null;
+  setCoordInputsFromSelection(state.selection);
+  document.getElementById('btn-area-scan').disabled = false;
+  log(`미리보기 위치 선택: X ${pct(state.selection.xMin*100)}~${pct(state.selection.xMax*100)}%, Y ${pct(state.selection.yMin*100)}~${pct(state.selection.yMax*100)}%`, 'system');
+  await scanSelectedAreaOnly();
+}
+
+function selectionHitMetrics(el, sel) {
+  const box = getOff(el);
+  if (!box || !sel) return null;
+
+  const ex1 = clamp(box.x / state.slideWidth, 0, 1);
+  const ey1 = clamp(box.y / state.slideHeight, 0, 1);
+  const ex2 = clamp((box.x + box.cx) / state.slideWidth, 0, 1);
+  const ey2 = clamp((box.y + box.cy) / state.slideHeight, 0, 1);
+  const sx1 = clamp(sel.xMin, 0, 1);
+  const sy1 = clamp(sel.yMin, 0, 1);
+  const sx2 = clamp(sel.xMax, 0, 1);
+  const sy2 = clamp(sel.yMax, 0, 1);
+
+  const ix1 = Math.max(ex1, sx1);
+  const iy1 = Math.max(ey1, sy1);
+  const ix2 = Math.min(ex2, sx2);
+  const iy2 = Math.min(ey2, sy2);
+  const iw = Math.max(0, ix2 - ix1);
+  const ih = Math.max(0, iy2 - iy1);
+  const interArea = iw * ih;
+  const elemArea = Math.max((ex2 - ex1) * (ey2 - ey1), 0.000001);
+  const selArea = Math.max((sx2 - sx1) * (sy2 - sy1), 0.000001);
+  const elemCx = (ex1 + ex2) / 2;
+  const elemCy = (ey1 + ey2) / 2;
+  const selCx = (sx1 + sx2) / 2;
+  const selCy = (sy1 + sy2) / 2;
+
+  return {
+    intersects: interArea > 0,
+    elementCoverage: interArea / elemArea,
+    selectionCoverage: interArea / selArea,
+    elementArea: elemArea,
+    selectionArea: selArea,
+    elementCenterInside: elemCx >= sx1 && elemCx <= sx2 && elemCy >= sy1 && elemCy <= sy2,
+    selectionCenterInside: selCx >= ex1 && selCx <= ex2 && selCy >= ey1 && selCy <= ey2,
+    isLargeElement: elemArea >= 0.18 || (ex2 - ex1) >= 0.65 || (ey2 - ey1) >= 0.65
+  };
+}
+
+function elementIntersectsSelection(el, sel) {
+  const m = selectionHitMetrics(el, sel);
+  if (!m || !m.intersects) return false;
+
+  // 핵심 안전장치:
+  // 드래그 박스가 전체 슬라이드 배경 이미지/대형 도형에 조금만 걸쳐도
+  // 해당 대형 요소 전체가 삭제되는 문제를 막는다.
+  if (m.isLargeElement) {
+    return m.elementCoverage >= 0.55 || (m.elementCenterInside && m.elementCoverage >= 0.35);
+  }
+
+  // 일반 요소는 선택 영역이 요소의 상당 부분을 덮거나, 요소 중심이 선택 영역 안에 있을 때만 삭제한다.
+  // 단순 경계선 접촉만으로는 삭제하지 않는다.
+  return m.elementCoverage >= 0.25 || (m.elementCenterInside && m.elementCoverage >= 0.12);
+}
+
+function targetPrecisionLabel(el, sel) {
+  const m = selectionHitMetrics(el, sel);
+  if (!m) return '';
+  return `선택매치 ${Math.round(m.elementCoverage * 100)}%`;
+}
+
+
+function isClearDocAreaEraser(sp) {
+  const cNvPr = findAll(sp, 'cNvPr')[0];
+  const name = (cNvPr && (cNvPr.getAttribute('name') || cNvPr.getAttribute('descr') || '') || '').toLowerCase();
+  return name.includes('cleardoc-area-eraser') || name.includes('cleardoc selection eraser');
+}
+
+function getShapeTree(xmlDoc) {
+  return findAll(xmlDoc, 'spTree')[0] || null;
+}
+
+function nextShapeId(xmlDoc) {
+  let maxId = 1000;
+  findAll(xmlDoc, 'cNvPr').forEach(n => {
+    const id = parseInt(n.getAttribute('id') || '0', 10);
+    if (!Number.isNaN(id)) maxId = Math.max(maxId, id);
+  });
+  return maxId + 1;
+}
+
+function selectionToEmuBox(sel) {
+  const x1 = clamp(Math.min(sel.xMin, sel.xMax), 0, 1);
+  const x2 = clamp(Math.max(sel.xMin, sel.xMax), 0, 1);
+  const y1 = clamp(Math.min(sel.yMin, sel.yMax), 0, 1);
+  const y2 = clamp(Math.max(sel.yMin, sel.yMax), 0, 1);
+  return {
+    x: Math.round(x1 * state.slideWidth),
+    y: Math.round(y1 * state.slideHeight),
+    cx: Math.max(1, Math.round((x2 - x1) * state.slideWidth)),
+    cy: Math.max(1, Math.round((y2 - y1) * state.slideHeight)),
+  };
+}
+
+function createAreaEraserShapeXml(xmlDoc, sel, label = 'manual') {
+  const box = selectionToEmuBox(sel);
+  const id = nextShapeId(xmlDoc);
+  const xml = `
+<p:sp xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+  <p:nvSpPr>
+    <p:cNvPr id="${id}" name="ClearDoc-Area-Eraser-${label}" descr="ClearDoc selection eraser"/>
+    <p:cNvSpPr/>
+    <p:nvPr/>
+  </p:nvSpPr>
+  <p:spPr>
+    <a:xfrm>
+      <a:off x="${box.x}" y="${box.y}"/>
+      <a:ext cx="${box.cx}" cy="${box.cy}"/>
+    </a:xfrm>
+    <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>
+    <a:solidFill><a:srgbClr val="FFFFFF"/></a:solidFill>
+    <a:ln><a:noFill/></a:ln>
+  </p:spPr>
+  <p:style>
+    <a:lnRef idx="0"><a:schemeClr val="accent1"/></a:lnRef>
+    <a:fillRef idx="0"><a:schemeClr val="accent1"/></a:fillRef>
+    <a:effectRef idx="0"><a:schemeClr val="accent1"/></a:effectRef>
+    <a:fontRef idx="minor"><a:schemeClr val="tx1"/></a:fontRef>
+  </p:style>
+  <p:txBody><a:bodyPr/><a:lstStyle/><a:p/></p:txBody>
+</p:sp>`;
+  return parseXml(xml).documentElement;
+}
+
+async function addSelectionEraserMaskToSlide(slideIdx, sel) {
+  const slide = state.slides[slideIdx];
+  if (!slide || !slide.xmlDoc || !sel) return false;
+  const tree = getShapeTree(slide.xmlDoc);
+  if (!tree) throw new Error('슬라이드 도형 트리를 찾을 수 없습니다.');
+  const mask = createAreaEraserShapeXml(slide.xmlDoc, sel, `slide-${slideIdx + 1}`);
+  // append last so it visually covers only the selected area, without deleting a full background image.
+  tree.appendChild(slide.xmlDoc.importNode(mask, true));
+  state.zip.file(slide.path, serializeXml(slide.xmlDoc));
+  const b = selectionToEmuBox(sel);
+  log(`[슬라이드 ${slideIdx + 1}] 선택 영역 마스크 적용: x=${b.x}, y=${b.y}, cx=${b.cx}, cy=${b.cy}`, 'success');
+  return true;
+}
+
+async function collectSelectionTargets(selection, onlyActiveSlide = true) {
+  const targets = [];
+  const start = onlyActiveSlide ? state.activeIdx : 0;
+  const end = onlyActiveSlide ? state.activeIdx + 1 : state.slides.length;
+  const removeText = document.getElementById('tgl-text').checked;
+  const removeImg = document.getElementById('tgl-img').checked;
+  const removeShape = document.getElementById('tgl-shape').checked;
+
+  for (let si = start; si < end; si++) {
+    const slide = state.slides[si];
+    slide.rels = await loadRels(state.zip, slide.path);
+    if (removeImg) {
+      findAll(slide.xmlDoc, 'pic').forEach(pic => {
+        if (!elementIntersectsSelection(pic, selection)) return;
+        const blip = findAll(pic, 'blip')[0];
+        const rid = blip ? getRelId(blip) : '';
+        const rel = rid ? slide.rels[rid] : null;
+        const media = rel?.resolved || '';
+        targets.push({ slideIdx: si, element: pic, type: 'image', label: `선택 영역 이미지 ${media.split('/').pop() || ''} · ${targetPrecisionLabel(pic, selection)}`.trim(), rid, mediaPath: media });
+      });
+    }
+    findAll(slide.xmlDoc, 'sp').forEach(sp => {
+      if (!elementIntersectsSelection(sp, selection)) return;
+      const text = getText(sp);
+      if (text && removeText) {
+        targets.push({ slideIdx: si, element: sp, type: 'text', label: `선택 영역 텍스트: ${text.slice(0, 28)} · ${targetPrecisionLabel(sp, selection)}`, rid: null, mediaPath: null });
+      } else if (!text && removeShape) {
+        targets.push({ slideIdx: si, element: sp, type: 'shape', label: `선택 영역 빈 도형 · ${targetPrecisionLabel(sp, selection)}`, rid: null, mediaPath: null });
+      }
+    });
+  }
+  const seen = new WeakSet();
+  return targets.filter(t => t.element && !seen.has(t.element) && (seen.add(t.element) || true));
+}
+
+async function scanSelectedAreaOnly() {
+  if (!state.zip || !state.slides.length) { toast('먼저 PPTX 파일을 업로드해 주세요.', 'error'); return; }
+  const sel = state.selection || getSelectionFromInputs();
+  if (!sel) { toast('미리보기에서 삭제할 영역을 클릭/드래그해 주세요.', 'error'); return; }
+  state.selection = sel;
+  setCoordInputsFromSelection(sel);
+  state.targets = await collectSelectionTargets(sel, true);
+  state.scanned = true;
+  state.isCleaned = false;
+  state.cleanedBlob = null;
+  document.getElementById('btn-apply').disabled = true;
+  updateDetectionSummary();
+  await renderPreview();
+  document.getElementById('btn-area-scan').disabled = false;
+  if (state.targets.length) {
+    toast(`현재 슬라이드 선택 영역에서 ${state.targets.length}개 요소를 감지했습니다.`, 'info');
+    log(`선택 영역 감지 완료: 현재 슬라이드 ${state.targets.length}개`, 'warn');
+  } else {
+    toast('선택 영역에 삭제 가능한 소형 요소가 없습니다. 전체 배경 이미지는 보호되어 삭제하지 않습니다.', 'info');
+    log('선택 영역에서 삭제 대상 없음: 대형 배경/슬라이드 전체 이미지는 보호됨', 'info');
+  }
+}
+
+// ── NotebookLM Detection ────────────────────────────────────
+async function collectNotebookWatermarkTargets() {
+  state.targets = [];
+  for (let si = 0; si < state.slides.length; si++) {
+    const slide = state.slides[si];
+    slide.rels = await loadRels(state.zip, slide.path);
+    const rels = slide.rels;
+
+    findAll(slide.xmlDoc, 'pic').forEach(pic => {
+      const blip = findAll(pic, 'blip')[0];
+      const rid = blip ? getRelId(blip) : '';
+      const rel = rid ? rels[rid] : null;
+      const media = rel?.resolved || '';
+      const verdict = shouldRemoveNotebookTarget(pic, media);
+      if (verdict.remove) {
+        state.targets.push({ slideIdx: si, element: pic, type: 'image', label: verdict.reason, rid, mediaPath: media });
+      }
+    });
+
+    // Text fallback: only remove tiny bottom-right text boxes that themselves contain NotebookLM.
+    findAll(slide.xmlDoc, 'sp').forEach(sp => {
+      const text = getText(sp).toLowerCase();
+      if (!text.includes('notebooklm')) return;
+      const box = getOff(sp);
+      if (isBottomRightSmall(box)) {
+        state.targets.push({ slideIdx: si, element: sp, type: 'text', label: '우측 하단 NotebookLM 텍스트', rid: null, mediaPath: null });
+      }
+    });
+  }
+
+  const seen = new WeakSet();
+  state.targets = state.targets.filter(t => {
+    if (!t.element || seen.has(t.element)) return false;
+    seen.add(t.element);
+    return true;
+  });
+  state.scanned = true;
+  return state.targets;
+}
+
+async function runWatermarkAiRemoval() {
+  if (!state.zip || !state.slides.length) { toast('먼저 PPTX 파일을 업로드해 주세요.', 'error'); return; }
+  document.getElementById('btn-scan').disabled = true;
+  document.getElementById('btn-apply').disabled = true;
+  state.cleanedBlob = null;
+  state.isCleaned = false;
+  const manualSel = state.selection || getSelectionFromInputs();
+  let targets;
+  if (manualSel) {
+    state.selection = manualSel;
+    setCoordInputsFromSelection(manualSel);
+    log('선택 영역 기반 실제 제거 시작...', 'system');
+    log(`좌표 필터: X ${pct(manualSel.xMin*100)}~${pct(manualSel.xMax*100)}%, Y ${pct(manualSel.yMin*100)}~${pct(manualSel.yMax*100)}%`, 'system');
+    targets = await collectSelectionTargets(manualSel, true);
+  } else {
+    log('NotebookLM 워터마크 AI 제거 시작...', 'system');
+    log('1) lm.png/NotebookLM 관계 키 체인 분석', 'system');
+    log('2) 우측 하단 소형 이미지 좌표 앵커 분석', 'system');
+    targets = await collectNotebookWatermarkTargets();
+  }
+  state.targets = targets;
+  state.scanned = true;
+  updateDetectionSummary();
+  await renderPreview();
+
+  if (!targets.length && !manualSel) {
+    log('자동 제거 대상이 없습니다. 우측 하단 소형 이미지 또는 lm.png 관계가 발견되지 않았습니다.', 'warn');
+    toast('워터마크 후보가 감지되지 않았습니다. 현재 파일 상태로 다운로드는 가능합니다.', 'info');
+    try {
+      state.cleanedFileName = state.fileName.replace(/\.pptx$/i, '') + '_NotebookLM_Cleaned.pptx';
+      await buildCleanedBlobIfNeeded('no-target');
+    } catch(err) {
+      log(`정제 파일 준비 실패: ${err.message}`, 'error');
+    }
+    document.getElementById('btn-scan').disabled = false;
+    return;
+  }
+
+  if (manualSel && !targets.length) {
+    log('선택 영역 내부에 독립 PPTX 요소는 없지만, 드래그 박스 내용만 지우기 위해 선택 영역 마스크를 적용합니다.', 'warn');
+    toast('선택 영역을 실제 슬라이드 위에 흰색 마스크로 지웁니다.', 'info');
+  } else {
+    toast(`${targets.length}개 후보 감지. 실제 PPTX 구조에서 제거합니다.`, 'info');
+  }
+  await new Promise(r => setTimeout(r, 250));
+
+  const result = targets.length ? await applyTargetsToZip(targets) : { nodeCount: 0, relCount: 0, mediaToRemove: new Set() };
+  if (manualSel) {
+    await addSelectionEraserMaskToSlide(state.activeIdx, manualSel);
+    state.cleanedBlob = null;
+    log('미리보기 드래그 박스 영역이 최종 PPTX 파일에도 반영되도록 동기화했습니다.', 'success');
+  }
+  await scrubStructuralOwners();
+  await removeSafeOrphanMedia(result.mediaToRemove);
+  state.targets = [];
+  state.scanned = false;
+  state.isCleaned = true;
+  state.selection = null;
+
+  log(`정제 완료: 슬라이드 노드 ${result.nodeCount}개 / 관계 ${result.relCount}개 제거${manualSel ? ' / 선택 영역 마스크 1개 적용' : ''}`, 'success');
+
+  try {
+    state.cleanedFileName = state.fileName.replace(/\.pptx$/i, '') + '_NotebookLM_Cleaned.pptx';
+    await buildCleanedBlobIfNeeded('cleaned');
+    document.getElementById('btn-apply').disabled = false;
+    log(`무손실 정제 파일 생성 완료: ${state.cleanedFileName}`, 'success');
+    toast('미리보기와 다운로드 파일 모두 워터마크 제거 상태로 갱신되었습니다.', 'success');
+  } catch(err) {
+    log(`패키징 실패: ${err.message}`, 'error');
+    toast('정제 파일 생성 중 오류가 발생했습니다.', 'error');
+  }
+
+  await reloadSlideXmlFromZip();
+  updateDetectionSummary();
+  await renderPreview();
+  document.getElementById('btn-scan').disabled = false;
+}
+
+async function applyTargetsToZip(targets) {
+  let nodeCount = 0, relCount = 0;
+  const mediaToRemove = new Set();
+  const bySlide = {};
+  for (const t of targets) {
+    if (!bySlide[t.slideIdx]) bySlide[t.slideIdx] = [];
+    bySlide[t.slideIdx].push(t);
+  }
+
+  for (const [siStr, slideTargets] of Object.entries(bySlide)) {
+    const si = parseInt(siStr, 10);
+    const slide = state.slides[si];
+    const rp = relPath(slide.path);
+    let relDoc = zipFileCaseInsensitive(state.zip, rp) ? parseXml(await getZipText(state.zip, rp)) : null;
+    const relIdsToRemove = new Set();
+
+    for (const t of slideTargets) {
+      if (t.element && t.element.parentNode) {
+        t.element.parentNode.removeChild(t.element);
+        nodeCount++;
+        log(`[슬라이드 ${si + 1}] 워터마크 노드 제거: ${t.label}`, 'warn');
+      }
+      if (t.rid) relIdsToRemove.add(t.rid);
+      if (t.mediaPath && /^ppt\/media\//i.test(t.mediaPath)) mediaToRemove.add(t.mediaPath);
+    }
+
+    state.zip.file(slide.path, serializeXml(slide.xmlDoc));
+
+    if (relDoc && relIdsToRemove.size) {
+      findAll(relDoc, 'Relationship').forEach(rel => {
+        if (relIdsToRemove.has(rel.getAttribute('Id'))) {
+          rel.parentNode.removeChild(rel);
+          relCount++;
+        }
+      });
+      state.zip.file(rp, serializeXml(relDoc));
+    }
+  }
+  return { nodeCount, relCount, mediaToRemove };
+}
+
+async function scrubStructuralOwners() {
+  const ownerFiles = Object.keys(state.zip.files).filter(n =>
+    (/^ppt\/slideLayouts\/slideLayout\d+\.xml$/i.test(n) || /^ppt\/slideMasters\/slideMaster\d+\.xml$/i.test(n))
+  );
+  let structuralNodes = 0, structuralRels = 0;
+
+  for (const ownerPath of ownerFiles) {
+    try {
+      const xmlDoc = parseXml(await getZipText(state.zip, ownerPath));
+      const rels = await loadRels(state.zip, ownerPath);
+      const removeRids = new Set();
+      let modified = false;
+
+      findAll(xmlDoc, 'pic').forEach(pic => {
+        const blip = findAll(pic, 'blip')[0];
+        const rid = blip ? getRelId(blip) : '';
+        const media = rid && rels[rid] ? rels[rid].resolved : '';
+        const verdict = shouldRemoveNotebookTarget(pic, media);
+        if (verdict.remove && pic.parentNode) {
+          pic.parentNode.removeChild(pic);
+          if (rid) removeRids.add(rid);
+          structuralNodes++;
+          modified = true;
+        }
+      });
+
+      findAll(xmlDoc, 'sp').forEach(sp => {
+        const text = getText(sp).toLowerCase();
+        if (text.includes('notebooklm') && isBottomRightSmall(getOff(sp)) && sp.parentNode) {
+          sp.parentNode.removeChild(sp);
+          structuralNodes++;
+          modified = true;
+        }
+      });
+
+      if (modified) state.zip.file(ownerPath, serializeXml(xmlDoc));
+
+      if (removeRids.size) {
+        const rp = relPath(ownerPath);
+        if (zipFileCaseInsensitive(state.zip, rp)) {
+          const relDoc = parseXml(await getZipText(state.zip, rp));
+          findAll(relDoc, 'Relationship').forEach(rel => {
+            if (removeRids.has(rel.getAttribute('Id'))) {
+              rel.parentNode.removeChild(rel);
+              structuralRels++;
+            }
+          });
+          state.zip.file(rp, serializeXml(relDoc));
+        }
+      }
+    } catch(e) { log(`레이아웃/마스터 정제 중 일부 파일 건너뜀: ${ownerPath}`, 'warn'); }
+  }
+  if (structuralNodes || structuralRels) log(`레이아웃/마스터 정제: 노드 ${structuralNodes}개 / 관계 ${structuralRels}개`, 'success');
+}
+
+async function removeSafeOrphanMedia(mediaToRemove) {
+  // Remove explicit lm.png media immediately. For coordinate-only images, only remove if no remaining XML references use it.
+  let mediaCount = 0;
+  const allXml = Object.keys(state.zip.files).filter(n => /\.xml$/i.test(n));
+  const combined = [];
+  for (const p of allXml) {
+    try { combined.push(await getZipText(state.zip, p)); } catch(e) {}
+  }
+  const hay = combined.join('\n').toLowerCase();
+  for (const path of mediaToRemove) {
+    const base = path.split('/').pop().toLowerCase();
+    const explicit = isNotebookLmMedia(path, '');
+    const stillReferenced = hay.includes(base);
+    if ((explicit || !stillReferenced) && zipFileCaseInsensitive(state.zip, path)) {
+      state.zip.remove(path);
+      delete state.mediaCache[path];
+      mediaCount++;
+      log(`미디어 파일 제거: ${path}`, 'warn');
+    }
+  }
+  if (mediaCount) log(`미디어 정리 완료: ${mediaCount}개`, 'success');
+}
+
+async function reloadSlideXmlFromZip() {
+  for (const slide of state.slides) {
+    slide.xmlDoc = parseXml(await getZipText(state.zip, slide.path));
+    slide.rels = await loadRels(state.zip, slide.path);
+  }
+}
+
+async function buildCleanedBlobIfNeeded(reason = 'manual') {
+  if (!state.zip) throw new Error('PPTX 파일이 로드되지 않았습니다.');
+  if (state.cleanedBlob) return state.cleanedBlob;
+
+  log(reason === 'no-target' ? '제거 후보가 없어 현재 PPTX 상태로 정제 패키지를 생성합니다...' : '현재 PPTX 상태를 무손실 정제 파일로 패키징합니다...', 'system');
+  const arrayBuffer = await state.zip.generateAsync({
+    type: 'arraybuffer',
+    compression: 'DEFLATE',
+    compressionOptions: { level: 6 },
+    mimeType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+  });
+  state.cleanedBlob = new Blob([arrayBuffer], { type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' });
+  state.cleanedFileName = state.cleanedFileName || state.fileName.replace(/\.pptx$/i, '') + '_NotebookLM_Cleaned.pptx';
+  document.getElementById('btn-apply').disabled = false;
+  log(`다운로드 가능한 정제 파일 준비 완료: ${state.cleanedFileName}`, 'success');
+  return state.cleanedBlob;
+}
+
+function saveBlob(blob, fileName) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileName;
+  a.rel = 'noopener';
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+}
+
+async function downloadCleanedPptx() {
+  if (!state.zip) { toast('먼저 PPTX 파일을 업로드해 주세요.', 'error'); return; }
+  const btn = document.getElementById('btn-apply');
+  const oldText = btn ? btn.textContent : '';
+  try {
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ 정제 파일 생성 중...'; }
+    const blob = await buildCleanedBlobIfNeeded('manual');
+    const outName = state.cleanedFileName || state.fileName.replace(/\.pptx$/i, '_NotebookLM_Cleaned.pptx');
+    saveBlob(blob, outName);
+    toast(`${outName} 다운로드 완료`, 'success');
+    log(`다운로드 완료: ${outName}`, 'success');
+  } catch(err) {
+    log(`다운로드 실패: ${err.message}`, 'error');
+    toast(`다운로드 실패: ${err.message}`, 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = oldText || '⬇️ 무손실 정제 파일 다운로드'; }
+  }
+}
+
+// Legacy manual scan retained for custom filters.
+async function runScan() { return runWatermarkAiRemoval(); }
+
+// ── Preview ─────────────────────────────────────────────────
+async function renderPreview() {
+  const body = document.getElementById('preview-body');
+  if (!state.slides.length) {
+    body.innerHTML = `<div class="empty-state"><div class="empty-icon">🗂</div><h3>파일을 업로드하면 실제 이미지 기반 미리보기가 나타납니다</h3><p>워터마크 제거 후 미리보기와 다운로드 파일이 동시에 갱신됩니다</p></div>`;
+    return;
+  }
+
+  const slide = state.slides[state.activeIdx];
+  const W = state.slideWidth, H = state.slideHeight;
+  const bodyRect = body.getBoundingClientRect();
+  const maxW = Math.max(bodyRect.width - 64, 320);
+  const maxH = Math.max(bodyRect.height - 48, 220);
+  const ratio = Math.min(maxW / W, maxH / H);
+  const vw = Math.round(W * ratio);
+  const vh = Math.round(H * ratio);
+  const slideTargets = state.targets.filter(t => t.slideIdx === state.activeIdx);
+  let elements = '';
+
+  // Draw images first so text overlays remain visible.
+  for (const pic of findAll(slide.xmlDoc, 'pic')) {
+    const box = getOff(pic); if (!box) continue;
+    const x = box.x * ratio, y = box.y * ratio, w = box.cx * ratio, h = box.cy * ratio;
+    const blip = findAll(pic, 'blip')[0];
+    const rid = blip ? getRelId(blip) : '';
+    const rel = rid ? slide.rels[rid] : null;
+    const media = rel?.resolved || '';
+    const url = await mediaDataUrl(media);
+    const isTarget = slideTargets.some(t => t.element === pic);
+    if (isTarget) {
+      elements += `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="rgba(240,92,92,0.22)" stroke="#f05c5c" stroke-width="2" stroke-dasharray="5,3" rx="3"/>`;
+      elements += `<text x="${x + w/2}" y="${y + h/2}" fill="#f05c5c" font-size="${Math.max(10, Math.min(14, h * 0.5))}" text-anchor="middle" dominant-baseline="middle" font-family="sans-serif">제거 대상</text>`;
+    } else if (url) {
+      elements += `<image x="${x}" y="${y}" width="${w}" height="${h}" href="${url}" preserveAspectRatio="none"/>`;
+    } else {
+      elements += `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="rgba(91,141,246,0.08)" stroke="rgba(91,141,246,0.3)" rx="3"/>`;
+      elements += `<text x="${x+w/2}" y="${y+h/2}" fill="rgba(91,141,246,0.7)" font-size="11" text-anchor="middle" dominant-baseline="middle" font-family="sans-serif">image</text>`;
+    }
+  }
+
+  // Draw text boxes, simple shapes, and ClearDoc area eraser masks.
+  findAll(slide.xmlDoc, 'sp').forEach(sp => {
+    const box = getOff(sp); if (!box) return;
+    const text = getText(sp);
+    const eraser = isClearDocAreaEraser(sp);
+    if (!text && !state.scanned && !eraser) return;
+    const x = box.x * ratio, y = box.y * ratio, w = box.cx * ratio, h = box.cy * ratio;
+    const isTarget = slideTargets.some(t => t.element === sp);
+    if (eraser) {
+      elements += `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="#ffffff" stroke="rgba(183,255,85,0.65)" stroke-width="1" stroke-dasharray="4,3" rx="2"/>`;
+      elements += `<text x="${x+w-5}" y="${y+h-5}" fill="rgba(20,20,20,0.35)" font-size="9" text-anchor="end" font-family="sans-serif">erased</text>`;
+    } else if (isTarget) {
+      elements += `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="rgba(240,92,92,0.18)" stroke="#f05c5c" stroke-width="2" stroke-dasharray="5,3" rx="3"/>`;
+      elements += `<text x="${x+w-4}" y="${y+14}" fill="#f05c5c" font-size="10" text-anchor="end" font-family="sans-serif">제거 대상</text>`;
+    } else if (text) {
+      const fontSize = Math.max(8, Math.min(28, h * 0.28));
+      elements += `<foreignObject x="${x+2}" y="${y+2}" width="${Math.max(w-4,1)}" height="${Math.max(h-4,1)}"><div xmlns="http://www.w3.org/1999/xhtml" style="font-size:${fontSize}px;color:#1e293b;overflow:hidden;line-height:1.25;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-weight:600;text-align:center;display:flex;align-items:center;justify-content:center;width:100%;height:100%;">${escHtml(text.slice(0,180))}</div></foreignObject>`;
+    }
+  });
+
+  const status = state.isCleaned ? '정제 후' : (state.scanned ? '감지 중' : '원본');
+  body.innerHTML = `<div id="slide-canvas-wrap" class="selectable" onpointerdown="onPreviewPointerDown(event)" style="width:${vw}px;height:${vh}px;background:#fff;position:relative;"><svg id="slide-svg" width="${vw}" height="${vh}" viewBox="0 0 ${vw} ${vh}" xmlns="http://www.w3.org/2000/svg"><rect width="${vw}" height="${vh}" fill="#ffffff"/>${elements}</svg><div id="selection-box" class="selection-box"></div><div id="selection-chip" class="selection-chip" style="display:none"></div><div style="position:absolute;top:8px;left:8px;background:rgba(17,19,24,.8);color:#b7ff55;border:1px solid rgba(183,255,85,.35);font:10px var(--mono);padding:5px 8px;border-radius:6px;pointer-events:none;">LIVE PPTX PREVIEW · ${status} · 클릭/드래그로 위치 선택</div></div>`;
+  state.preview = { ratio, vw, vh };
+  renderSelectionOverlay();
+  updateNav();
+}
+
+function updateDetectionSummary() {
+  const el = document.getElementById('detection-summary');
+  const total = state.targets.length;
+  el.style.display = total > 0 || state.scanned || state.isCleaned ? 'block' : 'none';
+  const onThisSlide = state.targets.filter(t => t.slideIdx === state.activeIdx).length;
+  if (state.isCleaned) {
+    el.innerHTML = `<span class="detection-count none">워터마크 제거 완료</span> · 다운로드 가능`;
+  } else {
+    el.innerHTML = `이 슬라이드 <span class="detection-count ${onThisSlide === 0 ? 'none' : ''}">${onThisSlide}</span>개 · 전체 <span class="detection-count ${total === 0 ? 'none' : ''}">${total}</span>개 감지`;
+  }
+}
+
+async function prevSlide() { if (state.activeIdx > 0) { state.activeIdx--; updateDetectionSummary(); await renderPreview(); } }
+async function nextSlide() { if (state.activeIdx < state.slides.length - 1) { state.activeIdx++; updateDetectionSummary(); await renderPreview(); } }
+function updateNav() {
+  document.getElementById('slide-indicator').textContent = state.slides.length ? `${state.activeIdx + 1} / ${state.slides.length}` : '— / —';
+  document.getElementById('btn-prev').disabled = state.activeIdx === 0 || !state.slides.length;
+  document.getElementById('btn-next').disabled = state.activeIdx >= state.slides.length - 1 || !state.slides.length;
+}
+
+// ── Reset ───────────────────────────────────────────────────
+function resetState() {
+  state.zip = null; state.fileName = '';
+  state.slides = []; state.targets = [];
+  state.activeIdx = 0; state.scanned = false;
+  state.slideWidth = 9144000; state.slideHeight = 5143500;
+  state.mediaCache = {}; state.cleanedBlob = null; state.cleanedFileName = ''; state.isCleaned = false;
+  state.selection = null; state.dragStart = null; state.preview = null;
+}
+
+function resetAll() {
+  resetState();
+  document.getElementById('dropzone').style.display = '';
+  document.getElementById('file-info').style.display = 'none';
+  document.getElementById('file-input').value = '';
+  document.getElementById('btn-scan').disabled = true;
+  document.getElementById('btn-apply').disabled = true;
+  document.getElementById('btn-area-scan').disabled = true;
+  document.getElementById('detection-summary').style.display = 'none';
+  document.getElementById('slide-indicator').textContent = '— / —';
+  document.getElementById('btn-prev').disabled = true;
+  document.getElementById('btn-next').disabled = true;
+  document.getElementById('preview-body').innerHTML = `<div class="empty-state"><div class="empty-icon">🗂</div><h3>파일을 업로드하면 실제 이미지 기반 미리보기가 나타납니다</h3><p>워터마크 제거 후 미리보기와 다운로드 파일이 동시에 갱신됩니다</p></div>`;
+  document.getElementById('log-panel').innerHTML = '';
+  log('초기화 완료', 'info');
+}
+
+// ── Escape helpers ──────────────────────────────────────────
+function escSvg(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function escHtml(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+
+
+// ── ClearDoc v16: Force Area Text Delete + Replacement Image Engine ──
+(function installV16Controls(){
+  try {
+    state.replacementImage = null;
+    state.v16Touched = false;
+    const filter = document.querySelector('.filter-section');
+    if (filter && !document.getElementById('replacement-input')) {
+      const panel = document.createElement('div');
+      panel.className = 'filter-group';
+      panel.innerHTML = `
+        <div class="filter-group-title">대체 이미지 삽입 엔진</div>
+        <input type="file" id="replacement-input" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml" style="display:none" onchange="onReplacementImageSelect(event)">
+        <button class="btn-secondary" type="button" onclick="document.getElementById('replacement-input').click()">🖼 대체 이미지 업로드</button>
+        <div id="replacement-info" class="position-help">선택 영역을 지운 뒤 삽입할 이미지를 업로드하세요. PNG/JPG/WebP/SVG 지원.</div>
+        <div class="toggle-row">
+          <label for="tgl-raster-edit">배경 이미지에 박힌 영역도 픽셀 편집</label>
+          <input type="checkbox" class="toggle" id="tgl-raster-edit" checked>
+        </div>
+        <div class="toggle-row">
+          <label for="tgl-insert-overlay">선택 영역에 대체 이미지 객체 삽입</label>
+          <input type="checkbox" class="toggle" id="tgl-insert-overlay" checked>
+        </div>
+      `;
+      filter.appendChild(panel);
+    }
+    const actions = document.querySelector('.action-area');
+    if (actions && !document.getElementById('btn-v16-current')) {
+      const b1 = document.createElement('button');
+      b1.className = 'btn-primary';
+      b1.id = 'btn-v16-current';
+      b1.type = 'button';
+      b1.style.background = 'var(--accent)';
+      b1.onclick = () => applyDragAreaV16(false);
+      b1.textContent = '✅ 선택 영역 적용';
+      const b2 = document.createElement('button');
+      b2.className = 'btn-primary';
+      b2.id = 'btn-v16-all';
+      b2.type = 'button';
+      b2.style.background = '#f59e0b';
+      b2.onclick = () => applyDragAreaV16(true);
+      b2.textContent = '🧩 전체 슬라이드 동일 영역 적용';
+      actions.insertBefore(b2, actions.firstChild);
+      actions.insertBefore(b1, actions.firstChild);
+    }
+  } catch(e) {
+    console.warn('v16 control install failed', e);
+  }
+})();
+
+async function onReplacementImageSelect(e) {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+  if (!/^image\//i.test(file.type)) {
+    toast('이미지 파일만 업로드할 수 있습니다.', 'error');
+    return;
+  }
+  const arrayBuffer = await file.arrayBuffer();
+  const dataUrl = await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+  const ext = imageExtFromFile(file);
+  state.replacementImage = {
+    file,
+    name: file.name,
+    type: file.type || mediaMime(file.name),
+    ext,
+    arrayBuffer,
+    dataUrl
+  };
+  const info = document.getElementById('replacement-info');
+  if (info) {
+    info.innerHTML = `업로드 완료: <b>${escHtml(file.name)}</b> · ${(file.size/1024).toFixed(1)} KB<br>적용 시 선택 영역에 이 이미지가 소실 없이 PPTX 내부에 삽입됩니다.`;
+  }
+  log(`대체 이미지 로드 완료: ${file.name}`, 'success');
+  toast('대체 이미지가 준비되었습니다.', 'success');
+}
+
+function imageExtFromFile(file) {
+  const nameExt = (file.name.split('.').pop() || '').toLowerCase();
+  if (['png','jpg','jpeg','webp','gif','svg'].includes(nameExt)) return nameExt === 'jpeg' ? 'jpg' : nameExt;
+  const t = (file.type || '').toLowerCase();
+  if (t.includes('jpeg')) return 'jpg';
+  if (t.includes('webp')) return 'webp';
+  if (t.includes('gif')) return 'gif';
+  if (t.includes('svg')) return 'svg';
+  return 'png';
+}
+
+function imageContentTypeFromExt(ext) {
+  ext = (ext || 'png').toLowerCase();
+  if (ext === 'jpg' || ext === 'jpeg') return 'image/jpeg';
+  if (ext === 'webp') return 'image/webp';
+  if (ext === 'gif') return 'image/gif';
+  if (ext === 'svg') return 'image/svg+xml';
+  return 'image/png';
+}
+
+function isLargeProtectedPicture(pic) {
+  const box = getOff(pic);
+  if (!box) return false;
+  const w = box.cx / state.slideWidth;
+  const h = box.cy / state.slideHeight;
+  const area = w * h;
+  return area >= 0.18 || w >= 0.65 || h >= 0.65;
+}
+
+function robustSelectionHit(el, sel, opts = {}) {
+  const m = selectionHitMetrics(el, sel);
+  if (!m || !m.intersects) return false;
+  if (opts.force) return true;
+  if (opts.text) return m.elementCoverage >= 0.03 || m.elementCenterInside || m.selectionCenterInside;
+  if (opts.logo) return !m.isLargeElement && (m.elementCoverage >= 0.03 || m.elementCenterInside || m.selectionCenterInside);
+  return elementIntersectsSelection(el, sel);
+}
+
+function deleteTextXmlNodesInSelection(slide, si, sel) {
+  let count = 0;
+  findAll(slide.xmlDoc, 'sp').forEach(sp => {
+    if (!robustSelectionHit(sp, sel, { text: true })) return;
+    const textNodes = findAll(sp, 't').filter(n => (n.textContent || '').trim());
+    if (!textNodes.length) return;
+
+    // 텍스트 XML 노드만 비운다. 배경 이미지/도형/차트는 건드리지 않는다.
+    textNodes.forEach(t => {
+      while (t.firstChild) t.removeChild(t.firstChild);
+      t.textContent = '';
+    });
+
+    // a:br, a:fld 등 보조 텍스트도 빈 문자열 처리
+    findAll(sp, 'fld').forEach(f => f.textContent = '');
+    count += textNodes.length;
+  });
+  if (count) {
+    state.zip.file(slide.path, serializeXml(slide.xmlDoc));
+    log(`[슬라이드 ${si + 1}] 선택 영역 텍스트 XML 노드 ${count}개 삭제`, 'success');
+  }
+  return count;
+}
+
+function removeSmallLogoPicturesInSelection(slide, si, sel) {
+  let nodeCount = 0, relCount = 0;
+  const mediaToMaybeRemove = [];
+  const removeRids = new Set();
+
+  findAll(slide.xmlDoc, 'pic').forEach(pic => {
+    if (!robustSelectionHit(pic, sel, { logo: true })) return;
+    if (isLargeProtectedPicture(pic)) return;
+    const blip = findAll(pic, 'blip')[0];
+    const rid = blip ? getRelId(blip) : '';
+    const rel = rid ? slide.rels[rid] : null;
+    const media = rel?.resolved || '';
+    if (pic.parentNode) {
+      pic.parentNode.removeChild(pic);
+      nodeCount++;
+      if (rid) removeRids.add(rid);
+      if (media) mediaToMaybeRemove.push(media);
+    }
+  });
+
+  if (nodeCount) {
+    const rp = relPath(slide.path);
+    if (zipFileCaseInsensitive(state.zip, rp)) {
+      try {
+        const relDoc = parseXmlSyncSafe(getZipTextSyncUnavailablePlaceholder()) || null;
+      } catch(e) {}
+    }
+  }
+  return { nodeCount, relCount, removeRids, mediaToMaybeRemove };
+}
+
+// Async rel cleanup separated because rel files are async.
+async function cleanupRemovedPictureRels(slide, removeRids) {
+  if (!removeRids || !removeRids.size) return 0;
+  const rp = relPath(slide.path);
+  if (!zipFileCaseInsensitive(state.zip, rp)) return 0;
+  const relDoc = parseXml(await getZipText(state.zip, rp));
+  let relCount = 0;
+  findAll(relDoc, 'Relationship').forEach(rel => {
+    if (removeRids.has(rel.getAttribute('Id'))) {
+      rel.parentNode.removeChild(rel);
+      relCount++;
+    }
+  });
+  if (relCount) state.zip.file(rp, serializeXml(relDoc));
+  return relCount;
+}
+
+// Legacy placeholder blockers for minifier-safe parsing.
+function parseXmlSyncSafe(){ return null; }
+function getZipTextSyncUnavailablePlaceholder(){ return ''; }
+
+function getOrCreateRelDoc(ownerPath) {
+  const xml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="${REL_NS}"></Relationships>`;
+  return parseXml(xml);
+}
+
+function nextRidFromRelDoc(relDoc) {
+  let max = 0;
+  findAll(relDoc, 'Relationship').forEach(r => {
+    const m = String(r.getAttribute('Id') || '').match(/rId(\d+)/i);
+    if (m) max = Math.max(max, parseInt(m[1], 10));
+  });
+  return `rId${max + 1}`;
+}
+
+async function ensureContentTypeDefault(ext, contentType) {
+  const path = '[Content_Types].xml';
+  const doc = parseXml(await getZipText(state.zip, path));
+  const exists = findAll(doc, 'Default').some(d => (d.getAttribute('Extension') || '').toLowerCase() === ext.toLowerCase());
+  if (!exists) {
+    const node = doc.createElementNS('http://schemas.openxmlformats.org/package/2006/content-types', 'Default');
+    node.setAttribute('Extension', ext);
+    node.setAttribute('ContentType', contentType);
+    doc.documentElement.appendChild(node);
+    state.zip.file(path, serializeXml(doc));
+  }
+}
+
+async function addReplacementImageToZip() {
+  if (!state.replacementImage) return null;
+  const ext = state.replacementImage.ext || 'png';
+  const contentType = imageContentTypeFromExt(ext);
+  await ensureContentTypeDefault(ext, contentType);
+  const safeBase = `cleardoc_replace_${Date.now()}_${Math.random().toString(36).slice(2,8)}.${ext}`;
+  const mediaPath = `ppt/media/${safeBase}`;
+  state.zip.file(mediaPath, state.replacementImage.arrayBuffer, { binary: true });
+  state.mediaCache[mediaPath] = state.replacementImage.dataUrl;
+  return { mediaPath, fileName: safeBase, ext, contentType };
+}
+
+function createPicElementXml(xmlDoc, box, rid, name = 'ClearDoc Replacement Image') {
+  const id = nextShapeId(xmlDoc);
+  const xml = `
+<p:pic xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="${OFFICE_REL_NS}">
+  <p:nvPicPr>
+    <p:cNvPr id="${id}" name="${name}"/>
+    <p:cNvPicPr>
+      <a:picLocks noChangeAspect="1"/>
+    </p:cNvPicPr>
+    <p:nvPr/>
+  </p:nvPicPr>
+  <p:blipFill>
+    <a:blip r:embed="${rid}"/>
+    <a:stretch><a:fillRect/></a:stretch>
+  </p:blipFill>
+  <p:spPr>
+    <a:xfrm>
+      <a:off x="${box.x}" y="${box.y}"/>
+      <a:ext cx="${box.cx}" cy="${box.cy}"/>
+    </a:xfrm>
+    <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>
+  </p:spPr>
+</p:pic>`;
+  return parseXml(xml).documentElement;
+}
+
+async function insertReplacementPicture(slide, si, sel, mediaInfo) {
+  if (!mediaInfo) return false;
+  const rp = relPath(slide.path);
+  let relDoc = zipFileCaseInsensitive(state.zip, rp) ? parseXml(await getZipText(state.zip, rp)) : getOrCreateRelDoc(slide.path);
+  const rid = nextRidFromRelDoc(relDoc);
+  const rel = relDoc.createElementNS(REL_NS, 'Relationship');
+  rel.setAttribute('Id', rid);
+  rel.setAttribute('Type', 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/image');
+  rel.setAttribute('Target', `../media/${mediaInfo.fileName}`);
+  relDoc.documentElement.appendChild(rel);
+  state.zip.file(rp, serializeXml(relDoc));
+
+  const tree = getShapeTree(slide.xmlDoc);
+  if (!tree) throw new Error(`슬라이드 ${si + 1}: 도형 트리를 찾을 수 없습니다.`);
+  const box = selectionToEmuBox(sel);
+  const pic = createPicElementXml(slide.xmlDoc, box, rid);
+  tree.appendChild(slide.xmlDoc.importNode(pic, true));
+  state.zip.file(slide.path, serializeXml(slide.xmlDoc));
+  log(`[슬라이드 ${si + 1}] 업로드 이미지 삽입 완료: ${mediaInfo.fileName}`, 'success');
+  return true;
+}
+
+function loadImageElement(src) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+}
+
+async function rasterEditLargePictures(slide, si, sel) {
+  if (!state.replacementImage) return 0;
+  const enabled = document.getElementById('tgl-raster-edit');
+  if (enabled && !enabled.checked) return 0;
+
+  let count = 0;
+  const replacementImg = await loadImageElement(state.replacementImage.dataUrl);
+  for (const pic of findAll(slide.xmlDoc, 'pic')) {
+    const box = getOff(pic);
+    if (!box || !isLargeProtectedPicture(pic)) continue;
+    const m = selectionHitMetrics(pic, sel);
+    if (!m || !m.intersects) continue;
+
+    const blip = findAll(pic, 'blip')[0];
+    const rid = blip ? getRelId(blip) : '';
+    const rel = rid ? slide.rels[rid] : null;
+    const mediaPath = rel?.resolved || '';
+    if (!mediaPath || /^https?:/i.test(mediaPath)) continue;
+    const dataUrl = await mediaDataUrl(mediaPath);
+    if (!dataUrl) continue;
+
+    try {
+      const img = await loadImageElement(dataUrl);
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth || img.width;
+      canvas.height = img.naturalHeight || img.height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+      const picX1 = box.x / state.slideWidth;
+      const picY1 = box.y / state.slideHeight;
+      const picX2 = (box.x + box.cx) / state.slideWidth;
+      const picY2 = (box.y + box.cy) / state.slideHeight;
+
+      const ix1 = Math.max(sel.xMin, picX1);
+      const iy1 = Math.max(sel.yMin, picY1);
+      const ix2 = Math.min(sel.xMax, picX2);
+      const iy2 = Math.min(sel.yMax, picY2);
+      if (ix2 <= ix1 || iy2 <= iy1) continue;
+
+      const rx = (ix1 - picX1) / (picX2 - picX1) * canvas.width;
+      const ry = (iy1 - picY1) / (picY2 - picY1) * canvas.height;
+      const rw = (ix2 - ix1) / (picX2 - picX1) * canvas.width;
+      const rh = (iy2 - iy1) / (picY2 - picY1) * canvas.height;
+
+      ctx.clearRect(rx, ry, rw, rh);
+      ctx.drawImage(replacementImg, rx, ry, rw, rh);
+
+      const mime = mediaMime(mediaPath);
+      const blob = await new Promise(resolve => canvas.toBlob(resolve, mime.includes('jpeg') ? 'image/jpeg' : 'image/png', 0.92));
+      if (!blob) continue;
+      const buf = await blob.arrayBuffer();
+      state.zip.file(mediaPath, buf, { binary: true });
+      state.mediaCache[mediaPath] = URL.createObjectURL(blob);
+      count++;
+      log(`[슬라이드 ${si + 1}] 배경 이미지 픽셀 영역 편집 완료: ${mediaPath}`, 'success');
+    } catch(err) {
+      log(`[슬라이드 ${si + 1}] 배경 이미지 편집 실패: ${err.message}`, 'warn');
+    }
+  }
+  return count;
+}
+
+async function removeSmallPicturesAndCleanup(slide, si, sel) {
+  let nodeCount = 0;
+  const removeRids = new Set();
+  const mediaToMaybeRemove = [];
+  findAll(slide.xmlDoc, 'pic').forEach(pic => {
+    if (!robustSelectionHit(pic, sel, { logo: true })) return;
+    if (isLargeProtectedPicture(pic)) return;
+    const blip = findAll(pic, 'blip')[0];
+    const rid = blip ? getRelId(blip) : '';
+    const rel = rid ? slide.rels[rid] : null;
+    const media = rel?.resolved || '';
+    if (pic.parentNode) {
+      pic.parentNode.removeChild(pic);
+      nodeCount++;
+      if (rid) removeRids.add(rid);
+      if (media) mediaToMaybeRemove.push(media);
+    }
+  });
+  const relCount = await cleanupRemovedPictureRels(slide, removeRids);
+  if (nodeCount) {
+    state.zip.file(slide.path, serializeXml(slide.xmlDoc));
+    log(`[슬라이드 ${si + 1}] 선택 영역 소형 로고/이미지 ${nodeCount}개 삭제`, 'success');
+  }
+  return { nodeCount, relCount, mediaToMaybeRemove };
+}
+
+async function applyDragAreaV16(allSlides = false) {
+  if (!state.zip || !state.slides.length) {
+    toast('먼저 PPTX 파일을 업로드해 주세요.', 'error');
+    return;
+  }
+  const sel = state.selection || getSelectionFromInputs();
+  if (!sel) {
+    toast('먼저 미리보기에서 워터마크/삭제 영역을 드래그하세요.', 'error');
+    return;
+  }
+
+  state.selection = sel;
+  setCoordInputsFromSelection(sel);
+  state.cleanedBlob = null;
+  state.isCleaned = false;
+  state.targets = [];
+  state.scanned = false;
+
+  const indices = allSlides ? state.slides.map((_, i) => i) : [state.activeIdx];
+  const insertOverlay = document.getElementById('tgl-insert-overlay');
+  let textCount = 0, logoCount = 0, rasterCount = 0, insertCount = 0;
+
+  log(allSlides ? '전체 슬라이드 동일 영역 적용 시작...' : '현재 슬라이드 선택 영역 적용 시작...', 'system');
+
+  let mediaInfo = null;
+  if (state.replacementImage && (!insertOverlay || insertOverlay.checked)) {
+    mediaInfo = await addReplacementImageToZip();
+  }
+
+  for (const si of indices) {
+    const slide = state.slides[si];
+    slide.rels = await loadRels(state.zip, slide.path);
+
+    textCount += deleteTextXmlNodesInSelection(slide, si, sel);
+
+    const rm = await removeSmallPicturesAndCleanup(slide, si, sel);
+    logoCount += rm.nodeCount;
+
+    if (state.replacementImage) {
+      rasterCount += await rasterEditLargePictures(slide, si, sel);
+      if (!insertOverlay || insertOverlay.checked) {
+        await insertReplacementPicture(slide, si, sel, mediaInfo);
+        insertCount++;
+      }
+    }
+
+    state.zip.file(slide.path, serializeXml(slide.xmlDoc));
+  }
+
+  await reloadSlideXmlFromZip();
+  state.isCleaned = true;
+  state.cleanedFileName = state.fileName.replace(/\.pptx$/i, '') + '_ClearDoc_Edited.pptx';
+  await buildCleanedBlobIfNeeded('cleaned');
+  document.getElementById('btn-apply').disabled = false;
+
+  log(`적용 완료: 텍스트 XML ${textCount}개 삭제 / 소형 이미지 ${logoCount}개 삭제 / 배경 픽셀 편집 ${rasterCount}개 / 대체 이미지 삽입 ${insertCount}회`, 'success');
+  toast('선택 영역 처리 완료. 미리보기와 다운로드 파일에 반영되었습니다.', 'success');
+  updateDetectionSummary();
+  await renderPreview();
+}
+
+// 기존 버튼도 새 엔진으로 연결한다.
+async function runWatermarkAiRemoval() {
+  return applyDragAreaV16(false);
+}
+
+async function scanSelectedAreaOnly() {
+  if (!state.zip || !state.slides.length) { toast('먼저 PPTX 파일을 업로드해 주세요.', 'error'); return; }
+  const sel = state.selection || getSelectionFromInputs();
+  if (!sel) { toast('미리보기에서 삭제할 영역을 클릭/드래그해 주세요.', 'error'); return; }
+  state.selection = sel;
+  setCoordInputsFromSelection(sel);
+  const slide = state.slides[state.activeIdx];
+  const targets = [];
+  findAll(slide.xmlDoc, 'sp').forEach(sp => {
+    if (robustSelectionHit(sp, sel, { text: true }) && findAll(sp, 't').some(t => (t.textContent || '').trim())) {
+      targets.push({ slideIdx: state.activeIdx, element: sp, type: 'text', label: '선택 영역 텍스트 XML', rid: null, mediaPath: null });
+    }
+  });
+  findAll(slide.xmlDoc, 'pic').forEach(pic => {
+    if (robustSelectionHit(pic, sel, { logo: true }) && !isLargeProtectedPicture(pic)) {
+      targets.push({ slideIdx: state.activeIdx, element: pic, type: 'image', label: '선택 영역 소형 이미지/로고', rid: null, mediaPath: null });
+    }
+  });
+  state.targets = targets;
+  state.scanned = true;
+  state.isCleaned = false;
+  state.cleanedBlob = null;
+  updateDetectionSummary();
+  await renderPreview();
+  document.getElementById('btn-area-scan').disabled = false;
+  log(`선택 영역 감지: 텍스트/소형이미지 ${targets.length}개. 적용 버튼을 누르면 실제 PPTX XML/이미지에 반영됩니다.`, targets.length ? 'warn' : 'info');
+  toast(`${targets.length}개 후보 감지`, 'info');
+}
+
+async function downloadCleanedPptx() {
+  if (!state.zip) { toast('먼저 PPTX 파일을 업로드해 주세요.', 'error'); return; }
+  const btn = document.getElementById('btn-apply');
+  const oldText = btn ? btn.textContent : '';
+  try {
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ 정제 파일 생성 중...'; }
+    state.cleanedBlob = null; // 항상 최신 ZIP 상태로 다시 패키징
+    const blob = await buildCleanedBlobIfNeeded('manual');
+    const outName = state.cleanedFileName || state.fileName.replace(/\.pptx$/i, '_ClearDoc_Edited.pptx');
+    saveBlob(blob, outName);
+    toast(`${outName} 다운로드 완료`, 'success');
+    log(`다운로드 완료: ${outName}`, 'success');
+  } catch(err) {
+    log(`다운로드 실패: ${err.message}`, 'error');
+    toast(`다운로드 실패: ${err.message}`, 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = oldText || '⬇️ 무손실 정제 파일 다운로드'; }
+  }
+}
+
+log('준비 완료. PPTX 파일을 업로드해 주세요.', 'system');
+</script>
+</body>
+</html>
