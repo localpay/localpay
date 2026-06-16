@@ -1,0 +1,1765 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>사전 계약 시뮬레이터</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Pretendard', '-apple-system', 'BlinkMacSystemFont', 'system-ui', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- React & ReactDOM CDNs (Production 빌드) -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  
+  <!-- Babel Standalone -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+
+  <!-- Firebase Compat 라이브러리 CDN -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+  <style>
+    /* 스크롤바 미려하게 개선 */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+
+    /* 로딩 애니메이션 바 스타일 */
+    @keyframes loading-slide {
+      0% { transform: translateX(-100%); }
+      50% { transform: translateX(100%); }
+      100% { transform: translateX(-100%); }
+    }
+    .loading-bar-active {
+      animation: loading-slide 2s infinite ease-in-out;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+  <div id="root"></div>
+
+  <!-- React-JSX Script 영역 -->
+  <script type="text/babel" data-presets="react">
+    const { useState, useEffect, useRef } = React;
+
+    // ==========================================
+    // 1. ICON COMPONENTS (Inlined SVG)
+    // ==========================================
+    const Icons = {
+      Calculator: () => (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <rect x="4" y="2" width="16" height="20" rx="2" />
+          <line x1="8" y1="6" x2="16" y2="6" />
+          <line x1="16" y1="10" x2="16" y2="18" />
+          <circle cx="9" cy="11" r="1" />
+          <circle cx="9" cy="15" r="1" />
+          <circle cx="13" cy="11" r="1" />
+          <circle cx="13" cy="15" r="1" />
+        </svg>
+      ),
+      Gavel: () => (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path d="M14 13l-4.5 4.5m0 0l-3-3M9.5 17.5L3 21h4l2.5-3.5M16 4l5 5m-1.5-1.5l-8.5 8.5-3.5-3.5 8.5-8.5L19.5 7.5z" />
+        </svg>
+      ),
+      Clock: () => (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <circle cx="12" cy="12" r="10" />
+          <polyline points="12 6 12 12 16 14" />
+        </svg>
+      ),
+      ShieldAlert: () => (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+          <line x1="12" y1="8" x2="12" y2="12" />
+          <line x1="12" y1="16" x2="12.01" y2="16" />
+        </svg>
+      ),
+      CheckSquare: () => (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <polyline points="9 11 12 14 22 4" />
+          <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+        </svg>
+      ),
+      Sparkles: () => (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m0-12.728l.707.707m11.314 11.314l.707-.707M12 5a7 7 0 1 0 0 14 7 7 0 0 0 0-14z" />
+        </svg>
+      ),
+      AlertTriangle: ({ className = "w-5 h-5" }) => (
+        <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+      ),
+      Copy: () => (
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+        </svg>
+      ),
+      Search: () => (
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <circle cx="11" cy="11" r="8" />
+          <line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </svg>
+      ),
+      Send: () => (
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <line x1="22" y1="2" x2="11" y2="13" />
+          <polygon points="22 2 15 22 11 13 2 9 22 2" />
+        </svg>
+      ),
+      Database: () => (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <ellipse cx="12" cy="5" rx="9" ry="3" />
+          <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
+          <path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3" />
+        </svg>
+      )
+    };
+
+    // ==========================================
+    // 2. CONSTANTS & PRESETS
+    // ==========================================
+    const PRESETS = [
+      {
+        name: "SW 고도화 사업 (대기업 참여제한 예외)",
+        contractType: "sw",
+        governingLaw: "national",
+        estimatedPrice: 480000000,
+        isUrgent: false,
+        isSingleSource: false,
+        hasPatent: false,
+        isLinkedProject: true,
+        policyTarget: "none",
+        isRebid: false,
+        institutionType: "national",
+        techImportance: 5,
+        isSpecFixed: false,
+        companyName: "아이티솔루션 주식회사"
+      },
+      {
+        name: "시청사 안전 펜스 보강 공사 (여성기업 수의계약 한도)",
+        contractType: "construction",
+        governingLaw: "local",
+        estimatedPrice: 48000000,
+        isUrgent: true,
+        isSingleSource: false,
+        hasPatent: false,
+        isLinkedProject: false,
+        policyTarget: "female",
+        isRebid: false,
+        institutionType: "local_gov",
+        techImportance: 1,
+        isSpecFixed: true,
+        companyName: "여성안전건설(주)"
+      },
+      {
+        name: "특허 기술 포함 장비 구매 (단독공급 수의)",
+        contractType: "goods",
+        governingLaw: "national",
+        estimatedPrice: 150000000,
+        isUrgent: false,
+        isSingleSource: true,
+        hasPatent: true,
+        isLinkedProject: false,
+        policyTarget: "innovation",
+        isRebid: false,
+        institutionType: "public_corp",
+        techImportance: 4,
+        isSpecFixed: true,
+        companyName: "특허테크산업"
+      }
+    ];
+
+    // ==========================================
+    // 3. MAIN COMPONENT
+    // ==========================================
+    function App() {
+      const [contractType, setContractType] = useState('sw');
+      const [governingLaw, setGoverningLaw] = useState('national');
+      const [estimatedPrice, setEstimatedPrice] = useState(180000000);
+      const [isUrgent, setIsUrgent] = useState(false);
+      const [isSingleSource, setIsSingleSource] = useState(false);
+      const [hasPatent, setHasPatent] = useState(false);
+      const [isLinkedProject, setIsLinkedProject] = useState(false);
+      const [policyTarget, setPolicyTarget] = useState('none');
+      const [isRebid, setIsRebid] = useState(false);
+      const [institutionType, setInstitutionType] = useState('national');
+      const [techImportance, setTechImportance] = useState(4);
+      const [isSpecFixed, setIsSpecFixed] = useState(false);
+      const [companyName, setCompanyName] = useState('주식회사 에이비씨');
+
+      // 지체상금 날짜 선택 계산 옵션
+      const [isDateCalc, setIsDateCalc] = useState(true);
+      const [deliveryDueDate, setDeliveryDueDate] = useState('2026-06-01');
+      const [actualDeliveryDate, setActualDeliveryDate] = useState('2026-06-16');
+      const [delayDays, setDelayDays] = useState(15);
+      const [isPartialDelivery, setIsPartialDelivery] = useState(false);
+      const [partialAmount, setPartialAmount] = useState(0);
+
+      // 정책구매 구체화 11대 핵심 상태값 매핑
+      const [policyStates, setPolicyStates] = useState({
+        heavyDisabled: false,  // 중증장애인생산품여부
+        disabled: false,       // 장애인기업여부
+        patriot: false,        // 보훈기업여부
+        social: false,         // 사회적기업여부
+        female: false,         // 여성기업여부
+        startup: false,        // 창업기업여부
+        venture: false,        // 벤처기업여부
+        innovation: false,     // 혁신제품보유여부
+        excellent: false,      // 우수조달보유여부
+        directProd: false,     // 직접생산확인여부
+        masReg: false          // MAS등록여부
+      });
+
+      // 간트 목표 일자 State
+      const [targetDateStr, setTargetDateStr] = useState(() => {
+        const today = new Date();
+        today.setDate(today.getDate() + 60);
+        return today.toISOString().split('T')[0];
+      });
+
+      // 탭 전환 State
+      const [activeTab, setActiveTab] = useState('recommendation');
+
+      // AI 코파일럿 대화 상태
+      const apiKey = ""; // Canvas 환경 자동 크리덴셜 주입 규정 준수
+      const [chatMessages, setChatMessages] = useState([
+        {
+          role: 'assistant',
+          content: '반갑습니다! 20년 차 공공조달 바이브로 무장한 **AI 계약 코파일럿**입니다. 왼쪽 시뮬레이터에 입력하신 발주 조건을 완벽하게 이해하고 있습니다. 무엇이든 물어보세요!'
+        }
+      ]);
+      const [userQuery, setUserQuery] = useState('');
+      const [isGenerating, setIsGenerating] = useState(false);
+      const [copyFeedback, setCopyFeedback] = useState('');
+
+      // 체크리스트 상태
+      const [checkedItems, setCheckedItems] = useState({});
+      const [user, setUser] = useState(null);
+
+      // 날짜 선택 시 지체일수 실시간 역산 반영
+      useEffect(() => {
+        if (isDateCalc && deliveryDueDate && actualDeliveryDate) {
+          const due = new Date(deliveryDueDate);
+          const actual = new Date(actualDeliveryDate);
+          const diffTime = actual - due;
+          const calculatedDays = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+          setDelayDays(calculatedDays);
+        }
+      }, [deliveryDueDate, actualDeliveryDate, isDateCalc]);
+
+      // Firebase 초기화 (구독 누수 방지 패키징)
+      useEffect(() => {
+        let unsubscribe;
+        const initFirebase = async () => {
+          try {
+            if (typeof __firebase_config !== 'undefined' && window.firebase) {
+              const firebaseConfig = JSON.parse(__firebase_config);
+              const app = firebase.initializeApp(firebaseConfig);
+              const authObj = firebase.auth(app);
+
+              unsubscribe = authObj.onAuthStateChanged(setUser);
+
+              if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                await authObj.signInWithCustomToken(__initial_auth_token);
+              } else {
+                await authObj.signInAnonymously();
+              }
+            }
+          } catch (err) {
+            console.warn("Firebase Auth bypassed or config missing. Using standard state mode.", err);
+          }
+        };
+        initFirebase();
+
+        return () => {
+          if (unsubscribe) unsubscribe();
+        };
+      }, []);
+
+      const applyPreset = (preset) => {
+        setContractType(preset.contractType);
+        setGoverningLaw(preset.governingLaw);
+        setEstimatedPrice(preset.estimatedPrice);
+        setIsUrgent(preset.isUrgent);
+        setIsSingleSource(preset.isSingleSource);
+        setHasPatent(preset.hasPatent);
+        setIsLinkedProject(preset.isLinkedProject);
+        setPolicyTarget(preset.policyTarget);
+        setIsRebid(preset.isRebid);
+        setInstitutionType(preset.institutionType);
+        setTechImportance(preset.techImportance);
+        setIsSpecFixed(preset.isSpecFixed);
+        if (preset.companyName) setCompanyName(preset.companyName);
+      };
+
+      // A. 수의계약 한도 및 검증 알고리즘
+      const evaluatePrivateContract = () => {
+        let limit = 20000000;
+        let policyLimit = 50000000;
+        
+        let isFeasible = false;
+        let reason = "수의계약 불가능 요건에 해당합니다. 일반/제한경쟁 검토가 원칙입니다.";
+        let applicableArticle = "";
+        let riskLevel = "low";
+        let riskDetails = [];
+
+        if (governingLaw === 'national') {
+          if (isSingleSource) {
+            isFeasible = true;
+            applicableArticle = "국가계약법 시행령 제26조 제1항 제2호 (단독공급/특정인 기술)";
+            reason = "단독공급 증빙이 가능하므로 특정인의 기술·생산이 필요한 경우에 해당하여 수의계약이 가능합니다.";
+          } else if (hasPatent) {
+            isFeasible = true;
+            applicableArticle = "국가계약법 시행령 제26조 제1항 제2호 사목 (특허/실용신안)";
+            reason = "해당 사업에 고유 특허권 등 권리자가 존재하며 타사 대체가 불가능함을 입증할 시 수의계약이 가능합니다.";
+          } else if (policyTarget === 'female' || policyTarget === 'disabled' || policyTarget === 'social') {
+            if (estimatedPrice <= policyLimit) {
+              isFeasible = true;
+              applicableArticle = "국가계약법 시행령 제26조 제1항 제5호 가목 (여성·장애인·사회적기업 등)";
+              reason = "여성기업, 장애인기업, 혹은 요건을 충족한 사회적기업으로서 5천만 원 이하 소액 수의계약 요건을 총족합니다.";
+            } else {
+              reason = `정책적 배려 대상 기업이나, 추정가격이 5천만 원을 초과(${ (estimatedPrice / 100000000).toFixed(2) }억 원)하여 여성/장애인 소액수의 요건에서 제외됩니다.`;
+            }
+          } else if (policyTarget === 'innovation' || policyTarget === 'excellent') {
+            isFeasible = true;
+            applicableArticle = "국가계약법 시행령 제26조 제1항 제3호 (우수/혁신조달물품)";
+            reason = "조달청 혁신제품 혹은 우수조달물품으로 지정된 자재·용역에 해당하여 제한 없는 수의계약 검토가 가능합니다.";
+          } else if (isRebid) {
+            isFeasible = true;
+            applicableArticle = "국가계약법 시행령 제26조 제1항 제1호 (재공고 유찰)";
+            reason = "2회 이상 정당하게 입찰공고 하였으나 유찰된 경우로서 수의계약 전환 요건을 충족합니다.";
+          } else if (estimatedPrice <= limit) {
+            isFeasible = true;
+            applicableArticle = "국가계약법 시행령 제26조 제1항 제5호 가목 (소액수의)";
+            reason = "추정가격이 2천만 원 이하인 일반 소액수의계약 대상에 해당합니다.";
+          }
+        } else {
+          if (isSingleSource) {
+            isFeasible = true;
+            applicableArticle = "지방계약법 시행령 제25조 제1항 제4호 (단독공급/특정인)";
+            reason = "지방관내 단독공급 혹은 대체 불가능한 특수설비 등으로 인해 특정 업체 계약이 법적으로 불가피합니다.";
+          } else if (hasPatent) {
+            isFeasible = true;
+            applicableArticle = "지방계약법 시행령 제25조 제1항 제4호 다목 (특허/디자인등록)";
+            reason = "권리를 행사하는 특허적용 범위가 발주 대상물과 완전 매칭되어 대체 불가능한 경우 지방계약법에 의거 수의계약 가능합니다.";
+          } else if (policyTarget === 'female' || policyTarget === 'disabled' || policyTarget === 'social') {
+            if (estimatedPrice <= policyLimit) {
+              isFeasible = true;
+              applicableArticle = "지방계약법 시행령 제25조 제1항 제5호 라목 (여성·장애인기업 소액)";
+              reason = "지자체 소액수의계약 낙찰자 결정기준에 따라 5천만 원 이하의 경우 수의계약이 전면 허용됩니다.";
+            } else {
+              reason = `지방계약 특례 대상이나 가격이 5천만 원을 초과하여 소액수의 혜택 적용을 받지 못합니다.`;
+            }
+          } else if (policyTarget === 'innovation' || policyTarget === 'excellent') {
+            isFeasible = true;
+            applicableArticle = "지방계약법 시행령 제25조 제1항 제8호 (우수제품/혁신조달)";
+            reason = "지자체 혁신 활성화를 위한 지정 제품으로서 직접 수의계약이 가능한 사유에 해당합니다.";
+          } else if (isRebid) {
+            isFeasible = true;
+            applicableArticle = "지방계약법 시행령 제25조 제1항 제2호 (경쟁 유찰)";
+            reason = "재공고 유찰로 인해 수의계약 요건이 성립합니다. 단, 계약조건 변경 시 재경쟁이 원칙입니다.";
+          } else if (estimatedPrice <= limit) {
+            isFeasible = true;
+            applicableArticle = "지방계약법 시행령 제25조 제1항 제5호 가목 (소액수의)";
+            reason = "추정가격이 2천만 원 이하로서 수의계약 체결이 가능합니다.";
+          }
+        }
+
+        if (isFeasible) {
+          if (estimatedPrice >= 19000000 && estimatedPrice < 20000000 && applicableArticle.includes("소액수의")) {
+            riskLevel = "high";
+            riskDetails.push("쪼개기 발주 의심: 일반 소액수의 한도(2천만원) 바로 밑돌며, 분할 발주 여부 집중 감사 대상입니다.");
+          }
+          if (estimatedPrice >= 48000000 && estimatedPrice < 50000000 && applicableArticle.includes("5호")) {
+            riskLevel = "high";
+            riskDetails.push("특례 소액수의 한도(5천만원) 직전 금액으로, 여성/장애인 지위 남용 또는 위장업체 유무에 대한 특정 감사 가능성이 존재합니다.");
+          }
+          if (isSingleSource && !hasPatent) {
+            riskLevel = "medium";
+            riskDetails.push("단독공급 사유서 보강 필요: 제조사 독점권 증빙 외 대체물품 존재 확인 절차(시장조사 보고서)가 미흡하면 감사 시 부적정 지적을 받습니다.");
+          }
+        }
+
+        return {
+          isFeasible,
+          status: isFeasible ? (riskLevel === 'high' ? "조건부 가능 (감사주의)" : "가능") : "불가",
+          applicableArticle,
+          reason,
+          riskLevel,
+          riskDetails
+        };
+      };
+
+      const pContractEval = evaluatePrivateContract();
+
+      // B. 낙찰점수 계산 알고리즘
+      const computeMethodScores = () => {
+        let scores = {
+          general: 50,
+          restricted: 40,
+          negotiation: 30,
+          qualification: 40,
+          twoStage: 20,
+          private: 10
+        };
+
+        scores.negotiation += techImportance * 12;
+        scores.qualification += (6 - techImportance) * 10;
+        scores.general += (6 - techImportance) * 5;
+
+        if (isSingleSource || hasPatent) {
+          scores.private += 80;
+          scores.general -= 30;
+          scores.restricted -= 20;
+        }
+
+        if (isSpecFixed) {
+          scores.qualification += 25;
+          scores.general += 20;
+          scores.negotiation -= 30;
+        } else {
+          scores.negotiation += 30;
+          scores.qualification -= 20;
+          scores.twoStage += 20;
+        }
+
+        if (estimatedPrice >= 500000000) {
+          scores.general += 20;
+          scores.restricted += 15;
+          scores.private -= 50;
+        } else if (estimatedPrice <= 20000000) {
+          scores.private += 60;
+        }
+
+        if (policyTarget !== 'none') {
+          scores.restricted += 20;
+          if (estimatedPrice <= 50000000) {
+            scores.private += 40;
+          }
+        }
+
+        if (isRebid) {
+          scores.private += 70;
+        }
+
+        if (contractType === 'sw' || contractType === 'research') {
+          scores.negotiation += 40;
+          scores.qualification -= 10;
+        }
+
+        let best = 'general';
+        let maxScore = -100;
+        Object.keys(scores).forEach(key => {
+          if (scores[key] > maxScore) {
+            maxScore = scores[key];
+            best = key;
+          }
+        });
+
+        const labelMap = {
+          general: "일반경쟁입찰",
+          restricted: "제한경쟁입찰",
+          negotiation: "협상에 의한 계약",
+          qualification: "적격심사 낙찰제",
+          twoStage: "규격·가격 동시입찰 (2단계)",
+          private: "수의계약 체결"
+        };
+
+        return { scores, best, bestLabel: labelMap[best] };
+      };
+
+      const methodRecommendation = computeMethodScores();
+
+      // C. 지체상금 시뮬레이션 계산
+      const calculateDelayDamages = () => {
+        let rate = 0.00075;
+        let typeName = "물품 제조·구매";
+
+        if (contractType === 'construction') {
+          rate = 0.0005;
+          typeName = "시설공사";
+        } else if (contractType === 'service') {
+          rate = 0.00125;
+          typeName = "일반용역";
+        } else if (contractType === 'sw') {
+          rate = 0.00075;
+          typeName = "소프트웨어 용역";
+        } else if (contractType === 'research') {
+          rate = 0.00125;
+          typeName = "학술연구용역";
+        }
+
+        let baseAmount = estimatedPrice * 1.1;
+        let targetDeductionAmount = isPartialDelivery ? partialAmount : 0;
+        let actualBase = baseAmount - targetDeductionAmount;
+        if (actualBase < 0) actualBase = 0;
+
+        let dailyPenalty = Math.floor(actualBase * rate);
+        let totalPenalty = dailyPenalty * delayDays;
+
+        const maxPenalty = Math.floor(baseAmount * 0.3);
+        const isCapped = totalPenalty > maxPenalty;
+        const finalPenalty = isCapped ? maxPenalty : totalPenalty;
+
+        const contractDeposit = Math.floor(baseAmount * 0.1);
+        const dangerDaysLimit = dailyPenalty > 0 ? Math.ceil(contractDeposit / dailyPenalty) : 0;
+
+        return {
+          rate,
+          typeName,
+          baseAmount,
+          actualBase,
+          dailyPenalty,
+          totalPenalty,
+          finalPenalty,
+          isCapped,
+          maxPenalty,
+          contractDeposit,
+          dangerDaysLimit
+        };
+      };
+
+      const delayDamages = calculateDelayDamages();
+
+      // D. 계약 소요기간 및 간트 계산 (일상감사 기일 통상 일주일(7일) 고정)
+      const calculateTimeline = () => {
+        let phases = [
+          { id: 'preReview', name: '발주계획 & 사전검토', days: 5, color: 'bg-indigo-100 border-indigo-300' },
+          { id: 'rfpDraft', name: '과업지시서/RFP 확정', days: 7, color: 'bg-blue-100 border-blue-300' },
+          { id: 'audit', name: '일상감사 (통상 일주일 소요)', days: 7, color: 'bg-teal-100 border-teal-300' },
+          { id: 'notice', name: '입찰공고 기간', days: 40, color: 'bg-amber-100 border-amber-300' },
+          { id: 'qa', name: '질의응답 및 정정공고', days: 5, color: 'bg-orange-100 border-orange-300' },
+          { id: 'eval', name: '제안서 평가 및 가격개찰', days: 4, color: 'bg-pink-100 border-pink-300' },
+          { id: 'negotiation', name: '우선협상 진행', days: 10, color: 'bg-purple-100 border-purple-300' },
+          { id: 'signing', name: '계약체결 및 승인', days: 5, color: 'bg-emerald-100 border-emerald-300' }
+        ];
+
+        if (isUrgent) {
+          const noticePhase = phases.find(p => p.id === 'notice');
+          if (noticePhase) noticePhase.days = 10;
+        } else {
+          if (methodRecommendation.best !== 'negotiation' && estimatedPrice < 200000000) {
+            const noticePhase = phases.find(p => p.id === 'notice');
+            if (noticePhase) noticePhase.days = 7;
+          }
+        }
+
+        if (methodRecommendation.best === 'private' || pContractEval.isFeasible) {
+          phases = [
+            { id: 'preReview', name: '발주요청', days: 2, color: 'bg-indigo-100 border-indigo-300' },
+            { id: 'rfpDraft', name: '과업내용서 확정', days: 3, color: 'bg-blue-100 border-blue-300' },
+            { id: 'audit', name: '일상감사 (통상 일주일 소요)', days: 7, color: 'bg-teal-100 border-teal-300' },
+            { id: 'notice', name: '견적제출공고 (또는 생략)', days: 3, color: 'bg-amber-100 border-amber-300' },
+            { id: 'signing', name: '수의계약 체결', days: 2, color: 'bg-emerald-100 border-emerald-300' }
+          ];
+        }
+
+        const totalDays = phases.reduce((acc, p) => acc + p.days, 0);
+        const oneRebidDays = totalDays + 15;
+        const twoRebidDays = totalDays + 30;
+
+        const targetDate = new Date(targetDateStr);
+        const startCalculatedDate = new Date(targetDate);
+        startCalculatedDate.setDate(targetDate.getDate() - totalDays);
+
+        return {
+          phases,
+          totalDays,
+          oneRebidDays,
+          twoRebidDays,
+          startCalculatedDateStr: startCalculatedDate.toISOString().split('T')[0]
+        };
+      };
+
+      const timelineSim = calculateTimeline();
+
+      // E. 감사 및 감점 지적 리스크 레벨링
+      const getAuditRiskLevel = () => {
+        let score = 0;
+        let indicators = [];
+
+        if (estimatedPrice >= 18000000 && estimatedPrice < 20000000) {
+          score += 35;
+          indicators.push({
+            title: "소액수의 우회(쪼개기) 의심",
+            desc: "추정가격이 수의계약 임계점(2천만원)에 과도하게 근접합니다. 연간 동일 과업을 쪼개 발주했는지 자체 감사가 필요합니다.",
+            severity: "high"
+          });
+        }
+
+        if (isSingleSource && !hasPatent) {
+          score += 20;
+          indicators.push({
+            title: "독점권 입증 문서 취약",
+            desc: "특허권 외 단순 대리점 '독점공급확약서'만으로 수의계약 추진 시, 대체 품목 조사서 미비로 감사 지적 가능성이 큽니다.",
+            severity: "medium"
+          });
+        }
+
+        if (hasPatent && methodRecommendation.best !== 'private') {
+          score += 15;
+          indicators.push({
+            title: "특정 규격 포함 입찰장벽",
+            desc: "입찰공고 과업지시서에 특정 업체의 특허 기술을 필수 조건으로 명시하면 경쟁제한 요소로 민원이 발생할 수 있습니다.",
+            severity: "medium"
+          });
+        }
+
+        const currentMonth = new Date().getMonth() + 1;
+        if (currentMonth >= 10 && timelineSim.totalDays > 40) {
+          score += 30;
+          indicators.push({
+            title: "회계연도 말 예산 불용 위험",
+            desc: "현재 시점은 4분기로, 긴 공기 소요에 따른 사고이월 혹은 불용 처리가 우려되므로 계약 방식을 더 신속한 형태로 전환 권장합니다.",
+            severity: "high"
+          });
+        }
+
+        if (techImportance === 5 && contractType !== 'sw') {
+          score += 10;
+          indicators.push({
+            title: "기술평가 비중 과다",
+            desc: "일반 용역이나 공사에서 명확한 이유 없이 기술성 배점을 지나치게 높게 설계할 시 공정성 의혹이 불거질 수 있습니다.",
+            severity: "low"
+          });
+        }
+
+        let status = "안전";
+        let color = "text-emerald-600 bg-emerald-50 border-emerald-200";
+        if (score >= 45) {
+          status = "엄중 경고";
+          color = "text-red-600 bg-red-50 border-red-200";
+        } else if (score >= 20) {
+          status = "유의 및 모니터링";
+          color = "text-amber-600 bg-amber-50 border-amber-200";
+        }
+
+        return { score, status, color, indicators };
+      };
+
+      const auditRisk = getAuditRiskLevel();
+
+      // F. 맞춤형 사전 점검 리스트 항목 생성 (공공구매 추가완료)
+      const getDynamicChecklist = () => {
+        const list = [
+          { id: 'budget', label: "발주 예정 금액에 대한 당해 회계연도 예산 확보 여부", category: "기본 요건" },
+          { id: 'publicPurchase', label: "중소기업제품 구매촉진 및 판로지원에 관한 법률 및 사회적기업 육성법 등에 따른 법정 공공구매 의무 비율 충족 여부 체크 및 가용 제품 사전 점검 완료 여부", category: "공공구매" },
+          { id: 'disclosure', label: "5천만 원 이상 사업의 경우 입찰 전 '사전규격공개'(5일 이상) 이행 여부", category: "행정 절차" },
+          { id: 'rfpReady', label: "과업범위가 명확히 기술된 과업지시서 및 세부 산출내역서 확정 여부", category: "문서 완결성" },
+        ];
+
+        if (contractType === 'sw') {
+          list.push({ id: 'swImpact', label: "SW사업 영향평가 수행 및 대기업 참여제한 기준 법적 적격 여부", category: "SW 특화" });
+          list.push({ id: 'swSecurity', label: "공공기관 정보보안 가이드라인 준수 및 보안특약 조항 RFP 반영", category: "SW 특화" });
+          list.push({ id: 'swSaaS', label: "상용소프트웨어 직접구매(분리발주) 대상 여부 사전 검토 여부", category: "SW 특화" });
+        } else if (contractType === 'construction') {
+          list.push({ id: 'constLimit', label: "건설업역 규제 개편에 따른 상호시장 진출 허용 기준 설계 여부", category: "공사 특화" });
+          list.push({ id: 'constSafety', label: "중대재해처벌법 대비 '안전보건관리계획서' 제출 조항 명시 여부", category: "공사 특화" });
+        } else if (contractType === 'goods') {
+          list.push({ id: 'goodsSme', label: "중소기업자간 경쟁제품 여부 확인 및 직접생산확인증명서 요구 적정성", category: "물품 특화" });
+        }
+
+        if (governingLaw === 'local') {
+          list.push({ id: 'localAudit', label: "지방자치단체 일상감사 및 계약심사 위원회 의뢰 (상한금액 초과 건)", category: "지방 계약 전용" });
+        }
+
+        return list;
+      };
+
+      const checklistItems = getDynamicChecklist();
+
+      // G. AI 코파일럿 연동 함수 (안정적인 gemini-2.5-flash-preview-09-2025 모델로 정상 마이그레이션)
+      const executeCopilotSearch = async (quickPrompt = '') => {
+        const queryToUse = quickPrompt || userQuery;
+        if (!queryToUse.trim()) return;
+
+        const newUserMsg = { role: 'user', content: queryToUse };
+        setChatMessages(prev => [...prev, newUserMsg]);
+        setUserQuery('');
+        setIsGenerating(true);
+
+        const systemPrompt = `당신은 20년 차 대한민국 공공조달 및 국가/지방계약법 전문가입니다. 사용자에게 편안하면서도 법리적 전문성이 가득한 현업 밀착형 답변을 제공하십시오.
+현재 시뮬레이터에 세팅되어 있는 발주 조건은 다음과 같습니다:
+- 계약 유형: ${contractType} (${delayDamages.typeName})
+- 적용 법령: ${governingLaw === 'national' ? '국가계약법' : '지방계약법'} (발주기관: ${institutionType})
+- 추정가격: ${estimatedPrice.toLocaleString()}원 (${ (estimatedPrice / 100000000).toFixed(2) }억 원)
+- 긴급 공고 여부: ${isUrgent ? '예' : '아니오'}
+- 단독 공급 여부: ${isSingleSource ? '예' : '아니오'}
+- 특허 및 저작권 보유: ${hasPatent ? '예' : '아니오'}
+- 정책 조달 대상: ${policyTarget === 'none' ? '해당없음' : policyTarget}
+- 2회 재공고 유찰 여부: ${isRebid ? '예' : '아니오'}
+- 기술평가 중요도: 5점 만점 중 ${techImportance}점
+- 규격/과업 범위 확정성: ${isSpecFixed ? '명확히 확정됨' : '불명확함'}
+- 지체상금 시뮬레이션 지체일수: ${delayDays}일 (전체 계약금: ${delayDamages.baseAmount.toLocaleString()}원, 적용지체상금: ${delayDamages.finalPenalty.toLocaleString()}원)
+
+이 정보들을 완벽하게 연계해서 사용자의 조달 관련 고민에 답변해 주세요. 질문자가 수의계약을 추진할 수 있을지 없을지 조항(예: 국가계약법 시행령 제26조, 지방계약법 시행령 제25조)을 정확히 인용하고 감사 위험을 경고해 주는 등 극강의 "조달청 바이브"로 가이드해 주셔야 합니다.`;
+
+        try {
+          let attempts = 0;
+          const maxRetries = 5;
+          let delay = 1000;
+          let response;
+
+          while (attempts < maxRetries) {
+            try {
+              response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  contents: [{ parts: [{ text: queryToUse }] }],
+                  systemInstruction: { parts: [{ text: systemPrompt }] }
+                })
+              });
+              if (response.ok) break;
+            } catch (e) {
+              // 백오프 대기
+            }
+            attempts++;
+            if (attempts === maxRetries) throw new Error("API 연동 시도 초과");
+            await new Promise(resolve => setTimeout(resolve, delay));
+            delay *= 2;
+          }
+
+          const result = await response.json();
+          const aiText = result.candidates?.[0]?.content?.parts?.[0]?.text || "답변 수신 실패. 입력을 다시 한 번 확인해주세요.";
+
+          setChatMessages(prev => [...prev, { role: 'assistant', content: aiText }]);
+        } catch (error) {
+          setChatMessages(prev => [...prev, {
+            role: 'assistant',
+            content: `에러가 발생했습니다: ${error.message}. API 연동에 실패했습니다.`
+          }]);
+        } finally {
+          setIsGenerating(false);
+        }
+      };
+
+      const handleCopyText = (text, elementId) => {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        document.body.appendChild(textarea);
+        textarea.select();
+        try {
+          document.execCommand('copy');
+          setCopyFeedback(elementId);
+          setTimeout(() => setCopyFeedback(''), 2500);
+        } catch (err) {
+          console.error('클립보드 복사 실패:', err);
+        }
+        document.body.removeChild(textarea);
+      };
+
+      // 정책구매 11대 항목에 다른 동적 추천 결과 계산기
+      const getDynamicPolicyResults = () => {
+        let companies = [];
+        let contractMethods = [];
+        let credits = [];
+
+        if (policyStates.heavyDisabled) {
+          companies.push("중증장애인 생산품 인증 시설");
+          contractMethods.push("중증장애인생산품 우선구매 특별법에 의거 금액 한도 없는 수의계약 수용 가능");
+          credits.push("중증장애인생산품 법정 의무구매 비율(총 구매액의 1% 이상) 우선 인정");
+        }
+        if (policyStates.disabled) {
+          companies.push("장애인기업 활동지원법에 따른 장애인기업");
+          contractMethods.push("추정가격 5천만 원 이하인 경우 소액 수의계약(1인 견적 제출) 처리 가능");
+          credits.push("장애인기업 제품 법정 의무구매 비율(총 구매액의 2% 이상) 연간 실적 반영");
+        }
+        if (policyStates.patriot) {
+          companies.push("국가유공자 자활협동조합 / 보훈용사촌 수의 단체");
+          contractMethods.push("국가유공자 등 단체와의 수의계약 사유 발생 시 우선 수의계약 심의 추천");
+          credits.push("보훈단체 우선 수의계약 연간 수혜 실적 집계");
+        }
+        if (policyStates.social) {
+          companies.push("사회적경제조합 / 고용노동부 지정 사회적기업");
+          contractMethods.push("취약계층 고용비율 30% 이상 충족 시 5천만 원 이하의 소액 수의계약 수혜 가능");
+          credits.push("사회적기업 제품 우선구매 공공기관 경영평가 가점 실적 인정");
+        }
+        if (policyStates.female) {
+          companies.push("여성기업지원법에 따른 여성기업 확인서 보유업체");
+          contractMethods.push("추정가격 5천만 원 이하 소액수의계약 전용 결정 기준 충족");
+          credits.push("여성기업 법정 의무구매 비율(물품·용역 5%, 공사 3% 이상) 연간 통계 인정");
+        }
+        if (policyStates.startup) {
+          companies.push("창업기업 육성법에 따른 창업기업 (창업 7년 이내)");
+          contractMethods.push("일반 소액수의 한도(2천만원 이하) 적용 및 제한경쟁입찰 시 창업 지위 우대점 가산");
+          credits.push("창업기업제품 법정 의무구매 비율(총 구매액의 8% 이상) 우선 구매 실적 충족");
+        }
+        if (policyStates.venture) {
+          companies.push("벤처기업 육성 특별법에 의거 지정된 벤처기업");
+          contractMethods.push("제한경쟁입찰 적격심사 시 신인도 가산점 우대 및 조달청 벤처나라 전용 등록 가능");
+          credits.push("기술개발제품 우선구매 비율 실적 연계 산정");
+        }
+        if (policyStates.innovation) {
+          companies.push("조달청 지정 혁신제품(우수연구개발품, 혁신시제품, 재난안전 등)");
+          contractMethods.push("금액 상관없이 조달청 혁신제품 구매 수의계약 특별 규정 적용 가능");
+          credits.push("혁신구매 목표제 법정 의무 비율 연간 가점 인정 (기관장 핵심 성과 지표)");
+        }
+        if (policyStates.excellent) {
+          companies.push("조달청 보증 우수조달물품 지정 우대 기업");
+          contractMethods.push("국가계약법 시행령 제26조 및 지방계약법에 따른 금액 제약 없는 지정 수의계약 가능");
+          credits.push("기술개발제품 법정 의무구매 비율(조달물품의 15% 이상) 우선 수용");
+        }
+        if (policyStates.directProd) {
+          companies.push("중소기업중앙회 직접생산확인증명서 보유업체");
+          contractMethods.push("중소기업자간 경쟁제품 입찰 시 필수 참가 자격 요건 충족");
+          credits.push("중소기업자간 경쟁제품 적격성 및 조달 실적 이행 보증");
+        }
+        if (policyStates.masReg) {
+          companies.push("다수공급자계약(MAS) 나라장터 종합쇼핑몰 등록업체");
+          contractMethods.push("종합쇼핑몰 제3자단가 즉시 납품요구 가능 (일정금액 초과 시 2단계 경쟁 자동 수행)");
+          credits.push("다수공급자 구매 실적 및 행정 효율 지표 가점 반영");
+        }
+
+        // 기본 상태
+        if (companies.length === 0) {
+          companies.push("우대 조건이 매칭되지 않은 일반 일반중소기업 또는 대기업");
+          contractMethods.push("추정가격 기준에 따라 일반경쟁입찰 또는 제한경쟁입찰 원칙 적용");
+          credits.push("법정 정책구매 우대 실적 가산 없음");
+        }
+
+        return { companies, contractMethods, credits };
+      };
+
+      const policyEvalResult = getDynamicPolicyResults();
+
+      return (
+        <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col font-sans antialiased">
+          {/* HEADER SECTION */}
+          <header className="bg-slate-900 text-white shadow-md border-b border-slate-800 py-5 px-6">
+            <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-1 text-xs font-bold uppercase bg-indigo-500 text-white rounded">v2.7 Pro (HTML)</span>
+                  <h1 className="text-2xl font-black tracking-tight text-white">사전 계약 시뮬레이터</h1>
+                </div>
+                <p className="text-sm text-slate-400 mt-1">발주 전 계약방식 추천, 법적 근거, 감사위험 진단, 일정 간트 및 지체상금을 한 번에 진단하는 의사결정 지원 시스템</p>
+              </div>
+              <div className="flex flex-wrap gap-2 items-center">
+                <span className="text-xs text-slate-400 mr-1 font-semibold">시나리오 빠른 프리셋:</span>
+                {PRESETS.map((p, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => applyPreset(p)}
+                    className="bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white px-3 py-1.5 text-xs rounded-md border border-slate-700 transition"
+                  >
+                    {p.name.length > 25 ? p.name.substring(0, 25) + '...' : p.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </header>
+
+          {/* CORE WORKSPACE GRID */}
+          <main className="max-w-7xl mx-auto px-4 md:px-6 py-8 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-8 w-full">
+            
+            {/* INPUT PANEL (LEFT COLUMN) */}
+            <section className="lg:col-span-5 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col gap-6">
+              <div className="border-b border-slate-100 pb-4">
+                <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                  <span className="w-2 h-5 bg-indigo-600 rounded"></span>
+                  조달 발주 요건 입력
+                </h2>
+                <p className="text-xs text-slate-500 mt-0.5">실무 사업계획서 상의 스펙 및 가격을 명시해 주십시오.</p>
+              </div>
+
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1.5">계약 유형</label>
+                    <select
+                      value={contractType}
+                      onChange={(e) => setContractType(e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-300 text-slate-900 rounded-lg p-2.5 text-sm font-medium focus:ring-indigo-500 focus:border-indigo-500"
+                    >
+                      <option value="goods">물품 제조/구매</option>
+                      <option value="service">일반 용역</option>
+                      <option value="construction">시설 공사</option>
+                      <option value="sw">SW 개발/고도화</option>
+                      <option value="research">연구 용역</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1.5">적용 조달 법령</label>
+                    <div className="grid grid-cols-2 gap-1 bg-slate-50 p-1 rounded-lg border border-slate-300">
+                      <button
+                        onClick={() => setGoverningLaw('national')}
+                        className={`py-1.5 text-xs font-bold rounded ${governingLaw === 'national' ? 'bg-indigo-600 text-white' : 'text-slate-600 hover:text-slate-900'}`}
+                      >
+                        국가계약법
+                      </button>
+                      <button
+                        onClick={() => setGoverningLaw('local')}
+                        className={`py-1.5 text-xs font-bold rounded ${governingLaw === 'local' ? 'bg-indigo-600 text-white' : 'text-slate-600 hover:text-slate-900'}`}
+                      >
+                        지방계약법
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex justify-between items-center mb-1.5">
+                    <label className="text-xs font-bold text-slate-700">추정가격 (공급가액 기준)</label>
+                    <span className="text-xs text-indigo-600 font-bold bg-indigo-50 px-2 py-0.5 rounded">
+                      {(estimatedPrice / 100000000).toFixed(4)} 억 원
+                    </span>
+                  </div>
+                  <div className="relative rounded-lg shadow-sm">
+                    <input
+                      type="number"
+                      value={estimatedPrice}
+                      onChange={(e) => setEstimatedPrice(Number(e.target.value))}
+                      step="1000000"
+                      className="w-full bg-slate-50 border border-slate-300 text-slate-900 rounded-lg py-2.5 pl-3 pr-12 text-sm font-semibold focus:ring-indigo-500 focus:border-indigo-500"
+                    />
+                    <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                      <span className="text-slate-500 text-xs font-bold">원</span>
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-slate-400 mt-1">💡 부가세가 미포함된 추정가격입니다. (소액수의 한도 검정 기준치)</p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-2">계약 속성 및 권리 증빙</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <label className="flex items-center gap-2 p-2.5 bg-slate-50 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-100 transition">
+                      <input
+                        type="checkbox"
+                        checked={isUrgent}
+                        onChange={(e) => setIsUrgent(e.target.checked)}
+                        className="rounded text-indigo-600 focus:ring-indigo-500"
+                      />
+                      <span className="text-xs font-medium text-slate-700">긴급 발주 여부</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 p-2.5 bg-slate-50 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-100 transition">
+                      <input
+                        type="checkbox"
+                        checked={isSingleSource}
+                        onChange={(e) => setIsSingleSource(e.target.checked)}
+                        className="rounded text-indigo-600 focus:ring-indigo-500"
+                      />
+                      <span className="text-xs font-medium text-slate-700">단독공급(독점)</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 p-2.5 bg-slate-50 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-100 transition">
+                      <input
+                        type="checkbox"
+                        checked={hasPatent}
+                        onChange={(e) => setHasPatent(e.target.checked)}
+                        className="rounded text-indigo-600 focus:ring-indigo-500"
+                      />
+                      <span className="text-xs font-medium text-slate-700">특허/고유저작권</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 p-2.5 bg-slate-50 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-100 transition">
+                      <input
+                        type="checkbox"
+                        checked={isLinkedProject}
+                        onChange={(e) => setIsLinkedProject(e.target.checked)}
+                        className="rounded text-indigo-600 focus:ring-indigo-500"
+                      />
+                      <span className="text-xs font-medium text-slate-700">기존 사업 연계</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">정책구매 배려 대상 기업 매칭</label>
+                  <select
+                    value={policyTarget}
+                    onChange={(e) => setPolicyTarget(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-300 text-slate-900 rounded-lg p-2.5 text-sm focus:ring-indigo-500 focus:border-indigo-500"
+                  >
+                    <option value="none">해당 없음 (일반)</option>
+                    <option value="female">여성기업 수의계약 특례 대상</option>
+                    <option value="disabled">장애인기업 수의계약 특례 대상</option>
+                    <option value="social">사회적 경제 기업 (자격 충족)</option>
+                    <option value="innovation">혁신조달물품 (조달청 지정)</option>
+                    <option value="excellent">우수조달물품 (조달청 보증)</option>
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="flex items-center gap-2 mt-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={isRebid}
+                        onChange={(e) => setIsRebid(e.target.checked)}
+                        className="rounded text-indigo-600 focus:ring-indigo-500"
+                      />
+                      <div className="text-xs">
+                        <span className="font-bold text-slate-700 block">재공고 유찰 상태</span>
+                        <span className="text-[10px] text-slate-400">2회 유찰 수의사유 유효</span>
+                      </div>
+                    </label>
+                  </div>
+
+                  <div>
+                    <label className="flex items-center gap-2 mt-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={isSpecFixed}
+                        onChange={(e) => setIsSpecFixed(e.target.checked)}
+                        className="rounded text-indigo-600 focus:ring-indigo-500"
+                      />
+                      <div className="text-xs">
+                        <span className="font-bold text-slate-700 block">규격 확정 가능 여부</span>
+                        <span className="text-[10px] text-slate-400">명확한 과업 내용 확보</span>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="text-xs font-bold text-slate-700">수행 난이도 및 품질 평가 중요성</label>
+                    <span className="text-xs text-indigo-600 font-bold">{techImportance} / 5</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="1"
+                    max="5"
+                    value={techImportance}
+                    onChange={(e) => setTechImportance(Number(e.target.value))}
+                    className="w-full accent-indigo-600 h-2 bg-slate-200 rounded-lg cursor-pointer"
+                  />
+                  <div className="flex justify-between text-[10px] text-slate-400 mt-1">
+                    <span>단순 구매/적격평가 지배</span>
+                    <span>고도의 전문성 (협상 계약)</span>
+                  </div>
+                </div>
+
+                <div className="border-t border-slate-100 pt-4">
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">조달 파트너 업체명 (지체상금용)</label>
+                  <input
+                    type="text"
+                    value={companyName}
+                    onChange={(e) => setCompanyName(e.target.value)}
+                    placeholder="예: 주식회사 나라텍"
+                    className="w-full bg-slate-50 border border-slate-300 text-slate-900 rounded-lg p-2.5 text-sm focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                </div>
+              </div>
+            </section>
+
+            {/* OUTPUT ANALYSIS & SIMULATOR TAB CONTENT (RIGHT COLUMN) */}
+            <section className="lg:col-span-7 flex flex-col gap-6">
+              
+              {/* TAB HEADERS */}
+              <nav className="flex flex-wrap gap-1 bg-slate-200/60 p-1.5 rounded-xl border border-slate-300">
+                {[
+                  { id: 'recommendation', label: "추천 & 법리", icon: Icons.Gavel },
+                  { id: 'timeline', label: "소요 기간 & 간트", icon: Icons.Clock },
+                  { id: 'auditRisk', label: "감사 리스크", icon: Icons.ShieldAlert },
+                  { id: 'liquidated', label: "지체상금 & 통지서", icon: Icons.Calculator },
+                  { id: 'checklist', label: "사전 점검", icon: Icons.CheckSquare },
+                  { id: 'policyPurchase', label: "정책구매 & DB설계", icon: Icons.Database, badge: true },
+                  { id: 'copilot', label: "AI 계약 코파일럿", icon: Icons.Sparkles }
+                ].map(tab => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-lg transition-all ${
+                      activeTab === tab.id
+                        ? 'bg-white text-slate-900 shadow-sm'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-white/40'
+                    }`}
+                  >
+                    <tab.icon />
+                    {tab.label}
+                    {tab.badge && (
+                      <span className="animate-pulse flex h-2 w-2 relative">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-600"></span>
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </nav>
+
+              {/* TAB BODY AREA */}
+              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex-1 min-h-[480px]">
+
+                {/* TAB 1: RECOMMENDATION & LEGAL MATCH */}
+                {activeTab === 'recommendation' && (
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-2">권장 입찰방식 자동판단 엔진</h3>
+                      <div className="bg-indigo-50 border border-indigo-100 p-5 rounded-xl flex items-start gap-4">
+                        <div className="p-3 bg-indigo-600 text-white rounded-lg shadow-sm">
+                          <Icons.Gavel />
+                        </div>
+                        <div>
+                          <div className="text-xs text-indigo-500 font-bold">인공지능 추천 계약방식</div>
+                          <div className="text-xl font-extrabold text-indigo-950 mt-0.5">{methodRecommendation.bestLabel}</div>
+                          <p className="text-sm text-slate-600 mt-2 leading-relaxed">
+                            본 건은 추정가격 <strong>{(estimatedPrice/100000000).toFixed(2)}억 원</strong>, 기술 평가 중요도 {techImportance}/5 수준입니다. 
+                            {isSpecFixed 
+                              ? " 과업범위가 명확하고 규격 확정이 가능하므로 공정하고 객관적인 적격심사 제도가 최우수 매칭됩니다." 
+                              : " 과업내용의 불명확성과 고도 기술 확보 요건을 감안할 때 협상에 의한 계약 체결이 합리적입니다."}
+                            {pContractEval.isFeasible && ` 추가로 ${pContractEval.applicableArticle}에 의거해 수의계약 검토를 직접 진행할 수 있습니다.`}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Score Breakdown Bars */}
+                    <div>
+                      <h4 className="text-xs font-bold text-slate-700 mb-3">각 낙찰자 결정방식 조달 적정성 지표</h4>
+                      <div className="space-y-3">
+                        {[
+                          { id: 'negotiation', name: "협상에 의한 계약 (제안평가)", score: methodRecommendation.scores.negotiation },
+                          { id: 'qualification', name: "적격심사 낙찰제 (가격/실적 점수)", score: methodRecommendation.scores.qualification },
+                          { id: 'private', name: "수의계약 (특례 소액 포함)", score: methodRecommendation.scores.private },
+                          { id: 'general', name: "일반경쟁입찰", score: methodRecommendation.scores.general },
+                          { id: 'restricted', name: "제한경쟁입찰 (지역/실적제한)", score: methodRecommendation.scores.restricted }
+                        ].map(item => (
+                          <div key={item.id} className="flex items-center gap-4">
+                            <span className="w-48 text-xs font-semibold text-slate-600 truncate">{item.name}</span>
+                            <div className="flex-1 h-3 bg-slate-100 rounded-full overflow-hidden">
+                              <div 
+                                style={{ width: `${Math.min(100, Math.max(5, item.score))}%` }}
+                                className={`h-full rounded-full transition-all duration-500 ${
+                                  item.id === methodRecommendation.best ? 'bg-indigo-600' : 'bg-slate-400'
+                                }`}
+                              ></div>
+                            </div>
+                            <span className="w-8 text-xs font-bold text-slate-700 text-right">{Math.max(0, item.score)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Legal Feasibility on Private Contract */}
+                    <div className="border-t border-slate-100 pt-5">
+                      <h4 className="text-xs font-bold text-slate-700 mb-3">수의계약 수용 가능성 및 법리 해석</h4>
+                      <div className={`p-4 rounded-xl border ${pContractEval.isFeasible ? 'bg-emerald-50 border-emerald-100' : 'bg-red-50 border-red-100'}`}>
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <span className={`text-xs font-bold px-2 py-0.5 rounded ${pContractEval.isFeasible ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}`}>
+                              {pContractEval.status}
+                            </span>
+                            <h5 className="font-bold text-slate-900 mt-2 text-sm">
+                              {pContractEval.applicableArticle || "해당하는 예외 수의계약 근거 조항 없음"}
+                            </h5>
+                          </div>
+                        </div>
+                        <p className="text-xs text-slate-600 mt-2 leading-relaxed">{pContractEval.reason}</p>
+                        
+                        {pContractEval.isFeasible && (
+                          <div className="mt-3 bg-white p-3 rounded-lg border border-slate-200/80 text-xs">
+                            <strong className="text-slate-800 block mb-1">📋 필요 필수 증빙 서류 목록:</strong>
+                            <ul className="list-disc pl-4 space-y-1 text-slate-500">
+                              <li>수의계약 사유서 및 대체 불가능 의견서</li>
+                              <li>타사 동종업종 부존재 유무 검토서 (특허권의 경우 특허 원부 포함)</li>
+                              <li>최근 2개년 직접생산확인증명서 또는 적격인증 기업 확인증</li>
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* TAB 2: TIMELINE SIMULATOR & GANTT */}
+                {activeTab === 'timeline' && (
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-2">공정 소요 기간 시뮬레이션</h3>
+                      
+                      {/* Summary Cards */}
+                      <div className="grid grid-cols-3 gap-4 mb-6">
+                        <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl text-center">
+                          <div className="text-[10px] text-slate-400 font-bold uppercase">정상 낙찰 완료</div>
+                          <div className="text-2xl font-black text-slate-900 mt-1">{timelineSim.totalDays} 일</div>
+                          <div className="text-[10px] text-slate-500 mt-1 font-semibold">감사 7일 고정 적용</div>
+                        </div>
+                        <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl text-center">
+                          <div className="text-[10px] text-slate-400 font-bold uppercase">1회 유찰 후 재공고</div>
+                          <div className="text-2xl font-black text-amber-600 mt-1">{timelineSim.oneRebidDays} 일</div>
+                          <div className="text-[10px] text-slate-500 mt-1">예상 지연 +15일</div>
+                        </div>
+                        <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl text-center">
+                          <div className="text-[10px] text-slate-400 font-bold uppercase">최악 (2회유찰 수의)</div>
+                          <div className="text-2xl font-black text-red-600 mt-1">{timelineSim.twoRebidDays} 일</div>
+                          <div className="text-[10px] text-slate-500 mt-1">소유 전환 +30일</div>
+                        </div>
+                      </div>
+
+                      {/* Reverse Schedule Settings */}
+                      <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 mb-6 flex flex-col md:flex-row items-center justify-between gap-4">
+                        <div>
+                          <span className="text-xs font-bold text-slate-700 block">목표 계약 체결 희망일</span>
+                          <input 
+                            type="date" 
+                            value={targetDateStr}
+                            onChange={(e) => setTargetDateStr(e.target.value)}
+                            className="mt-1 bg-white border border-slate-300 rounded px-2 py-1 text-xs font-bold text-slate-800"
+                          />
+                        </div>
+                        <div className="text-right md:text-right text-xs">
+                          <span className="text-slate-400 font-semibold block">계약완료일 기준 발주요청 최종 한계선</span>
+                          <span className="text-sm font-black text-indigo-600 block mt-1">
+                            👉 {timelineSim.startCalculatedDateStr} (이전 발주 필수)
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Gantt Timeline */}
+                      <h4 className="text-xs font-bold text-slate-700 mb-3">상세 공정별 타임차트 및 점유 일수</h4>
+                      <div className="space-y-4">
+                        {timelineSim.phases.map((phase) => (
+                          <div key={phase.id} className="relative">
+                            <div className="flex justify-between items-center text-xs mb-1.5 font-bold">
+                              <span className="text-slate-700">{phase.name}</span>
+                              <span className="text-slate-500">{phase.days} 일</span>
+                            </div>
+                            <div className="w-full h-4 bg-slate-100 rounded-md overflow-hidden border border-slate-200">
+                              <div 
+                                style={{ width: `${Math.max(5, (phase.days / timelineSim.totalDays) * 100)}%` }}
+                                className={`h-full ${phase.color} border-r transition-all duration-500`}
+                              ></div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* TAB 3: AUDIT RISK INDICATORS */}
+                {activeTab === 'auditRisk' && (
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-2">실무 감사 대비 지적 고위험 요인</h3>
+                      
+                      {/* Gauge Risk Header */}
+                      <div className={`p-5 rounded-xl border ${auditRisk.color} flex items-center justify-between gap-6 mb-6`}>
+                        <div>
+                          <div className="text-xs font-bold uppercase">종합 감사 리스크 레벨</div>
+                          <div className="text-xl font-black mt-1">{auditRisk.status}</div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-3xl font-extrabold">{auditRisk.score} <span className="text-sm font-semibold">/ 100</span></div>
+                        </div>
+                      </div>
+
+                      {/* Indicators Cards List */}
+                      {auditRisk.indicators.length === 0 ? (
+                        <div className="text-center py-12 text-slate-400 flex flex-col items-center">
+                          <Icons.ShieldAlert />
+                          <p className="text-xs font-medium mt-2">감지된 법적/감사용 리스크 지표가 전혀 없습니다. 안전한 계약 집행이 가능합니다.</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          {auditRisk.indicators.map((ind, idx) => (
+                            <div key={idx} className="p-4 bg-slate-50 border border-slate-200 rounded-xl flex items-start gap-3">
+                              <div className={`p-1.5 rounded-full mt-0.5 ${
+                                ind.severity === 'high' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'
+                              }`}>
+                                <Icons.AlertTriangle className="w-4 h-4" />
+                              </div>
+                              <div>
+                                <h4 className="text-xs font-bold text-slate-900">{ind.title}</h4>
+                                <p className="text-xs text-slate-500 mt-1 leading-relaxed">{ind.desc}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* TAB 4: LIQUIDATED DAMAGES CALCULATOR */}
+                {activeTab === 'liquidated' && (
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-2">지체상금 요율 자동계산기</h3>
+
+                      {/* Date Calc vs Manual Mode Selector */}
+                      <div className="flex gap-2 mb-4 bg-slate-100 p-1 rounded-lg border border-slate-200">
+                        <button
+                          onClick={() => setIsDateCalc(true)}
+                          className={`flex-1 py-1.5 text-xs font-bold rounded ${isDateCalc ? 'bg-indigo-600 text-white' : 'text-slate-600 hover:text-slate-900'}`}
+                        >
+                          납품/수령 일자 자동 계산
+                        </button>
+                        <button
+                          onClick={() => setIsDateCalc(false)}
+                          className={`flex-1 py-1.5 text-xs font-bold rounded ${!isDateCalc ? 'bg-indigo-600 text-white' : 'text-slate-600 hover:text-slate-900'}`}
+                        >
+                          수동 지체 일수 입력
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                        {isDateCalc ? (
+                          <>
+                            <div>
+                              <label className="block text-xs font-bold text-slate-700 mb-1.5">계약서 상 납품기한</label>
+                              <input 
+                                type="date" 
+                                value={deliveryDueDate}
+                                onChange={(e) => setDeliveryDueDate(e.target.value)}
+                                className="w-full bg-slate-50 border border-slate-300 text-slate-900 rounded-lg p-2 text-xs font-bold"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-bold text-slate-700 mb-1.5">실제 납품완료일 (현품수령일)</label>
+                              <input 
+                                type="date" 
+                                value={actualDeliveryDate}
+                                onChange={(e) => setActualDeliveryDate(e.target.value)}
+                                className="w-full bg-slate-50 border border-slate-300 text-slate-900 rounded-lg p-2 text-xs font-bold"
+                              />
+                            </div>
+                          </>
+                        ) : (
+                          <div>
+                            <label className="block text-xs font-bold text-slate-700 mb-1.5">지체 일수 설정</label>
+                            <input 
+                              type="number" 
+                              value={delayDays}
+                              onChange={(e) => setDelayDays(Number(e.target.value))}
+                              className="w-full bg-slate-50 border border-slate-300 text-slate-900 rounded-lg p-2 text-xs font-bold"
+                            />
+                          </div>
+                        )}
+                        
+                        <div className="md:col-span-2">
+                          <label className="block text-xs font-bold text-slate-700 mb-1.5">부분 기성 인수금액 공제</label>
+                          <div className="flex gap-2">
+                            <label className="flex items-center gap-1.5 text-xs select-none">
+                              <input 
+                                type="checkbox" 
+                                checked={isPartialDelivery}
+                                onChange={(e) => setIsPartialDelivery(e.target.checked)}
+                              />
+                              공제유무
+                            </label>
+                            {isPartialDelivery && (
+                              <input 
+                                type="number" 
+                                placeholder="공제액"
+                                value={partialAmount}
+                                onChange={(e) => setPartialAmount(Number(e.target.value))}
+                                className="w-full bg-slate-50 border border-slate-300 text-slate-900 rounded p-1 text-xs"
+                              />
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Calculation result breakdown & Formula Explanation */}
+                      <div className="space-y-4">
+                        <div className="p-5 bg-slate-950 text-white rounded-xl font-mono text-xs space-y-2 relative">
+                          <span className="absolute top-3 right-3 text-[10px] text-amber-400 font-bold bg-amber-950/50 border border-amber-900 px-2 py-0.5 rounded">지상률 고시 준수</span>
+                          <div>■ 대상 계약종류: {delayDamages.typeName}</div>
+                          <div>■ 일 지체상금률: {(delayDamages.rate * 100).toFixed(4)} % (일부 법정 특례요율 자동 반영)</div>
+                          {isDateCalc && (
+                            <>
+                              <div>■ 계약서 상 납품기한: {deliveryDueDate}</div>
+                              <div>■ 실제 현품수령일자: {actualDeliveryDate}</div>
+                            </>
+                          )}
+                          <div className="text-indigo-300">■ 계산 산출된 총 지체일수: {delayDays} 일</div>
+                          <div>■ 계약 시뮬레이션 총액: {delayDamages.baseAmount.toLocaleString()} 원</div>
+                          {isPartialDelivery && <div>■ 인수기성금 공제: - {delayDamages.baseAmount.toLocaleString()} 원</div>}
+                          <div className="border-t border-slate-800 my-2 pt-2 text-slate-400">■ 계산방식: 계약금액 × 지체일수 × 지체상금률</div>
+                          <div className="text-sm text-amber-300 font-black">
+                            ★ 최종 예상 지체상금: {delayDamages.finalPenalty.toLocaleString()} 원 {delayDamages.isCapped && "(상한제 30% 한도 적용 완료)"}
+                          </div>
+                          <div className="text-[10px] text-slate-500 mt-2">
+                            ⚠️ 주의: 계약보증금 한도 도달 예상 지체일수는 {delayDamages.dangerDaysLimit}일 입니다. 이 시점 이후에는 계약해제 검토에 들어가야 감사 리스크가 최소화됩니다.
+                          </div>
+                        </div>
+
+                        {/* 추가된 공식 설명 보드 */}
+                        <div className="bg-slate-100 p-4 rounded-xl border border-slate-200 text-xs">
+                          <h4 className="font-bold text-slate-800 mb-1">📋 법정 지체상금 부과 처분 산식 가이드</h4>
+                          <p className="text-slate-600 leading-relaxed mb-2">
+                            대한민국 국가계약법 시행령 제74조 및 동법 시행규칙 제75조(지방계약법 시행령 제90조)에 의거한 표준 산출 방법입니다.
+                          </p>
+                          <div className="bg-white p-3 rounded border border-slate-300 font-mono text-slate-700 leading-normal">
+                            <strong>지체상금(L)</strong> = [계약금액(A) - 기완성부분인수액(B)] × 지체상금률(R) × 지체일수(N)<br/>
+                            * 계약금액(A): {delayDamages.baseAmount.toLocaleString()} 원 (VAT 포함)<br/>
+                            * 기인수액(B): {isPartialDelivery ? partialAmount.toLocaleString() : "0"} 원<br/>
+                            * 지상률(R): {delayDamages.rate} (하루 기준)<br/>
+                            * 지체일수(N): {delayDays} 일
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Notice Draft Generator */}
+                    <div className="border-t border-slate-100 pt-5">
+                      <div className="flex justify-between items-center mb-3">
+                        <h4 className="text-xs font-bold text-slate-700">지체상금 부과 처분 사전 통지서 (행정문서 자동 생성)</h4>
+                        <button
+                          onClick={() => handleCopyText(`[지체상금 부과 처분 사전 통지서]
+수신: ${companyName} 대표이사
+발신: 계약담당 공무원 / 발주기관장
+
+귀사와의 계약 건에 대하여 아래와 같이 지체상금 부과 대상 및 처분 예정을 통지하오니, 이의가 있을 시 명시된 기한까지 귀책사유 면책에 대한 증빙을 포함하여 소명 자료를 제출하시기 바랍니다.
+
+1. 계약 건명: ${contractType.toUpperCase()} 관련 발주 시뮬레이션 사업
+2. 계약 금액: 부가세 포함 약 ${delayDamages.baseAmount.toLocaleString()} 원
+3. 계약 납품기한: ${isDateCalc ? deliveryDueDate : '지정기한'}
+4. 실제 현품수령일: ${isDateCalc ? actualDeliveryDate : '수령 완료일'}
+5. 지체 내역 및 지상금 세부 산정:
+  - 지체 일수: ${delayDays} 일
+  - 일일 지상률: ${delayDamages.rate * 1000}/1000
+  - 기 납품/완성 공제액: ${isPartialDelivery ? partialAmount.toLocaleString() : "없음"} 원
+  - 최종 부과 예정 금액: ${delayDamages.finalPenalty.toLocaleString()} 원`, 'noticeDraft')}
+                          className="text-xs text-indigo-600 hover:text-indigo-800 flex items-center gap-1 font-bold"
+                        >
+                          <Icons.Copy />
+                          {copyFeedback === 'noticeDraft' ? '복사완료!' : '초안 텍스트 복사'}
+                        </button>
+                      </div>
+                      <pre className="p-4 bg-slate-50 border border-slate-200 rounded-xl text-[11px] text-slate-600 font-mono overflow-x-auto whitespace-pre-wrap leading-relaxed">
+                        <strong>[지체상금 부과 처분 사전 통지서]</strong>{`
+수신: ${companyName} 대표이사
+발신: 계약담당 공무원 / 발주기관장
+
+귀사와의 계약 건에 대하여 아래와 같이 지체상금 부과 대상 및 처분 예정을 통지하오니...
+계약 납품기한: ${isDateCalc ? deliveryDueDate : '지정기한'}
+실제 현품수령일: ${isDateCalc ? actualDeliveryDate : '수령일'}
+지체일수: ${delayDays}일 (부과 예정액: ${delayDamages.finalPenalty.toLocaleString()}원)`}
+                      </pre>
+                    </div>
+                  </div>
+                )}
+
+                {/* TAB 5: PRE-FLIGHT CHECKLIST */}
+                {activeTab === 'checklist' && (
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-2">계약 발주 전 사전 점검 자동 체크리스트</h3>
+                      <p className="text-xs text-slate-500 mb-4">현재 지정하신 계약유형인 <strong>{delayDamages.typeName}</strong> 맞춤형 필수 법정의무 이행 사항 리스트입니다.</p>
+                      
+                      <div className="space-y-3">
+                        {checklistItems.map((item) => (
+                          <label 
+                            key={item.id} 
+                            className="flex items-start gap-3 p-3 bg-slate-50 hover:bg-slate-100/80 rounded-xl border border-slate-200 cursor-pointer transition"
+                          >
+                            <input 
+                              type="checkbox" 
+                              checked={!!checkedItems[item.id]}
+                              onChange={(e) => setCheckedItems(prev => ({ ...prev, [item.id]: e.target.checked }))}
+                              className="rounded text-indigo-600 focus:ring-indigo-500 mt-0.5"
+                            />
+                            <div>
+                              <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded uppercase tracking-wider">
+                                {item.category}
+                              </span>
+                              <span className={`text-xs block mt-1 font-medium ${checkedItems[item.id] ? 'line-through text-slate-400' : 'text-slate-700'}`}>
+                                {item.label}
+                              </span>
+                            </div>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* TAB 6: POLICY PURCHASE & DATABASE SCHEMA (구체화된 11대 핵심요소 연동형) */}
+                {activeTab === 'policyPurchase' && (
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-2">정책구매 추천 시뮬레이터 (11대 우대인증 연동)</h3>
+                      
+                      {/* Interactive Certification Simulator (11대 항목) */}
+                      <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 mb-6">
+                        <span className="text-xs font-bold text-slate-800 block mb-3">🏢 가상 조달 계약업체의 우대 및 법적 인증 체크 (11대 항목 전체)</span>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                          
+                          {/* 중증장애인생산품여부 */}
+                          <label className="flex items-center gap-1.5 p-2 bg-white border rounded text-xs select-none cursor-pointer hover:bg-slate-50">
+                            <input 
+                              type="checkbox" 
+                              checked={policyStates.heavyDisabled} 
+                              onChange={(e) => setPolicyStates(prev => ({ ...prev, heavyDisabled: e.target.checked }))} 
+                            />
+                            중증장애인생산품여부
+                          </label>
+
+                          {/* 장애인기업여부 */}
+                          <label className="flex items-center gap-1.5 p-2 bg-white border rounded text-xs select-none cursor-pointer hover:bg-slate-50">
+                            <input 
+                              type="checkbox" 
+                              checked={policyStates.disabled} 
+                              onChange={(e) => setPolicyStates(prev => ({ ...prev, disabled: e.target.checked }))} 
+                            />
+                            장애인기업여부
+                          </label>
+
+                          {/* 보훈기업여부 */}
+                          <label className="flex items-center gap-1.5 p-2 bg-white border rounded text-xs select-none cursor-pointer hover:bg-slate-50">
+                            <input 
+                              type="checkbox" 
+                              checked={policyStates.patriot} 
+                              onChange={(e) => setPolicyStates(prev => ({ ...prev, patriot: e.target.checked }))} 
+                            />
+                            보훈기업여부
+                          </label>
+
+                          {/* 사회적기업여부 */}
+                          <label className="flex items-center gap-1.5 p-2 bg-white border rounded text-xs select-none cursor-pointer hover:bg-slate-50">
+                            <input 
+                              type="checkbox" 
+                              checked={policyStates.social} 
+                              onChange={(e) => setPolicyStates(prev => ({ ...prev, social: e.target.checked }))} 
+                            />
+                            사회적기업여부
+                          </label>
+
+                          {/* 여성기업여부 */}
+                          <label className="flex items-center gap-1.5 p-2 bg-white border rounded text-xs select-none cursor-pointer hover:bg-slate-50">
+                            <input 
+                              type="checkbox" 
+                              checked={policyStates.female} 
+                              onChange={(e) => setPolicyStates(prev => ({ ...prev, female: e.target.checked }))} 
+                            />
+                            여성기업여부
+                          </label>
+
+                          {/* 창업기업여부 */}
+                          <label className="flex items-center gap-1.5 p-2 bg-white border rounded text-xs select-none cursor-pointer hover:bg-slate-50">
+                            <input 
+                              type="checkbox" 
+                              checked={policyStates.startup} 
+                              onChange={(e) => setPolicyStates(prev => ({ ...prev, startup: e.target.checked }))} 
+                            />
+                            창업기업여부
+                          </label>
+
+                          {/* 벤처기업여부 */}
+                          <label className="flex items-center gap-1.5 p-2 bg-white border rounded text-xs select-none cursor-pointer hover:bg-slate-50">
+                            <input 
+                              type="checkbox" 
+                              checked={policyStates.venture} 
+                              onChange={(e) => setPolicyStates(prev => ({ ...prev, venture: e.target.checked }))} 
+                            />
+                            벤처기업여부
+                          </label>
+
+                          {/* 혁신제품보유여부 */}
+                          <label className="flex items-center gap-1.5 p-2 bg-white border rounded text-xs select-none cursor-pointer hover:bg-slate-50">
+                            <input 
+                              type="checkbox" 
+                              checked={policyStates.innovation} 
+                              onChange={(e) => setPolicyStates(prev => ({ ...prev, innovation: e.target.checked }))} 
+                            />
+                            혁신제품보유여부
+                          </label>
+
+                          {/* 우수조달보유여부 */}
+                          <label className="flex items-center gap-1.5 p-2 bg-white border rounded text-xs select-none cursor-pointer hover:bg-slate-50">
+                            <input 
+                              type="checkbox" 
+                              checked={policyStates.excellent} 
+                              onChange={(e) => setPolicyStates(prev => ({ ...prev, excellent: e.target.checked }))} 
+                            />
+                            우수조달보유여부
+                          </label>
+
+                          {/* 직접생산확인여부 */}
+                          <label className="flex items-center gap-1.5 p-2 bg-white border rounded text-xs select-none cursor-pointer hover:bg-slate-50">
+                            <input 
+                              type="checkbox" 
+                              checked={policyStates.directProd} 
+                              onChange={(e) => setPolicyStates(prev => ({ ...prev, directProd: e.target.checked }))} 
+                            />
+                            직접생산확인여부
+                          </label>
+
+                          {/* MAS등록여부 */}
+                          <label className="flex items-center gap-1.5 p-2 bg-white border rounded text-xs select-none cursor-pointer hover:bg-slate-50">
+                            <input 
+                              type="checkbox" 
+                              checked={policyStates.masReg} 
+                              onChange={(e) => setPolicyStates(prev => ({ ...prev, masReg: e.target.checked }))} 
+                            />
+                            MAS등록여부
+                          </label>
+
+                        </div>
+                      </div>
+
+                      {/* 구체화된 정책 조달 분석 판정서 */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                        
+                        <div className="p-3.5 bg-indigo-50 border border-indigo-100 rounded-lg">
+                          <span className="text-[10px] text-indigo-700 font-bold block mb-1.5 uppercase tracking-wider">■ 가능 업체 유형</span>
+                          <div className="space-y-1 text-xs">
+                            {policyEvalResult.companies.map((co, i) => (
+                              <div key={i} className="font-bold text-slate-800">• {co}</div>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="p-3.5 bg-amber-50 border border-amber-100 rounded-lg">
+                          <span className="text-[10px] text-amber-700 font-bold block mb-1.5 uppercase tracking-wider">■ 예상 계약방식</span>
+                          <div className="space-y-1 text-xs text-slate-800 font-medium">
+                            {policyEvalResult.contractMethods.map((cm, i) => (
+                              <div key={i}>• {cm}</div>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="p-3.5 bg-emerald-50 border border-emerald-100 rounded-lg">
+                          <span className="text-[10px] text-emerald-700 font-bold block mb-1.5 uppercase tracking-wider">■ 기관 실적 인정</span>
+                          <div className="space-y-1 text-xs text-slate-800 font-medium">
+                            {policyEvalResult.credits.map((cr, i) => (
+                              <div key={i}>• {cr}</div>
+                            ))}
+                          </div>
+                        </div>
+
+                      </div>
+
+                    </div>
+                  </div>
+                )}
+
+                {/* TAB 7: AI CO-PILOT CHAT AREA (로딩 프로그레스 바 추가완료) */}
+                {activeTab === 'copilot' && (
+                  <div className="space-y-6 flex flex-col h-full justify-between">
+                    <div>
+                      <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+                        <div>
+                          <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+                            <Icons.Sparkles />
+                            공공조달 전용 AI 어드바이저
+                          </h3>
+                          <p className="text-xs text-slate-500 mt-0.5">상태값을 이해하고 국가/지방계약법 기준으로 실질적 실무 답변을 드립니다.</p>
+                        </div>
+                      </div>
+
+                      {/* Info warning */}
+                      <div className="bg-indigo-50 border border-indigo-100 p-2.5 rounded-lg text-[11px] text-indigo-800 leading-normal mb-4">
+                        💡 <strong>알림:</strong> 샌드박스 인증이 자동 처리됩니다. 이제 별도의 개인 API Key 없이 바로 대화할 수 있습니다.
+                      </div>
+
+                      {/* AI 연동 로딩바 (isGenerating 활성화시 가동) */}
+                      {isGenerating && (
+                        <div className="w-full h-1.5 bg-indigo-100 rounded-full overflow-hidden mb-4 relative">
+                          <div className="loading-bar-active absolute top-0 left-0 h-full w-1/3 bg-indigo-600 rounded-full"></div>
+                        </div>
+                      )}
+
+                      {/* Conversational Frame */}
+                      <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 max-h-[280px] overflow-y-auto space-y-4 mb-4">
+                        {chatMessages.map((msg, idx) => (
+                          <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                            <div className={`p-3 rounded-xl max-w-[85%] text-xs leading-relaxed ${
+                              msg.role === 'user' 
+                                ? 'bg-indigo-600 text-white' 
+                                : 'bg-white text-slate-800 border border-slate-200 shadow-sm'
+                            }`}>
+                              {msg.content}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Pre-cooked Prompt Templates */}
+                      <div className="flex flex-wrap gap-2 mb-4">
+                        {[
+                          { query: "이 건 수의계약 가능한가?", label: "⚖️ 수의계약 판단" },
+                          { query: "감사 리스크는?", label: "🚨 감사 주의요소" },
+                          { query: "입찰공고문 초안 만들어줘", label: "✍️ 공고문 초안" },
+                          { query: "지체상금 면책사유 검토", label: "☂️ 지체상금 면책" }
+                        ].map((btn, idx) => (
+                          <button
+                            key={idx}
+                            onClick={() => executeCopilotSearch(btn.query)}
+                            disabled={isGenerating}
+                            className="bg-slate-100 hover:bg-slate-200 disabled:opacity-55 text-slate-700 font-bold px-2.5 py-1 text-[11px] rounded border border-slate-300 transition"
+                          >
+                            {btn.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Input query field */}
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder={isGenerating ? "답변을 정형화하는 중입니다..." : "예: 일상감사 통과 비결은 무엇일까?"}
+                        value={userQuery}
+                        onChange={(e) => setUserQuery(e.target.value)}
+                        disabled={isGenerating}
+                        onKeyDown={(e) => e.key === 'Enter' && executeCopilotSearch()}
+                        className="flex-1 bg-slate-50 border border-slate-300 text-slate-900 rounded-lg px-3 py-2 text-xs font-medium focus:ring-indigo-500 focus:border-indigo-500"
+                      />
+                      <button
+                        onClick={() => executeCopilotSearch()}
+                        disabled={isGenerating || !userQuery.trim()}
+                        className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-400 text-white p-2.5 rounded-lg transition flex items-center justify-center"
+                      >
+                        <Icons.Send />
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+              </div>
+            </section>
+
+          </main>
+
+          {/* FOOTER METADATA */}
+          <footer className="bg-slate-900 text-slate-500 py-6 border-t border-slate-800 text-center text-xs">
+            <div className="max-w-7xl mx-auto px-4">
+              <p>© 2026 사전 계약 시뮬레이터. 대한민국 국가계약법 및 지방계약법 시행령 기준 엔진 구동 중.</p>
+              <p className="mt-1 text-slate-600">※ 본 프로그램은 의사결정 참고용 시뮬레이션이며, 실제 발주 집행 시 소관 부처 상급기관 감사과 및 조달청의 최종 유권해석을 우선시합니다.</p>
+            </div>
+          </footer>
+        </div>
+      );
+    }
+
+    // React Render 트리거
+    const container = document.getElementById('root');
+    const root = ReactDOM.createRoot(container);
+    root.render(<App />);
+  </script>
+</body>
+</html>
