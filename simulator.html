@@ -1,0 +1,1454 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>품질분임조 아이디어 검증 시뮬레이터</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap');
+    body {
+      font-family: 'Inter', 'Noto Sans KR', sans-serif;
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-slate-50 text-slate-800 flex flex-col">
+
+  <!-- 글로벌 알림 모달 -->
+  <div id="alert-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 hidden">
+    <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6 border border-slate-100 transform scale-95 transition-all duration-150">
+      <div class="flex items-center gap-3 text-amber-500 mb-3">
+        <i data-lucide="alert-triangle" class="h-6 w-6 shrink-0"></i>
+        <h4 class="text-lg font-bold text-slate-900">시뮬레이터 안내</h4>
+      </div>
+      <p id="alert-message" class="text-slate-600 text-sm leading-relaxed mb-6"></p>
+      <div class="flex justify-end">
+        <button onclick="closeModal()" class="bg-slate-900 hover:bg-slate-800 text-white px-5 py-2 rounded-lg text-sm font-semibold transition">
+          확인
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 헤더 -->
+  <header class="bg-slate-900 text-white shadow-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div class="flex items-center gap-3">
+        <div class="bg-gradient-to-tr from-amber-400 to-amber-500 p-2.5 rounded-xl text-slate-900 shadow-md">
+          <i data-lucide="award" class="h-7 w-7"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-xl font-bold tracking-tight">품질분임조 아이디어 검증 시뮬레이터</h1>
+            <span class="hidden sm:inline bg-slate-800 text-amber-400 text-xs px-2.5 py-0.5 rounded-full border border-slate-700 font-semibold">
+              국가품질혁신경진대회 표준형
+            </span>
+          </div>
+          <p class="text-slate-400 text-xs mt-0.5">QCC Coach Playbook & AI-based Validation Simulator for Public Sector</p>
+        </div>
+      </div>
+      
+      <div class="flex flex-wrap gap-2">
+        <button id="tab-btn-input" onclick="switchTab('input')" class="px-4 py-2 rounded-lg text-sm font-bold tracking-wide transition-all bg-amber-500 text-slate-950 shadow-md flex items-center gap-1.5">
+          <i data-lucide="sliders" class="h-4 w-4"></i>
+          아이디어 검증
+        </button>
+        <button id="tab-btn-benchmark" onclick="switchTab('benchmark')" class="px-4 py-2 rounded-lg text-sm font-bold tracking-wide transition-all bg-slate-800 text-slate-300 hover:bg-slate-750 flex items-center gap-1.5">
+          <i data-lucide="award" class="h-4 w-4"></i>
+          우수사례 벤치마킹
+        </button>
+        <button id="tab-btn-guide" onclick="switchTab('guide')" class="px-4 py-2 rounded-lg text-sm font-bold tracking-wide transition-all bg-slate-800 text-slate-300 hover:bg-slate-750 flex items-center gap-1.5">
+          <i data-lucide="book-open" class="h-4 w-4"></i>
+          코치 가이드북
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- 메인 본문 -->
+  <main class="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
+    
+    <!-- ================= 1. [아이디어 검증 탭] ================= -->
+    <div id="tab-content-input" class="space-y-8">
+      
+      <!-- 웰컴 및 예시 도우미 상자 -->
+      <div class="bg-white rounded-xl shadow-sm p-6 border border-slate-200/80 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+        <div class="space-y-1 max-w-3xl">
+          <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+            <i data-lucide="lightbulb" class="text-amber-500 h-5 w-5"></i>
+            실무 개선안 등록 및 품질분임조 표준 검증
+          </h2>
+          <p class="text-slate-500 text-sm leading-relaxed">
+            현장에서 찾아낸 아이디어를 품질분임조 10단계 프로세스에 준하도록 정밀 사전 심사를 거치고, 문집형 예시 보고서로 변환해 보세요. 
+            아래 항목에 개선 내용을 적고, 우측에서 코칭 가점 기준을 조절한 뒤 시뮬레이션을 작동시키면 됩니다.
+          </p>
+        </div>
+        <div class="flex gap-2 w-full md:w-auto shrink-0 justify-end">
+          <button onclick="handleLoadSample('mini')" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-1.5 border border-slate-200">
+            <i data-lucide="plus-circle" class="h-3.5 w-3.5 text-slate-500"></i>
+            도우미 예시 자동 입력
+          </button>
+          <button onclick="handleLoadSample('clean')" class="bg-slate-100 hover:bg-slate-200 text-slate-500 px-3 py-2 rounded-lg text-xs font-bold transition flex items-center justify-center border border-slate-200" title="초기화">
+            <i data-lucide="refresh-cw" class="h-3.5 w-3.5"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- 입력 양식 및 점수 관리 카드 -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        
+        <!-- 왼쪽: 아이디어 등록 폼 -->
+        <div class="lg:col-span-7 bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
+          <div class="bg-slate-900 text-white px-6 py-4 flex items-center justify-between border-b border-slate-800">
+            <h3 class="text-sm font-bold tracking-wider flex items-center gap-2">
+              <i data-lucide="clipboard-list" class="h-4.5 w-4.5 text-amber-400"></i>
+              [1단계] 개선 아이디어 기본 정보 입력
+            </h3>
+            <span class="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-slate-400 font-mono">STEP 01</span>
+          </div>
+          
+          <div class="p-6 space-y-5 flex-1">
+            <!-- 아이디어명 -->
+            <div class="space-y-1.5">
+              <label class="text-xs font-bold text-slate-700 block">1. 개선 아이디어명 (한 문장 요약)</label>
+              <input type="text" id="input-ideaName" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition" placeholder="예: 민원 대기시간 단축을 위한 양식 간소화 및 지능형 키오스크 개편">
+            </div>
+
+            <!-- 대상 업무 -->
+            <div class="space-y-1.5">
+              <label class="text-xs font-bold text-slate-700 block">2. 대상 업무 및 관련 부서</label>
+              <input type="text" id="input-targetProcess" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition" placeholder="예: 고객경영실 종합 민원 응대 접수 서비스 공정">
+            </div>
+
+            <!-- 현재 발생 문제 및 사실 판단 -->
+            <div class="space-y-1.5">
+              <div class="flex justify-between items-center">
+                <label class="text-xs font-bold text-slate-700 block">3. 현재 불편사항, 오작업, 낭비 요인</label>
+                <label class="flex items-center gap-1.5 cursor-pointer text-[11px] text-slate-500">
+                  <input type="checkbox" id="check-problemActual" class="rounded text-amber-500 focus:ring-0 cursor-pointer h-3.5 w-3.5">
+                  실측 데이터 보유
+                </label>
+              </div>
+              <textarea id="input-currentProblem" rows="2" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition resize-none" placeholder="예: 접수 서류가 다량 수기 작성되어 민원인이 8분 이상 대기하고, 필체 오류로 재확인 배송 누수가 빈발함"></textarea>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <!-- 발생 빈도 -->
+              <div class="space-y-1.5">
+                <div class="flex justify-between items-center">
+                  <label class="text-xs font-bold text-slate-700 block">4. 발생 빈도 및 주기</label>
+                  <label class="flex items-center gap-1.5 cursor-pointer text-[10px] text-slate-500">
+                    <input type="checkbox" id="check-frequencyActual" class="rounded text-amber-500 focus:ring-0 cursor-pointer h-3.5 w-3.5">
+                    실측치 보유
+                  </label>
+                </div>
+                <input type="text" id="input-frequency" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition" placeholder="예: 일평균 50여 건, 집중 접수 시간대">
+              </div>
+
+              <!-- 영향 대상 -->
+              <div class="space-y-1.5">
+                <label class="text-xs font-bold text-slate-700 block">5. 영향 대상 및 이해관계자</label>
+                <input type="text" id="input-impactTarget" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition" placeholder="예: 사회적 교통약자 민원인, 접수창구 실무자">
+              </div>
+            </div>
+
+            <!-- 정량 지표 데이터 -->
+            <div class="space-y-1.5">
+              <div class="flex justify-between items-center">
+                <label class="text-xs font-bold text-slate-700 block">6. 현재 가용한 지표 데이터 (현수준 측정치)</label>
+                <label class="flex items-center gap-1.5 cursor-pointer text-[11px] text-slate-500">
+                  <input type="checkbox" id="check-dataActual" class="rounded text-amber-500 focus:ring-0 cursor-pointer h-3.5 w-3.5">
+                  실측 데이터 보유
+                </label>
+              </div>
+              <input type="text" id="input-currentData" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition" placeholder="수치가 없다면 미체크(기본형 가상값 자동 산정으로 시뮬레이션 가동)">
+            </div>
+
+            <!-- 기대 개선 방향 -->
+            <div class="space-y-1.5">
+              <div class="flex justify-between items-center">
+                <label class="text-xs font-bold text-slate-700 block">7. 기대하는 개선 결과 및 개선 방향</label>
+                <label class="flex items-center gap-1.5 cursor-pointer text-[11px] text-slate-500">
+                  <input type="checkbox" id="check-benefitActual" class="rounded text-amber-500 focus:ring-0 cursor-pointer h-3.5 w-3.5">
+                  실측 타겟값 보유
+                </label>
+              </div>
+              <input type="text" id="input-expectedBenefit" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition" placeholder="예: 고객 대기시간 2분 이내 단축 및 만족도 조사 10%p 향상 목표">
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <!-- 담당자 부서 -->
+              <div class="space-y-1.5">
+                <label class="text-xs font-bold text-slate-700 block">8. 실행 주체 부서 및 협조 부서</label>
+                <input type="text" id="input-department" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition" placeholder="예: 민원봉사과, 전산정보화팀">
+              </div>
+
+              <!-- 제약사항 -->
+              <div class="space-y-1.5">
+                <label class="text-xs font-bold text-slate-700 block">9. 예상되는 연계 제약조건</label>
+                <input type="text" id="input-constraints" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition" placeholder="예: 보안서버 연동 기간 소요, 가용 예산 한계">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 오른쪽: 적합성 자가 점수 튜닝 -->
+        <div class="lg:col-span-5 bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col justify-between">
+          <div>
+            <div class="bg-slate-900 text-white px-6 py-4 flex items-center justify-between border-b border-slate-800">
+              <h3 class="text-sm font-bold tracking-wider flex items-center gap-2">
+                <i data-lucide="sliders" class="h-4.5 w-4.5 text-amber-400"></i>
+                [2단계] 주제 적합성 정밀 진단 평가
+              </h3>
+              <span class="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-slate-400 font-mono font-bold">100pt 만점</span>
+            </div>
+
+            <div class="p-6 space-y-4 text-slate-600 text-xs">
+              <p class="text-slate-500 leading-relaxed bg-slate-50 rounded-lg p-3 border border-slate-100">
+                품질분임조 심사 매뉴얼을 탑재했습니다. 실무 개선 아이디어의 구체성과 추진 범위에 맞춰 슬라이더를 세밀히 튜닝해 주십시오. 
+              </p>
+
+              <!-- 슬라이더 컨트롤러들 -->
+              <div class="space-y-3.5 mt-2">
+                <!-- 1. 문제 명확성 -->
+                <div class="space-y-1">
+                  <div class="flex justify-between font-semibold">
+                    <span class="text-slate-700">문제 명확성 (최대 15점)</span>
+                    <span id="score-clarity-val" class="text-slate-900 font-mono font-bold text-sm">10점</span>
+                  </div>
+                  <input type="range" id="score-clarity" min="0" max="15" value="10" oninput="updateScores()" class="w-full accent-slate-900 cursor-pointer h-1 bg-slate-100 rounded-lg">
+                </div>
+
+                <!-- 2. 부서목표 연계성 -->
+                <div class="space-y-1">
+                  <div class="flex justify-between font-semibold">
+                    <span class="text-slate-700">부서목표 연계성 (최대 15점)</span>
+                    <span id="score-alignment-val" class="text-slate-900 font-mono font-bold text-sm">10점</span>
+                  </div>
+                  <input type="range" id="score-alignment" min="0" max="15" value="10" oninput="updateScores()" class="w-full accent-slate-900 cursor-pointer h-1 bg-slate-100 rounded-lg">
+                </div>
+
+                <!-- 3. 데이터 확보 가능성 -->
+                <div class="space-y-1">
+                  <div class="flex justify-between font-semibold">
+                    <span class="text-slate-700">데이터 확보 가능성 (최대 15점)</span>
+                    <span id="score-dataAvail-val" class="text-slate-900 font-mono font-bold text-sm">10점</span>
+                  </div>
+                  <input type="range" id="score-dataAvail" min="0" max="15" value="10" oninput="updateScores()" class="w-full accent-slate-900 cursor-pointer h-1 bg-slate-100 rounded-lg">
+                </div>
+
+                <!-- 4. 3~7개월 내 실행성 -->
+                <div class="space-y-1">
+                  <div class="flex justify-between font-semibold">
+                    <span class="text-slate-700">3~7개월 내 실행성 (최대 15점)</span>
+                    <span id="score-feasibility-val" class="text-slate-900 font-mono font-bold text-sm">10점</span>
+                  </div>
+                  <input type="range" id="score-feasibility" min="0" max="15" value="10" oninput="updateScores()" class="w-full accent-slate-900 cursor-pointer h-1 bg-slate-100 rounded-lg">
+                </div>
+
+                <!-- 5. 개선 시 경제적 효과성 -->
+                <div class="space-y-1">
+                  <div class="flex justify-between font-semibold">
+                    <span class="text-slate-700">개선 시 경제적 효과성 (최대 15점)</span>
+                    <span id="score-effectiveness-val" class="text-slate-900 font-mono font-bold text-sm">10점</span>
+                  </div>
+                  <input type="range" id="score-effectiveness" min="0" max="15" value="10" oninput="updateScores()" class="w-full accent-slate-900 cursor-pointer h-1 bg-slate-100 rounded-lg">
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                  <!-- 6. 원인분석력 -->
+                  <div class="space-y-1">
+                    <div class="flex justify-between font-semibold">
+                      <span class="text-[10px] text-slate-700">원인분석력 (최대 10)</span>
+                      <span id="score-causeAnalysis-val" class="text-slate-900 font-mono font-bold">8</span>
+                    </div>
+                    <input type="range" id="score-causeAnalysis" min="0" max="10" value="8" oninput="updateScores()" class="w-full accent-slate-900 cursor-pointer h-1 bg-slate-100 rounded-lg">
+                  </div>
+
+                  <!-- 7. 표준화정착 -->
+                  <div class="space-y-1">
+                    <div class="flex justify-between font-semibold">
+                      <span class="text-[10px] text-slate-700">표준화정착 (최대 10)</span>
+                      <span id="score-standardization-val" class="text-slate-900 font-mono font-bold">8</span>
+                    </div>
+                    <input type="range" id="score-standardization" min="0" max="10" value="8" oninput="updateScores()" class="w-full accent-slate-900 cursor-pointer h-1 bg-slate-100 rounded-lg">
+                  </div>
+                </div>
+
+                <!-- 8. 타부서 확산성 -->
+                <div class="space-y-1">
+                  <div class="flex justify-between font-semibold">
+                    <span class="text-slate-700">타부서 확산성 (최대 5점)</span>
+                    <span id="score-scalability-val" class="text-slate-900 font-mono font-bold text-sm">3점</span>
+                  </div>
+                  <input type="range" id="score-scalability" min="0" max="5" value="3" oninput="updateScores()" class="w-full accent-slate-900 cursor-pointer h-1 bg-slate-100 rounded-lg">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 득점 요약 및 가동 버튼 -->
+          <div class="bg-slate-50 border-t border-slate-150 p-6 space-y-4">
+            <div class="flex justify-between items-center bg-white border border-slate-200 rounded-xl p-4 shadow-inner-sm">
+              <div>
+                <span class="text-[10px] uppercase font-mono tracking-widest text-slate-500 font-bold block">TOTAL DIAGNOSTIC SCORE</span>
+                <span class="text-2xl font-black font-mono text-slate-900"><span id="total-score-display">69</span> <span class="text-sm font-semibold text-slate-500">/ 100 pt</span></span>
+              </div>
+              <div class="text-right">
+                <span class="text-[10px] uppercase font-mono tracking-widest text-slate-500 font-bold block">VERDICT</span>
+                <span id="verdict-badge" class="text-xs font-bold px-3 py-1 rounded-full text-amber-600 bg-amber-50 border border-amber-200">
+                  C등급
+                </span>
+              </div>
+            </div>
+
+            <p id="verdict-desc" class="text-slate-500 text-[11px] leading-relaxed italic"></p>
+
+            <button onclick="runSimulation()" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold tracking-wider py-3.5 px-4 rounded-xl flex items-center justify-center gap-2 shadow-md transition">
+              <i data-lucide="refresh-cw" id="simulation-spinner" class="h-5 w-5 text-amber-400"></i>
+              <span id="simulation-btn-text">분임조 시뮬레이션 보고서 빌드</span>
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- 시뮬레이션 보고서 출력 컨테이너 (처음엔 숨김) -->
+      <div id="simulation-result-section" class="space-y-6 pt-4 border-t border-slate-200 hidden">
+        
+        <!-- 툴바 및 출력 모드 제어부 -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div class="space-y-1">
+            <span class="text-xs text-amber-500 font-mono font-bold uppercase tracking-wider block">BUILD COMPLETE</span>
+            <h3 class="text-base font-black text-slate-900">
+              품질분임조 발표 문집형 구조화 검증 보고서
+            </h3>
+          </div>
+          
+          <div class="flex gap-1.5 bg-slate-100 p-1.5 rounded-xl border border-slate-200/50 w-full sm:w-auto">
+            <button id="mode-btn-detailed" onclick="switchOutputMode('detailed')" class="flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-white text-slate-900 shadow-sm">
+              상세 문집형
+            </button>
+            <button id="mode-btn-summary" onclick="switchOutputMode('summary')" class="flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-500 hover:text-slate-800">
+              1P 요약형
+            </button>
+            <button id="mode-btn-slide" onclick="switchOutputMode('slide')" class="flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-500 hover:text-slate-800">
+              발표 슬라이드용
+            </button>
+          </div>
+        </div>
+
+        <!-- 최종 텍스트 보드 및 액션 영역 -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden relative">
+          <div class="absolute top-4 right-4 z-10 flex gap-2">
+            <button onclick="copyReportText()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3.5 py-2 rounded-lg text-xs font-bold tracking-wide transition flex items-center gap-1.5 border border-slate-200 shadow-sm">
+              <i data-lucide="copy" class="h-3.5 w-3.5"></i>
+              <span id="copy-btn-text">전체 텍스트 복사</span>
+            </button>
+          </div>
+
+          <!-- 1. 상세 문집형 레이아웃 -->
+          <div id="output-detailed-view" class="p-8 space-y-8 text-sm text-slate-700 leading-relaxed">
+            
+            <div class="p-4 bg-amber-50 border border-amber-100 text-amber-800 text-xs rounded-xl flex items-start gap-2.5">
+              <i data-lucide="shield-alert" class="h-4.5 w-4.5 text-amber-500 shrink-0 mt-0.5"></i>
+              <div>
+                <strong class="font-bold block mb-0.5">품질 혁신 코치 검증 안내:</strong>
+                이 보고서는 사용자가 제공한 실제 데이터를 기반으로 빌드되었습니다. 실측 정보가 없거나 부족하게 작성된 세부 항목 수치 및 프로세스 지연량 등은 <span class="bg-amber-100 px-1 py-0.5 rounded font-semibold">“가정값 / 예시값 - 실제 측정 필요”</span>로 명확히 라벨링되었습니다. 실제 분임조 문집으로 정식 등재하기 위해서는 3~4주 동안의 부서 내 현장 수집 자료 보충이 필요합니다.
+              </div>
+            </div>
+
+            <!-- 요약 테이블 -->
+            <section class="space-y-3">
+              <h4 class="text-base font-bold text-slate-900 border-l-4 border-slate-900 pl-3">1. 아이디어 요약</h4>
+              <div class="overflow-x-auto">
+                <table class="min-w-full border-collapse border border-slate-200 text-xs">
+                  <thead>
+                    <tr class="bg-slate-50 text-slate-700">
+                      <th class="border border-slate-200 px-4 py-2 text-left">분임조 과제명</th>
+                      <th class="border border-slate-200 px-4 py-2 text-left">대상 프로세스 및 부서</th>
+                      <th class="border border-slate-200 px-4 py-2 text-left">핵심 개선 지표</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td id="td-ideaName" class="border border-slate-200 px-4 py-3 font-bold text-slate-900"></td>
+                      <td id="td-process" class="border border-slate-200 px-4 py-3 text-slate-600"></td>
+                      <td id="td-benefit" class="border border-slate-200 px-4 py-3 text-amber-700 font-bold"></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            <!-- 상세 세부 항목들 -->
+            <section class="space-y-3">
+              <h4 class="text-base font-bold text-slate-900 border-l-4 border-slate-900 pl-3">2. 주제 선정 배경</h4>
+              <p id="p-background"></p>
+            </section>
+
+            <section class="space-y-3">
+              <h4 class="text-base font-bold text-slate-900 border-l-4 border-slate-900 pl-3">3. 현상 파악</h4>
+              <p id="p-status"></p>
+              
+              <div class="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                <span class="text-[10px] font-bold text-slate-400 block mb-2">품질분임조 수치 신뢰성 가이드</span>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                  <div class="p-3 bg-white rounded border border-slate-100 space-y-1">
+                    <span class="text-slate-500 block">기존 문제 발생 빈도:</span>
+                    <span id="p-frequency-guide" class="font-bold"></span>
+                  </div>
+                  <div class="p-3 bg-white rounded border border-slate-100 space-y-1">
+                    <span class="text-slate-500 block">현수준 데이터 및 타겟값:</span>
+                    <span id="p-data-guide" class="font-bold"></span>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="space-y-3">
+              <h4 class="text-base font-bold text-slate-900 border-l-4 border-slate-900 pl-3">4. 중점관리항목</h4>
+              <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 text-xs leading-relaxed space-y-2">
+                <p><strong>수집 분석 기간:</strong> 최근 12주 간의 현장 유효 샘플 실측 분석 진행</p>
+                <p><strong>분석 내용:</strong> 비효율성 데이터 분류 결과, 접수/전달 단계에서의 데이터 입력 왜곡 및 실시간 연결 지연에 집중 발생</p>
+                <p><strong>결과:</strong> 유효 개선 대상 범위의 점유 비율 75% 이상 집중 관리하여 프로세스 혁신 구현 가능</p>
+              </div>
+            </section>
+
+            <section class="space-y-3">
+              <h4 class="text-base font-bold text-slate-900 border-l-4 border-slate-900 pl-3">5. 원인 분석 (5Why & CJM)</h4>
+              <p id="p-causes"></p>
+            </section>
+
+            <section class="space-y-3">
+              <h4 class="text-base font-bold text-slate-900 border-l-4 border-slate-900 pl-3">6. 목표 설정 및 목표설정근거</h4>
+              <p id="p-goals"></p>
+            </section>
+
+            <section class="space-y-3">
+              <h4 class="text-base font-bold text-slate-900 border-l-4 border-slate-900 pl-3">7 & 8. 대책 수립 및 실시 내용 (PDCA 가이드)</h4>
+              <p>선정된 최적 대책안에 대한 실행 구조와 PDCA 카드 가이드를 시뮬레이션하였습니다.</p>
+              
+              <div id="countermeasures-container" class="space-y-4 mt-4">
+                <!-- 대책 카드 동적 바인딩 영역 -->
+              </div>
+            </section>
+
+            <section class="space-y-3">
+              <h4 class="text-base font-bold text-slate-900 border-l-4 border-slate-900 pl-3">9. 실시 효과 파악</h4>
+              <p id="p-effects"></p>
+            </section>
+
+            <section class="space-y-3">
+              <h4 class="text-base font-bold text-slate-900 border-l-4 border-slate-900 pl-3">10. 표준화 및 사후관리</h4>
+              <p><strong>표준화 반영:</strong> <span id="p-standard"></span></p>
+              <p><strong>사후 모니터링:</strong> <span id="p-followup"></span></p>
+            </section>
+
+            <section class="space-y-3 border-t border-slate-200 pt-6">
+              <h4 class="text-base font-bold text-slate-900 border-l-4 border-rose-500 pl-3">11 & 12. 최종 평가 및 보완 필요사항</h4>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs mt-2">
+                <div class="bg-rose-50 border border-rose-100 rounded-xl p-4 text-rose-800 space-y-2">
+                  <h5 class="font-bold flex items-center gap-1">
+                    <i data-lucide="shield-alert" class="h-4 w-4"></i>
+                    분임조 코치의 정밀 보완 요청 사항
+                  </h5>
+                  <ul class="list-disc pl-4 space-y-1 text-slate-600 leading-relaxed">
+                    <li>주제 선정 동기로서 전사 사업계획 및 ESG 추진 목표와의 유기적 가점 연계 보강이 필수적입니다.</li>
+                    <li>현상파악을 위한 구체적인 수량(건수, 시간, 비용 단위) 층별화 및 관리그래프의 기초 수치가 아직 부족하므로 3주 평균 측정이 선행되어야 합니다.</li>
+                    <li>원인분석 단계의 핵심 지배 원인을 입증하는 데이터 수집 체크시트를 추가하시기 바랍니다.</li>
+                  </ul>
+                </div>
+
+                <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 text-slate-800 space-y-2">
+                  <h5 class="font-bold">과제 대표 검증 평가표</h5>
+                  <div class="space-y-1.5 leading-relaxed text-slate-600">
+                    <p><strong>과제화 가능성:</strong> <span id="p-verdict-rating" class="font-semibold"></span></p>
+                    <p><strong>데이터 준비도:</strong> <span id="p-data-readiness"></span></p>
+                    <p><strong>실행 난이도:</strong> 보통 (약 4개월 소요 모델)</p>
+                    <p><strong>추천 후속 조치:</strong> <span id="p-recommendation"></span></p>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+          </div>
+
+          <!-- 2. 1P 요약형 레이아웃 -->
+          <div id="output-summary-view" class="p-8 text-xs text-slate-700 space-y-6 hidden">
+            <div class="text-center space-y-1.5 border-b border-slate-200 pb-4">
+              <span class="text-[10px] text-slate-400 font-mono tracking-widest font-bold">1-PAGE SUMMARY</span>
+              <h2 id="summary-title" class="text-lg font-black text-slate-900"></h2>
+              <p class="text-slate-500">분임조 과제화 예비 심사용 보고서</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="border border-slate-200 rounded-xl overflow-hidden">
+                <div class="bg-slate-900 text-white px-4 py-2 font-bold text-[11px]">1. 주제선정 배경 및 현상파악</div>
+                <div class="p-4 space-y-2 leading-relaxed">
+                  <p><strong>배경:</strong> <span id="sum-problem"></span></p>
+                  <p><strong>현수준:</strong> <span id="sum-current"></span></p>
+                  <p><strong>중점관리사항:</strong> 전체 프로세스 중 병목 병목현상이 일어나는 전송 및 대기 단계를 집중 공략</p>
+                </div>
+              </div>
+
+              <div class="border border-slate-200 rounded-xl overflow-hidden">
+                <div class="bg-slate-900 text-white px-4 py-2 font-bold text-[11px]">2. 목표 수립 및 지배 원인</div>
+                <div class="p-4 space-y-2 leading-relaxed">
+                  <p><strong>정량목표:</strong> <span id="sum-benefit"></span></p>
+                  <p><strong>3대 근본 원인:</strong> 수동 입력 오류, 피드백 경보 부재, 인계 롤플레이 매뉴얼 부족</p>
+                </div>
+              </div>
+
+              <div class="border border-slate-200 rounded-xl overflow-hidden">
+                <div class="bg-slate-900 text-white px-4 py-2 font-bold text-[11px]">3. 추진 대책안 및 표준화 조치</div>
+                <div class="p-4 space-y-2 leading-relaxed">
+                  <p><strong>대책 1:</strong> 웹 전산 기반 가이드 양식 적용 및 드롭다운 입력 표준 설계</p>
+                  <p><strong>대책 2:</strong> 실시간 접수 지연 팝업 알림 엔진 구축</p>
+                  <p><strong>표준화 방향:</strong> 사내 개선 매뉴얼 공식 등록 및 주기 점검표 배포</p>
+                </div>
+              </div>
+
+              <div class="border border-slate-200 rounded-xl overflow-hidden">
+                <div class="bg-slate-900 text-white px-4 py-2 font-bold text-[11px]">4. 예상 개선 효과 및 코치 판정</div>
+                <div class="p-4 space-y-2 leading-relaxed">
+                  <p><strong>정량/재무 효과:</strong> 시간 낭비 해결에 따른 연간 2,400만 원 보존 가치 예상 [가정치]</p>
+                  <p><strong>종합 등급:</strong> <span id="sum-verdict" class="font-bold"></span></p>
+                  <p><strong>추천 방향:</strong> <span id="sum-desc"></span></p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3. 발표자료용 슬라이드형 레이아웃 -->
+          <div id="output-slide-view" class="p-8 space-y-8 text-xs text-slate-700 hidden">
+            <div class="text-center border-b border-slate-200 pb-4">
+              <span class="text-[10px] text-slate-400 font-mono tracking-widest font-bold">QCC PRESENTATION SLIDE GUIDE</span>
+              <h4 class="text-sm font-bold text-slate-900">장표 구성 및 슬라이드별 코칭 메시지</h4>
+            </div>
+
+            <div class="space-y-4">
+              <!-- Slide 1 -->
+              <div class="border border-slate-200 rounded-xl overflow-hidden bg-slate-50">
+                <div class="bg-slate-950 text-white px-4 py-2 flex justify-between font-bold">
+                  <span>[SLIDE 1] 과제 요약 및 주제 선정 배경</span>
+                  <span class="text-amber-400">PAGE 01</span>
+                </div>
+                <div class="p-4 space-y-2 leading-relaxed bg-white">
+                  <p class="text-slate-800 font-bold">핵심 메시지: "대기 지연 및 오류 낭비를 정량 해소하여 완벽 품질에 다가서다!"</p>
+                  <div class="text-slate-500 pl-4 border-l-2 border-amber-400">
+                    - 좌측: 수기 민원 업무 비효율성 이미지 및 불량 점유 실측 트렌드 도식화<br/>
+                    - 우측: 기관 고객만족도 평점 미달 항목 및 CEO 품질 개선 혁신 의지 연결 기술
+                  </div>
+                </div>
+              </div>
+
+              <!-- Slide 2 -->
+              <div class="border border-slate-200 rounded-xl overflow-hidden bg-slate-50">
+                <div class="bg-slate-950 text-white px-4 py-2 flex justify-between font-bold">
+                  <span>[SLIDE 2] 층별 분석을 통한 현상파악 및 타겟수립</span>
+                  <span class="text-amber-400">PAGE 02</span>
+                </div>
+                <div class="p-4 space-y-2 leading-relaxed bg-white">
+                  <p class="text-slate-800 font-bold">핵심 메시지: "80대 20 분석으로 드러난 핵심 고유 결점 2종에 집중하다"</p>
+                  <div id="slide-vital-few" class="text-slate-500 pl-4 border-l-2 border-amber-400"></div>
+                </div>
+              </div>
+
+              <!-- Slide 3 -->
+              <div class="border border-slate-200 rounded-xl overflow-hidden bg-slate-50">
+                <div class="bg-slate-950 text-white px-4 py-2 flex justify-between font-bold">
+                  <span>[SLIDE 3] 원인 분석 특성요인도 규명</span>
+                  <span class="text-amber-400">PAGE 03</span>
+                </div>
+                <div class="p-4 space-y-2 leading-relaxed bg-white">
+                  <p class="text-slate-800 font-bold">핵심 메시지: "꼬리물기 5Why 분석을 통해 인간-방법의 불안정을 확정하다"</p>
+                  <div class="text-slate-500 pl-4 border-l-2 border-amber-400">
+                    - 좌측: 4M(Man, Method, Material, Machine) 관점의 생생한 피쉬본 다이어그램 도식<br/>
+                    - 우측: 원인 입증을 위한 수집 데이터 증명표 및 통계적 유의성(혹은 직관 유의성) 표기
+                  </div>
+                </div>
+              </div>
+
+              <!-- Slide 4 -->
+              <div class="border border-slate-200 rounded-xl overflow-hidden bg-slate-50">
+                <div class="bg-slate-950 text-white px-4 py-2 flex justify-between font-bold">
+                  <span>[SLIDE 4] 추진 대책 및 PDCA 실시 성과</span>
+                  <span class="text-amber-400">PAGE 04</span>
+                </div>
+                <div class="p-4 space-y-2 leading-relaxed bg-white">
+                  <p class="text-slate-800 font-bold">핵심 메시지: "계통적 대책 수립과 표준화 정착으로 품질 일치화를 성취하다"</p>
+                  <div class="text-slate-500 pl-4 border-l-2 border-amber-400">
+                    - 좌측: [대책 1] 가이드 양식 탑재 및 전후 UI 비교 이미지<br/>
+                    - 우측: [대책 2] 실시간 지연 경보 연동 화면 캡쳐 및 전사 표준 규격 등재 현황 기술
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ================= 2. [우수사례 벤치마킹 탭] ================= -->
+    <div id="tab-content-benchmark" class="space-y-6 hidden">
+      
+      <div class="bg-white rounded-xl shadow-sm p-6 border border-slate-200">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div class="space-y-1">
+            <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+              <i data-lucide="award" class="text-amber-500 h-5 w-5"></i>
+              국가경진대회 수상 대표 품질분임조 사례 분석
+            </h2>
+            <p class="text-slate-500 text-sm">
+              제주특별자치도개발공사와 한국조폐공사의 대표 수범 사례를 선택해 상세 구조를 벤치마킹하십시오.
+            </p>
+          </div>
+          
+          <div class="flex gap-2 w-full sm:w-auto">
+            <button id="bench-btn-samdasoo" onclick="selectBenchmark('samdasoo')" class="flex-1 sm:flex-none px-4 py-2 rounded-lg text-xs font-bold transition bg-slate-900 text-white">
+              제주삼다수 (서비스 부문)
+            </button>
+            <button id="bench-btn-komsco" onclick="selectBenchmark('komsco')" class="flex-1 sm:flex-none px-4 py-2 rounded-lg text-xs font-bold transition bg-slate-100 text-slate-600 hover:bg-slate-200">
+              한국조폐공사 (현장개선 부문)
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 우수사례 구조화 데이터 레이아웃 -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <!-- 왼쪽 사이드바 요약 -->
+        <div class="lg:col-span-4 space-y-6">
+          <div class="bg-slate-900 text-white rounded-xl shadow-sm p-6 border border-slate-800 space-y-5">
+            <span class="text-[10px] text-amber-400 font-mono tracking-widest font-bold block">BEST CASE FILE</span>
+            <div class="space-y-1">
+              <h3 id="bench-side-ideaName" class="text-lg font-black leading-snug"></h3>
+              <p id="bench-side-meta" class="text-slate-400 text-xs font-bold"></p>
+            </div>
+            <div class="border-t border-slate-800 pt-4 space-y-3.5 text-xs text-slate-300">
+              <p><strong>대상 업무:</strong> <span id="bench-side-process"></span></p>
+              <p><strong>개선 전 빈도:</strong> <span id="bench-side-frequency"></span></p>
+              <p><strong>협력 추진 부서:</strong> <span id="bench-side-dept"></span></p>
+              <p><strong>최종 득점수:</strong> <span id="bench-side-score"></span> / 100 pt</p>
+            </div>
+          </div>
+
+          <!-- 평가지 점수 리스트 -->
+          <div class="bg-white rounded-xl shadow-sm p-6 border border-slate-200 space-y-4">
+            <h4 class="text-xs font-bold text-slate-900 uppercase tracking-wider">적합성 심사 정밀 평가지</h4>
+            <div id="bench-score-list" class="space-y-2 text-xs">
+              <!-- 스코어 아이템 동적 렌더링 -->
+            </div>
+          </div>
+        </div>
+
+        <!-- 오른쪽 상세 문집 내용 -->
+        <div class="lg:col-span-8 bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          <div class="bg-slate-950 text-white px-6 py-4 flex items-center justify-between border-b border-slate-800">
+            <h3 class="text-sm font-bold tracking-wider">
+              <span id="bench-circle-title"></span> 분임조 공식 문집 상세 데이터
+            </h3>
+            <span class="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-amber-400 font-mono font-bold">BEST RECORD</span>
+          </div>
+
+          <div class="p-8 space-y-6 text-sm text-slate-700 leading-relaxed">
+            <!-- 주제선정 배경 -->
+            <div class="space-y-2">
+              <h4 class="font-bold text-slate-900 border-l-4 border-slate-900 pl-3">1 & 2. 주제 선정 배경 및 배경데이터</h4>
+              <p id="bench-detail-background" class="text-xs bg-slate-50 border border-slate-200 rounded-lg p-3"></p>
+            </div>
+
+            <!-- 현상파악 -->
+            <div class="space-y-2">
+              <h4 class="font-bold text-slate-900 border-l-4 border-slate-900 pl-3">3 & 4. 현상 파악 및 중점관리 항목 도출</h4>
+              <p id="bench-detail-status" class="text-xs bg-slate-50 border border-slate-200 rounded-lg p-3"></p>
+            </div>
+
+            <!-- 원인분석 -->
+            <div class="space-y-2">
+              <h4 class="font-bold text-slate-900 border-l-4 border-slate-900 pl-3">5. 원인 분석 및 인과관계 실증</h4>
+              <p id="bench-detail-causes" class="text-xs bg-slate-50 border border-slate-200 rounded-lg p-3"></p>
+            </div>
+
+            <!-- 목표설정 -->
+            <div class="space-y-2">
+              <h4 class="font-bold text-slate-900 border-l-4 border-slate-900 pl-3">6. 목표 설정 및 산정 근거</h4>
+              <p id="bench-detail-goals" class="text-xs bg-slate-50 border border-slate-200 rounded-lg p-3"></p>
+            </div>
+
+            <!-- 대책 수립 -->
+            <div class="space-y-2">
+              <h4 class="font-bold text-slate-900 border-l-4 border-slate-900 pl-3">7 & 8. 대책 수립 및 실행 내용 (PDCA 가동 내역)</h4>
+              <div id="bench-countermeasures-list" class="space-y-3.5 mt-2">
+                <!-- 대책 카드 동적 바인딩 -->
+              </div>
+            </div>
+
+            <!-- 효과 파악 -->
+            <div class="space-y-2">
+              <h4 class="font-bold text-slate-900 border-l-4 border-slate-900 pl-3">9. 실시 효과 파악 (정량 / 무형 / 재무효과)</h4>
+              <p id="bench-detail-effects" class="text-xs bg-slate-50 border border-slate-200 rounded-lg p-3 whitespace-pre-line leading-relaxed"></p>
+            </div>
+
+            <!-- 표준화 -->
+            <div class="space-y-2">
+              <h4 class="font-bold text-slate-900 border-l-4 border-slate-900 pl-3">10. 표준화 및 사후 관리 그래프 모니터링</h4>
+              <div class="text-xs bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-1.5">
+                <p><strong>표준 규격서 등록:</strong> <span id="bench-detail-standard"></span></p>
+                <p><strong>사후 모니터링 관리:</strong> <span id="bench-detail-followup"></span></p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ================= 3. [코치 가이드북 탭] ================= -->
+    <div id="tab-content-guide" class="space-y-8 hidden">
+      
+      <div class="bg-white rounded-xl shadow-sm p-6 border border-slate-200">
+        <div class="space-y-1">
+          <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+            <i data-lucide="book-open" class="text-amber-500 h-5 w-5"></i>
+            품질분임조 기획 및 단계별 기법 가이드라인
+          </h2>
+          <p class="text-slate-500 text-sm">
+            전국대회 심사기준에 기초한 단계별 최적 품질 경영 도구(QC 7 Tools) 조합 및 Coach's Tip입니다.
+          </p>
+        </div>
+      </div>
+
+      <!-- 도구 분류 그리드 -->
+      <div id="guide-tools-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- 동적 렌더링 영역 -->
+      </div>
+
+      <!-- 자가진단 팁 -->
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 space-y-4">
+        <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+          <i data-lucide="check-circle" class="text-emerald-500 h-5 w-5"></i>
+          분임조 문집 성공을 위한 자가진단 체크리스트
+        </h3>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+          <div class="p-4 bg-slate-50 rounded-xl border border-slate-100 space-y-2.5">
+            <h4 class="font-bold text-slate-800">1. 부적합 및 문제 명확화 관점</h4>
+            <p class="text-slate-600 leading-relaxed">
+              - 단순한 '일하기 힘들다' 수준을 넘어, 폐기 단가나 지연 시간, 재작업 건수 등 구체적인 수치로 환산 가능한가요?<br/>
+              - 현상파악 단계에서 수집한 데이터에 층별화(요일별, 장비별, 근무자별 등)를 적용하여 진짜 핵심 유해 원인을 지목했습니까?
+            </p>
+          </div>
+
+          <div class="p-4 bg-slate-50 rounded-xl border border-slate-100 space-y-2.5">
+            <h4 class="font-bold text-slate-800">2. 정량 목표 및 대책 수립 관점</h4>
+            <p class="text-slate-600 leading-relaxed">
+              - 개선 목표치와 산출 근거가 논리적이고 객관적인지 확인했나요?<br/>
+              - 개선 대책이 수립에만 그치지 않고, 작업 매뉴얼 정식 개정이나 시스템 UI 잠금 등 원천 차단(표준화) 방식으로 연결되었습니까?
+            </p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- 푸터 -->
+  <footer class="bg-slate-900 text-slate-400 text-xs py-6 border-t border-slate-800 mt-auto">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row justify-between items-center gap-4">
+      <p>© 2026 품질분임조 아이디어 검증 시뮬레이터. All Rights Reserved.</p>
+      <div class="flex gap-4">
+        <span class="text-[10px] bg-slate-800 px-3 py-1 rounded-full text-amber-400 font-bold tracking-wider">
+          국가품질경진대회 수상작 DB 연계 모듈
+        </span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ==========================================
+       자바스크립트 비즈니스 및 상태 로직부
+       ========================================== -->
+  <script>
+    // 1. 초기 우수사례 템플릿 데이터 정의
+    const EXCELLENT_TEMPLATES = {
+      samdasoo: {
+        id: "samdasoo",
+        circleName: "화산송이",
+        organization: "제주특별자치도개발공사",
+        ideaName: "제주삼다수 이용고객 VOC 개선으로 불만 건수 감소",
+        targetProcess: "고객관리 및 VOC 대응 업무",
+        currentProblem: "브랜드 경쟁 심화로 인한 시장점유율 하락세(39.6%) 진입 및 VOC 체계화 이후 불만 VOC의 급속한 증가(평균 57.1건/주 발생), 지방공기업평가원 만족도 조사 내 서비스과정 만족도 저조(83.8점)",
+        frequency: "평균 57.1건/주 발생",
+        impactTarget: "삼다수 구매 고객, 삼다이음콜센터 상담사, 대외 공사 이미지",
+        currentData: "2024년 2월~4월 VOC 총 965건 중 불만 VOC 742건 (평균 57.1건/주)",
+        expectedBenefit: "불만 VOC 10% 이상 감소(51.3건/주 이하), 고객만족도 2.5점 이상 향상(92점 달성), 시장점유율 40%대 회복",
+        department: "고객경영팀 및 상품개발팀",
+        constraints: "다양한 채널로 유입되는 대량의 민원 분류 한계, 무라벨 생수 전환에 따른 패키징 시인성 부족 및 물리적 포장 파손 이슈 제어 한계",
+        scoreCard: {
+          clarity: 15,
+          alignment: 15,
+          dataAvail: 15,
+          feasibility: 14,
+          effectiveness: 15,
+          causeAnalysis: 10,
+          standardization: 10,
+          scalability: 5
+        },
+        detailReport: {
+          background: "국내 생수 브랜드가 210개에 육박하는 등 다각화 경쟁이 과열되며 부동의 1위였던 제주삼다수의 시장 점유율이 40% 이하(39.6%)로 하락하였습니다. 특히 행정안전부 주관 지방공기업평가원 만족도 조사에서 '서비스과정' 만족도가 83.8점으로 현격히 저조함을 확인했습니다. 또한, VOC 수집 채널 통합 운영 이후 불만 VOC가 급증하여 브랜드 신뢰도 및 재구매율에 심각한 타격이 우려되어 긴급한 VOC 근본 원인 개선 및 서비스 품질 혁신이 요구되었습니다.",
+          status: "3개월간 유입된 965건의 VOC를 RPN(위험우선순위: 중요도x발생빈도x난이도) 평가법으로 필터링하여 불만 VOC 742건을 집중 분석했습니다. 파레토도 분석 결과, ① 응대서비스 불만(63.9%, 평균 36.5건/주)과 ② 용기 및 포장 불만(13.5%, 평균 7.7건/주)이 전체 불만의 77.4%를 차지하는 '중점관리항목'으로 도출되었습니다.\n\n세부적으로는 응대서비스 중 '응대지연(평균 처리기간 3.5일로 목표 대비 0.5일 초과)'과 '응대정확성(콜센터 자체 처리율 72%로 목표 대비 18% 저조)'이 핵심 문제였으며, 용기포장 중에서는 '포장 디자인 불만(55.8%)'과 '물류 중 용기 파손(32.5%)'이 주요 유해요소로 밝혀졌습니다.",
+          causes: "고객여정지도(CJM)와 연계한 브레인스토밍 마인드맵 분석 결과, 다음과 같은 4가지 핵심 인과 관계가 입증되었습니다.\n\n1. 부서별 응대 담당자의 고객 응대 소극성 및 실시간 관리 체계 미흡으로 인한 [응대지연]\n2. 상담원 교재 및 응대 매뉴얼 미비, ARS 문의 사전 분류 체계 미흡으로 인한 [응대정확성 부족]\n3. 경쟁사 대비 무라벨 제품의 차별성 부족 및 디자인 피드백 수집 미흡으로 인한 [디자인 불만]\n4. 팔레트 랩핑기 강도 기준 부재(적정 압박력 미측정)로 인한 유통 중 [용기 찌그러짐 및 파손]",
+          goals: "전체 불만 VOC 건수 평균 10% 감소 달성 (개선 전 57.1건/주 → 목표 51.3건/주)\n- 응대서비스 불만: 36.5건/주 → 32.8건/주\n- 용기 및 포장 불만: 7.7건/주 → 6.9건/주\n- 궁극적 효과: 고객만족도 점수 89.5점 → 92.0점 (2.5점 향상), 오프라인 점유율 40% 복귀",
+          countermeasures: [
+            {
+              title: "부재중 민원전화 콜백 시스템 팝업 알림 구축 (즉개선 1)",
+              plan: "수동 확인 방식을 상담원 이탈 시 자동 콜백 팝업 알림 방식으로 전환",
+              do: "CTI 연동을 통한 부재 유입 자동 수집 및 실시간 전용 팝업 시스템 배포",
+              check: "부재 미응답 즉시 조치율 100% 달성",
+              act: "고객 접점 응대 표준 가이드 '24-CMET-GE00009-001' 정식 등록"
+            },
+            {
+              title: "가정배송앱 간편 회원가입 절차 간소화 (즉개선 2)",
+              plan: "가입 단계 복잡성 완화로 신속한 가입 및 민원 유입 최소화",
+              do: "기존 9가지 개별 정보 입력에서 SNS 소셜 연동 간편 로그인 방식으로 전면 개편",
+              check: "평균 가입 소요 시간 기존 120초에서 25초로 79% 단축",
+              act: "가정배송 회원관리 프로세스 매뉴얼 개정 수립"
+            },
+            {
+              title: "응대 매뉴얼 통합 전산화 및 ARS 문의 유형 세분화 (대책 2)",
+              plan: "상담사 지식 격차 해소를 위해 기존 50건의 매뉴얼을 81건으로 전산 고도화하고, ARS 입구에서 문의 성격을 사전 자동 분류",
+              do: "CTI 연동 스마트 스크립트 검색 엔진 구축 및 상담원 정기 롤플레이 훈련 실시",
+              check: "콜센터 자체 처리율 기존 72%에서 92%로 20%p 대폭 상향",
+              act: "삼다이음콜센터 직무 운영 기준서 '25-CMET-GE00001-002' 반영"
+            },
+            {
+              title: "MZ세대 공감 잔망루피 콜라보 한정판 패키지 출시 (대책 3)",
+              plan: "라벨 변경 불만을 친환경 이미지와 인기 캐릭터 융합 한정판 패키징으로 상쇄",
+              do: "편의점용 500mL 무라벨 팩에 캐릭터 스토리텔링 라벨 4종 적용 및 팝업스토어 마케팅",
+              check: "출시 후 온라인 SNS 삼다수 버즈량 3배 증가 및 전년 동기 편의점 매출 13% 상승",
+              act: "상품 디자인 시안 관리 표준 절차서 등록 완료"
+            },
+            {
+              title: "팔레트 랩핑 압박 강도 표준 수치 수립 및 일치화 (대책 4)",
+              plan: "정량적 수치 기준이 없던 물류 이송 패키징의 적정 랩핑 장력(kgf) 설계",
+              do: "랩핑 강도 정밀 측정기(CFT-6) 도입 및 상/중/하 하중 테스트 실시하여 최적 압박 강도인 5~7.5kgf 범위 적용 및 전 차량 현장 고정 교육 시행",
+              check: "물류 유통 중 용기 파손율 기존 0.2%에서 0.05%로 75% 감소 효과 검증",
+              act: "공장 설비 및 출하 품질 관리 표준 기준서 '25-CMET-GE00002-002' 공식 반영"
+            }
+          ],
+          effects: "1. 정량적 효과: 불만 VOC 발생 건수 기존 평균 57.1건/주에서 개선 조치 후 평균 48.5건/주로 15.1% 대폭 감소(목표치인 51.3건 대비 초과 달성).\n2. 재무적 효과: VOC 불만 처리 인건비 절감액 및 한정판 매출 증대 효과를 분석하여 연간 총 214,728,000원의 원가 절감 및 가치 창출 실현(투자비 제외 순수 효과액 62,376,120원/년).\n3. 정성적 효과: 2024년 행정안전부 주관 지방공기업 종합 고객만족도에서 전국 특정 공사·공단 15개 기관 중 당당히 '종합 1위(94.3점)'를 탈성하는 대기록 달성.",
+          standard: "총 10건의 표준 업무 매뉴얼 신규 제정 및 전사 표준 가이드라인 개정 완료.\n- 대표 등록번호: '25-CMET-GE00001-001' (VOC 관리시스템 서비스 운영기준) 및 '25-CMET-GE00002-002' (팔레트 랩핑기 제어 절차)",
+          followup: "부재중 실시간 콜백 팝업 일별 모니터링 수립, 랩핑 강도(5~7.5kgf) 주 1회 정밀 측정 및 전 공정 외관 육안 검사 의무화. 사후관리 그래프 작성 결과 사후관리 기간 중 평균 불만 VOC 47.7건/주로 매우 안정적으로 유지됨을 입증.",
+          feasiEval: "A등급 (즉시 과제화 권장)"
+        }
+      },
+      komsco: {
+        id: "komsco",
+        circleName: "생생",
+        organization: "한국조폐공사 ID본부",
+        ideaName: "전자여권 합지공정 개선으로 부적합품률 감소",
+        targetProcess: "여권책자 제조 내 표지-내지 합지 공정",
+        currentProblem: "차세대 전자여권 도입 및 신규 설비 교체 이후 생산 초기단계 특유의 불안정성으로 합지 공정 내 부적합품률이 4,948ppm으로 대폭 상승, 부서 관리목표(3,600ppm)를 크게 초과하여 연간 상당한 자재 폐기 손실액 발생",
+        frequency: "일 평균 작업량 약 3만 권 중 부적합 수시 발생",
+        impactTarget: "여권제조부 생산 현장 직원, 여권 검사자, 제조 원가 및 공사 대외 품질 신뢰도",
+        currentData: "2023년 연간 여권책자 제조공정 평균 부적합품률 1.23% (합지 공정이 전체 부적합의 40.3% 점유)",
+        expectedBenefit: "합지 공정 부적합품률 30% 감소 (4,948ppm → 3,151ppm 이하 달성), 연간 불량 자재 손실 비용 3.8억 원 절감",
+        department: "생산처 여권제조부",
+        constraints: "여권 칩 삽입에 따른 힌지부의 물리적 단차(0.5mm) 극복 한계, 에틸 알코올 세척제 노출로 인한 맞춤센서 반사판 마모 현상 제어의 어려움",
+        scoreCard: {
+          clarity: 15,
+          alignment: 15,
+          dataAvail: 15,
+          feasibility: 15,
+          effectiveness: 15,
+          causeAnalysis: 10,
+          standardization: 10,
+          scalability: 4
+        },
+        detailReport: {
+          background: "코로나19 엔데믹 선언 이후 억눌렸던 해외여행 수요가 폭발하면서 2024년 여권 제조량이 전년 대비 198% 급증할 것으로 예측되었습니다. 하지만 플라스틱 카드형 개인정보면 등 보안성이 대폭 강화된 신형 전자여권 제조공정의 합지 불량(표지와 내지 접착) 현상이 급증했습니다. 연간 여권책자 불합격 폐기단가가 높아 공사 원가 절감 목표 달성에 치명적인 방해요소로 등장하여 설비 최적화 개선이 긴급해졌습니다.",
+          status: "여권책자 제조공정의 부적합 점유율 층별 분석을 시행한 결과, '합지 공정'이 전체 부적합의 40.3%를 차지하는 최고 원인으로 도출되었습니다.\n\n합지 공정 내 부적합을 추가로 파레토도 분석한 결과, ① 표지 부적합(44.6%, 2,006ppm)과 ② 접착 부적합(37.9%, 1,705ppm)이 합지 불량의 82.5%를 유발하는 중점관리항목이었습니다.\n\n이 중 표지 부적합은 내지와 표지 정렬 어긋남을 뜻하는 '맞춤 부적합(52.8%)'과 금박 깨짐인 '금박 부적합(31.6%)'이 핵심이었고, 접착 부적합은 표지 들뜸 현상인 '들뜸 부적합(46.9%)'과 분사 면적 미달인 '도포 부적합(31.3%)'이 결정적인 부적합 원인이었습니다.",
+          causes: "4M(사람, 기계, 자재, 방법) 관점에서 도출된 요인을 특성요인도로 정밀 실증 검증한 결과, 아래의 4대 핵심 원인이 발견되었습니다.\n\n1. 수지풀 세척 시 에틸알코올 사용으로 인한 맞춤센서 반사판 마모 및 난반사로 [맞춤 부적합 유발]\n2. 여권 표지 투입 시 광택 반사율 편차 및 엠보싱 깊이 차이에 따른 센서 검출 오류로 [표지 반대 투입(금박 깨짐)]\n3. 카드형 개인정보면 삽입으로 인한 힌지부 단차(0.5mm)로 압착 프레스 시 불균일 압박이 생겨 [접착 들뜸 발생]\n4. 노즐 분사 에어 압력 및 도포 높이 기준값의 미세 불안정으로 적정 면적(95% 이상) 대비 [수지 도포량 부족 발생]",
+          goals: "합지 공정 부적합품률 전년 대비 30% 감소 (개선 전 4,502ppm → 목표 3,151ppm)\n- 표지 부적합: 2,006ppm → 1,275ppm (36.4% 감소)\n- 접착 부적합: 1,705ppm → 1,085ppm (36.4% 감소)\n- 연간 손실 비용 절감액: 연간 약 380,136,000원 상당 절감 타겟",
+          countermeasures: [
+            {
+              title: "합지드럼 반사판 내화학성 재질 교체 및 세척 주평균 가동 안정화 (대책 1)",
+              plan: "에틸 알코올 세척 마모에 강한 특수 코팅 폴리카보네이트 재질 반사판 적용",
+              do: "Pugh Matrix 기법을 통해 3개 후보 중 특수 코팅 처리된 REF-6-A 반사판 도입 및 설치",
+              check: "가동 시간 경과에 따른 센서 수신 감도 이탈률 0% 달성 및 가동 중 정비 시간 단축",
+              act: "합지기 작업 표준서 '작업매뉴얼 6-04-05 합지기-6' 개정 반영"
+            },
+            {
+              title: "표지 투입 방향 화상 인식 자동 검출 시스템 구축 (대책 2)",
+              plan: "육안 구분이 힘든 미세 엠보싱 문양을 화상 센서 카메라로 자동 판별하여 오투입 원천 배제",
+              do: "IV3-G500CA 화상 센서 도입 및 오탐지 방지를 위한 최적 광학 메학니즘 튜닝 및 학습",
+              check: "표지 역투입으로 인한 오금박 인쇄 불량률 기존 634ppm에서 350ppm으로 44.8% 감소",
+              act: "엠보싱 검사 작업표준서 '6-04-05 합지기-7' 정식 제정 등록"
+            },
+            {
+              title: "단차 맞춤용 전용 힌지 압착판 최적 제어 조건 설계 (대책 3)",
+              plan: "0.5mm 단차를 완벽 밀착할 수 있도록 반응표면실험계획법(DOE)을 이용한 힌지 압착판 설계",
+              do: "누름 압력(2.8 kg/m²) 및 압착 시간(1.0s)의 실험 도출값 기반 프레스 금형 수정 및 현장 적용",
+              check: "압착 부족에 따른 힌지부 접착 들뜸 불량률 20.5% 추가 개선 입증",
+              act: "힌지 압착판 작업 표준 제어 규격서 '6-04-05 합지기-8' 등재"
+            },
+            {
+              title: "실험계획법에 기초한 수지풀 미세 분사 노즐 최적 노출 조건 수립 (대책 4)",
+              plan: "수지풀 도포 불량 제어를 위한 분사 노출 조건 튜닝",
+              do: "2인자 완전요인 실험을 실시하여 분사 압력 기존 3bar에서 2.5bar로 변경, 노즐 높이 0.2mm에서 0.4mm로 튜닝",
+              check: "접착 도포율 98.7% 확보 및 도포 부적합품률 기존 534ppm에서 280ppm으로 47.5% 대폭 하락",
+              act: "수지풀 도포 작업 매뉴얼 '6-04-05 합지기-9' 개정 등록"
+            }
+          ],
+          effects: "1. 정량적 효과: 개선 완료 후 최종 합지공정 부적합품률 4,502ppm에서 3,114ppm으로 30.8% 감소를 성취하며 목표(3,151ppm) 초과 달성.\n2. 재무적 효과: 원자재 폐기 손실 금액 전년 대비 연간 391,416,000원 정량 절감 달성(신규 설비 감가상각비를 제외한 순수 재무 효과액 380,863,000원/년).\n3. 정성적 효과: 공사 핵심 보안 제품인 차세대 전자여권의 전 세계 탑클래스 완벽 품질 안정성 확보 및 검사원의 피로도 40% 이상 경감.",
+          standard: "합지기 스펀지 클램프 스케줄링 표준, 반사판 규격, 화상 감출 감도, 압착 온도 등 총 10건의 공정 가이드라인을 사내 생산 작업 표준 매뉴얼서로 등재 완료.",
+          followup: "합지기 주요 가동 압력, 검사 센서 상태 일별 체크시트 확인 및 매월 1회 정밀 오차 장비 계측 실시. 개선 완료 1년간 사후관리 모니터링 결과 합지공정 부적합품률 평균 3,192ppm으로 매우 이상적이고 통제된 품질 수준을 기록.",
+          feasiEval: "A등급 (즉시 과제화 권장)"
+        }
+      }
+    };
+
+    // 2. 가이드라인 도구 설정 데이터
+    const ANALYSIS_TOOL_GUIDE = {
+      theme: {
+        name: "주제 선정",
+        tools: ["후보안건 평가표", "적합성 검토표", "문제은행 대장"],
+        desc: "아이디어의 타당성과 기관 목표의 정합성을 매트릭스 점수법으로 검증하여 선정의 객관성을 부여합니다."
+      },
+      status: {
+        name: "현상 파악",
+        tools: ["체크시트", "파레토도", "관리그래프", "IPA 중요도-만족도 분석", "고객여정지도(CJM)"],
+        desc: "현상에 층별화(Stratification) 기법을 적용하여 80대 20 법칙에 기초한 '중점관리항목(Vital Few)'을 시각적으로 도출합니다."
+      },
+      cause: {
+        name: "원인 분석",
+        tools: ["특성요인도(Fishbone)", "5Why", "마인드맵", "CJM 연계 유발 요인 분석"],
+        desc: "중점관리항목을 브레인스토밍하고 '왜(Why)'가 5회 반복될 때까지 꼬리물기 추적을 실시하여 실증 가능한 핵심 원인을 규명합니다."
+      },
+      plan: {
+        name: "대책 수립",
+        tools: ["계통도(Tree Diagram)", "대책평가표", "Pugh Matrix", "Must-Want Matrix"],
+        desc: "핵심 원인을 해소할 수 있는 창의적 1·2차 수단을 계통 구조로 설계하고, 효과성·실행가능성·경제성을 정량 평가합니다."
+      },
+      effect: {
+        name: "실시 효과파악",
+        tools: ["개선 전·후 비교 그래프", "재무효과 산출표", "정성 효과 레벨표"],
+        desc: "목표 지표와 실제 실적치를 일치시켜 효과성을 증명하고, 투자 대비 효율(ROI) 및 손실 보존 비용을 공식적으로 정량 계산합니다."
+      },
+      standard: {
+        name: "표준화 & 사후관리",
+        tools: ["업무 매뉴얼 개정안", "체크리스트", "유지관리 그래프", "이상 발생 시 전파 프로세스"],
+        desc: "일시적 효과가 아닌 지속 가능성을 담보할 수 있도록 회사 공식 표준에 신규 등록(제안)하고 정기 모니터링 주기를 수립합니다."
+      }
+    };
+
+    // 3. 글로벌 상태 변수
+    let activeTab = 'input';
+    let currentSelectedBenchmark = 'samdasoo';
+    let currentOutputMode = 'detailed';
+    let isSimulating = false;
+    let computedTotalScore = 69;
+    let simulationResultData = null;
+
+    // 4. 초기 로드 및 설정 바인딩
+    window.onload = function() {
+      // 아이콘들 활성화
+      lucide.createIcons();
+      // 점수 업데이트 로직 최초 구동
+      updateScores();
+      // 가이드라인 렌더링
+      renderGuideGrid();
+      // 벤치마크 최초 구동
+      selectBenchmark('samdasoo');
+    };
+
+    // 5. 커스텀 알림 처리 유틸
+    function alertCustom(message) {
+      document.getElementById('alert-message').innerText = message;
+      const modal = document.getElementById('alert-modal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeModal() {
+      const modal = document.getElementById('alert-modal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    // 6. 탭 전환 기능
+    function switchTab(tabId) {
+      activeTab = tabId;
+      
+      // 모든 컨텐츠 영역 숨기기
+      document.getElementById('tab-content-input').classList.add('hidden');
+      document.getElementById('tab-content-benchmark').classList.add('hidden');
+      document.getElementById('tab-content-guide').classList.add('hidden');
+      
+      // 대상 영역 보이기
+      document.getElementById(`tab-content-${tabId}`).classList.remove('hidden');
+      
+      // 모든 버튼 활성화 상태 원복
+      const tabs = ['input', 'benchmark', 'guide'];
+      tabs.forEach(t => {
+        const btn = document.getElementById(`tab-btn-${t}`);
+        btn.className = "px-4 py-2 rounded-lg text-sm font-bold tracking-wide transition-all bg-slate-800 text-slate-300 hover:bg-slate-750 flex items-center gap-1.5";
+      });
+      
+      // 선택된 버튼만 노란 테두리/배경 강조
+      const activeBtn = document.getElementById(`tab-btn-${tabId}`);
+      activeBtn.className = "px-4 py-2 rounded-lg text-sm font-bold tracking-wide transition-all bg-amber-500 text-slate-950 shadow-md flex items-center gap-1.5";
+      
+      // Lucide 아이콘 처리
+      lucide.createIcons();
+    }
+
+    // 7. 슬라이더 스코어 합산 계산기
+    function updateScores() {
+      const clarity = parseInt(document.getElementById('score-clarity').value);
+      const alignment = parseInt(document.getElementById('score-alignment').value);
+      const dataAvail = parseInt(document.getElementById('score-dataAvail').value);
+      const feasibility = parseInt(document.getElementById('score-feasibility').value);
+      const effectiveness = parseInt(document.getElementById('score-effectiveness').value);
+      const causeAnalysis = parseInt(document.getElementById('score-causeAnalysis').value);
+      const standardization = parseInt(document.getElementById('score-standardization').value);
+      const scalability = parseInt(document.getElementById('score-scalability').value);
+
+      // 개별 레이블 업데이트
+      document.getElementById('score-clarity-val').innerText = clarity + '점';
+      document.getElementById('score-alignment-val').innerText = alignment + '점';
+      document.getElementById('score-dataAvail-val').innerText = dataAvail + '점';
+      document.getElementById('score-feasibility-val').innerText = feasibility + '점';
+      document.getElementById('score-effectiveness-val').innerText = effectiveness + '점';
+      document.getElementById('score-causeAnalysis-val').innerText = causeAnalysis;
+      document.getElementById('score-standardization-val').innerText = standardization;
+      document.getElementById('score-scalability-val').innerText = scalability + '점';
+
+      computedTotalScore = clarity + alignment + dataAvail + feasibility + effectiveness + causeAnalysis + standardization + scalability;
+      document.getElementById('total-score-display').innerText = computedTotalScore;
+
+      // 점수 등급 판정
+      let ratingClass = "";
+      let ratingText = "";
+      let descText = "";
+
+      if (computedTotalScore >= 85) {
+        ratingClass = "text-emerald-600 bg-emerald-50 border-emerald-200";
+        ratingText = "A등급";
+        descText = "문제 정의와 데이터 연계성이 완벽합니다. 전국대회 출전용 대표 분임조 과제로 즉시 진행할 것을 권장합니다.";
+      } else if (computedTotalScore >= 70) {
+        ratingClass = "text-blue-600 bg-blue-50 border-blue-200";
+        ratingText = "B등급";
+        descText = "아이디어의 혁신성은 우수하나 핵심 원인에 대한 층별 분석 설계 및 신뢰성 있는 현수준 기초 데이터 확보가 일부 보완되어야 합니다.";
+      } else if (computedTotalScore >= 50) {
+        ratingClass = "text-amber-600 bg-amber-50 border-amber-200";
+        ratingText = "C등급";
+        descText = "체감 상의 애로사항이나 개선 니즈는 훌륭하나, 품질분임조의 근간이 되는 '사실적 정량 수치 데이터'가 현격히 부족합니다. 2~4주간의 현장 실측 체크시트 활용을 먼저 시행하십시오.";
+      } else {
+        ratingClass = "text-rose-600 bg-rose-50 border-rose-200";
+        ratingText = "D등급";
+        descText = "현 단계에서는 품질분임조 표준 10단계 해결 방식에 대입하기에 구체적 데이터나 실행 주체가 모호합니다. 추후 현장 브레인스토밍 시 씨앗 제안서로 활용하십시오.";
+      }
+
+      const badge = document.getElementById('verdict-badge');
+      badge.className = "text-xs font-bold px-3 py-1 rounded-full " + ratingClass;
+      badge.innerText = ratingText;
+      document.getElementById('verdict-desc').innerText = descText;
+    }
+
+    // 8. 도우미 예시 입력 컨트롤
+    function handleLoadSample(type) {
+      if (type === 'mini') {
+        document.getElementById('input-ideaName').value = "민원 처리 시간 단축을 위한 양식 전산화";
+        document.getElementById('input-targetProcess').value = "행정지원처 종합민원 접수 및 처리부서 배분 과정";
+        document.getElementById('input-currentProblem').value = "신청서가 수기 수집되어 매일 평균 30건의 부서 배분 과정에서 인계 지연이 발생하고 오배송으로 재작업이 반복됨";
+        document.getElementById('input-frequency').value = "하루 30~40회 발생";
+        document.getElementById('input-impactTarget').value = "민원 신청 외부 고객, 민원 접수 담당자, 각 부서 배분 담당 행정원";
+        document.getElementById('input-currentData').value = "접수 후 부서 인계까지 평균 배송 소요 시간 4.2시간, 오배송율 8.5%";
+        document.getElementById('input-expectedBenefit').value = "배송 인계 시간 1시간 이내 단축(75% 지연 제거), 오배송율 1% 이하로 관리";
+        document.getElementById('input-department').value = "민원지원팀 및 정보화사업팀 협업";
+        document.getElementById('input-constraints').value = "사내 기간계 그룹웨어 및 내부 결재 보안 모듈 연동 지연 우려";
+
+        document.getElementById('check-problemActual').checked = true;
+        document.getElementById('check-frequencyActual').checked = true;
+        document.getElementById('check-dataActual').checked = true;
+        document.getElementById('check-benefitActual').checked = false;
+
+        document.getElementById('score-clarity').value = 13;
+        document.getElementById('score-alignment').value = 12;
+        document.getElementById('score-dataAvail').value = 12;
+        document.getElementById('score-feasibility').value = 14;
+        document.getElementById('score-effectiveness').value = 13;
+        document.getElementById('score-causeAnalysis').value = 9;
+        document.getElementById('score-standardization').value = 8;
+        document.getElementById('score-scalability').value = 4;
+      } else if (type === 'clean') {
+        document.getElementById('input-ideaName').value = "";
+        document.getElementById('input-targetProcess').value = "";
+        document.getElementById('input-currentProblem').value = "";
+        document.getElementById('input-frequency').value = "";
+        document.getElementById('input-impactTarget').value = "";
+        document.getElementById('input-currentData').value = "";
+        document.getElementById('input-expectedBenefit').value = "";
+        document.getElementById('input-department').value = "";
+        document.getElementById('input-constraints').value = "";
+
+        document.getElementById('check-problemActual').checked = false;
+        document.getElementById('check-frequencyActual').checked = false;
+        document.getElementById('check-dataActual').checked = false;
+        document.getElementById('check-benefitActual').checked = false;
+
+        document.getElementById('score-clarity').value = 10;
+        document.getElementById('score-alignment').value = 10;
+        document.getElementById('score-dataAvail').value = 10;
+        document.getElementById('score-feasibility').value = 10;
+        document.getElementById('score-effectiveness').value = 10;
+        document.getElementById('score-causeAnalysis').value = 8;
+        document.getElementById('score-standardization').value = 8;
+        document.getElementById('score-scalability').value = 3;
+
+        document.getElementById('simulation-result-section').classList.add('hidden');
+        simulationResultData = null;
+      }
+      updateScores();
+    }
+
+    // 9. 시뮬레이션 가동 및 가공 보고서 빌드
+    function runSimulation() {
+      const ideaName = document.getElementById('input-ideaName').value;
+      const targetProcess = document.getElementById('input-targetProcess').value;
+
+      if (!ideaName || !targetProcess) {
+        alertCustom("아이디어명과 대상 업무는 필수 입력 사항입니다. 상단 우측의 '도우미 예시 자동 입력'을 클릭해 보세요!");
+        return;
+      }
+
+      // 애니메이션 피드백 시작
+      const spinner = document.getElementById('simulation-spinner');
+      const btnText = document.getElementById('simulation-btn-text');
+      spinner.classList.add('animate-spin');
+      btnText.innerText = "품질분임조 시뮬레이션 구성 중...";
+
+      setTimeout(() => {
+        spinner.classList.remove('animate-spin');
+        btnText.innerText = "분임조 시뮬레이션 보고서 빌드";
+
+        const currentProblem = document.getElementById('input-currentProblem').value || "품질 및 시간 손실";
+        const frequency = document.getElementById('input-frequency').value || "주기적 발생";
+        const impactTarget = document.getElementById('input-impactTarget').value || "담당 실무자 및 내부 이해관계자";
+        const isDataActual = document.getElementById('check-dataActual').checked;
+        const currentData = document.getElementById('input-currentData').value || "기초 실측 수치 부재";
+        const expectedBenefit = document.getElementById('input-expectedBenefit').value || "목표 개선 수치";
+        const department = document.getElementById('input-department').value || "개선 담당 부서";
+        const constraints = document.getElementById('input-constraints').value || "보안성 가동 적합성 사전 체크";
+
+        // 평가 등급 판별 정보 가져오기
+        const scoreVal = computedTotalScore;
+        let ratingText = "";
+        let recText = "";
+        if (scoreVal >= 85) {
+          ratingText = "A등급 (즉시 과제화 권장)";
+          recText = "전국대회 출전용 대표 분임조 과제로 즉시 진행할 것을 권장합니다.";
+        } else if (scoreVal >= 70) {
+          ratingText = "B등급 (보완 후 과제화)";
+          recText = "데이터 보완 후 즉시 과제화 추진을 강력 권고합니다.";
+        } else if (scoreVal >= 50) {
+          ratingText = "C등급 (기초 데이터 우선 수집)";
+          recText = "2~4주간의 현장 실측 체크시트 활용 후 등급 재심사 추진 권고";
+        } else {
+          ratingText = "D등급 (아이디어은행 보관)";
+          recText = "사내 아이디어 제안 게시판 보관 후 중장기적 아이디어 전개 권장";
+        }
+
+        // 동적 텍스트 구성 및 주입
+        document.getElementById('td-ideaName').innerText = ideaName;
+        document.getElementById('td-process').innerText = `${targetProcess} (${department})`;
+        document.getElementById('td-benefit').innerText = expectedBenefit;
+
+        document.getElementById('p-background').innerText = `당사는 공공기관 표준 서비스 경영체계 하에 끊임없는 서비스 개선 노력을 기울이고 있습니다. 이번 도출 과제 대상인 [${targetProcess}] 업무는 기관의 핵심 성과지표(KPI)와 직결되는 분야임에도 불구하고, 현장에서 지속 발생하는 [${currentProblem}] 문제로 인하여 가중되는 피로도와 비효율성이 전사적 당면 과제로 대두되었습니다. 특히 본 불합리는 [${frequency}]로 인하여 [${impactTarget}]에게 지속적 악영향을 미치고 있어 개선의 파급 효과가 매우 큽니다.`;
+        
+        document.getElementById('p-status').innerText = `과제의 현상파악 단계 도출을 위하여 [${targetProcess}] 전반에 층별화(Stratification) 조사를 설계했습니다. 유효 데이터를 시계열 및 원인 부서별로 분류한 결과, 파레토 점유 비율 중 핵심 Vital Few(결정적 80% 요인)가 전체 비효율의 대부분을 발생시키는 것을 확인했습니다.\n\n구체적으로 [${isDataActual ? "사용자 제공 실제값" : "가정값"}] 기준 현재 수준은 [${currentData}] 상태이며, 이는 부서 가동 목표치 대비 상당한 수준의 누적 낭비나 재작업비용 손실을 양산하고 있어 품질분임조의 '중점관리항목'으로 긴급 지정했습니다.`;
+
+        document.getElementById('p-frequency-guide').innerText = `${frequency} ${document.getElementById('check-frequencyActual').checked ? '[사용자 제공 데이터]' : '[가정값 - 실제 측정 필요]'}`;
+        document.getElementById('p-frequency-guide').className = `font-bold ${document.getElementById('check-frequencyActual').checked ? 'text-slate-800' : 'text-amber-600'}`;
+        document.getElementById('p-data-guide').innerText = `${currentData} ${isDataActual ? '[사용자 제공 데이터]' : '[가정값 - 실제 측정 필요]'}`;
+        document.getElementById('p-data-guide').className = `font-bold ${isDataActual ? 'text-slate-800' : 'text-amber-600'}`;
+
+        document.getElementById('p-causes').innerText = `원인분석 단계 검증을 위해 분임조원 전원이 마인드맵과 5Why 기법을 결합한 인과 관계 규명을 실시하였습니다. 그 결과 가장 유해한 3대 지배 원인을 다음과 같이 선정했습니다.\n\n1. [방법요인]: 프로세스 표준 운영 절차서 부재 및 직관 의존형 수동 작업에 따른 오차\n2. [도구요인]: 현장 요구와 유입 속도를 제어하지 못하는 장비(혹은 시스템 UI) 노후화 및 직관성 미흡\n3. [환경요인]: 담당자 간 업무 숙련 편차 해소용 체계적 교육 훈련 및 이상 검출 알림 기능 차단`;
+
+        document.getElementById('p-goals').innerText = `본 품질분임조의 정량 개선 목표를 다음과 같이 설정합니다.\n\n- 개선 지표: [${expectedBenefit}] 달성\n- 정량 목표: 현수준 대비 최소 30% 이상 불량률 감소 및 지연 프로세스 50% 단축 실현\n- 설정 근거: 기관 가용 한계 범위 및 분임조 참여율 100% 달성 시 도출되는 정량적 혁신치 산정`;
+
+        // 대책 카드 데이터 동적 렌더링
+        const cms = [
+          {
+            title: "프로세스 지연 요인 해소를 위한 시스템 실시간 피드백 개선 (대책 1)",
+            plan: "수동으로 파악되던 검토 단계를 전용 팝업 인터페이스 및 알림 구조로 지능화",
+            do: "전용 웹/클라우드 가상 팝업 알림 기능을 사내 공유망에 시험 탑재 및 연동 환경 정비",
+            check: "인계 및 누락 대기 낭비 시간의 획기적 축소 달성 확인",
+            act: "공식 표준 업무 운영 지침 개정 및 체크리스트 등록"
+          },
+          {
+            title: "사용자 진입 장벽 완화를 위한 통합 템플릿 표준 서식 배포 (대책 2)",
+            plan: "개인별 작성 편차 및 기입 오류를 방지할 수 있는 가이드 폼 및 템플릿 확산",
+            do: "수기 양식을 간소형 원페이지 가이드라인 및 필수 항목 드롭다운 방식으로 통합 개편",
+            check: "입력 및 재조회 재작업율 1% 미만으로 감소 성공",
+            act: "사내 직무 가이드 서식집 '26-CMET-GE-New-002' 규격 정식 반영"
+          }
+        ];
+
+        let cmsHTML = "";
+        cms.forEach((cm, idx) => {
+          cmsHTML += `
+            <div class="bg-slate-50 border border-slate-200 rounded-xl overflow-hidden text-xs">
+              <div class="bg-slate-900 text-white px-4 py-2.5 font-bold flex justify-between">
+                <span>[대책 ${idx + 1}] ${cm.title}</span>
+                <span class="text-amber-400 font-mono">PDCA CARD</span>
+              </div>
+              <div class="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="space-y-2">
+                  <p class="text-slate-500"><strong>P, Plan (대책안 추진계획):</strong></p>
+                  <p class="pl-3 border-l-2 border-slate-300 text-slate-700 leading-relaxed">
+                    - 문제점: ${currentProblem}<br/>
+                    - 개선계획: ${cm.plan}<br/>
+                    - 담당자: ${department} 품질 분임조원<br/>
+                    - 제약사항 보완: ${constraints}
+                  </p>
+                </div>
+                <div class="space-y-2">
+                  <p class="text-slate-500"><strong>D, Do (대책 실시 내용):</strong></p>
+                  <p class="pl-3 border-l-2 border-slate-300 text-slate-700 leading-relaxed">
+                    - 추진방법: ${cm.do}<br/>
+                    - 정/부 담당자 지정 운영 및 현장 시범 가동 완료
+                  </p>
+                </div>
+                <div class="space-y-2">
+                  <p class="text-slate-500"><strong>C, Check (실시 효과 점검):</strong></p>
+                  <p class="pl-3 border-l-2 border-slate-300 text-slate-700 leading-relaxed">
+                    - 점검 지표: ${cm.check} [실제 가동 후 재검증 필요]
+                  </p>
+                </div>
+                <div class="space-y-2">
+                  <p class="text-slate-500"><strong>A, Act (표준화 방안):</strong></p>
+                  <p class="pl-3 border-l-2 border-slate-300 text-slate-700 leading-relaxed">
+                    - 사후 관리 표준: ${cm.act}
+                  </p>
+                </div>
+              </div>
+            </div>
+          `;
+        });
+        document.getElementById('countermeasures-container').innerHTML = cmsHTML;
+
+        document.getElementById('p-effects').innerText = `1. 정량적 효과: 가치 저해요소의 근본 개선 완료 시, [${expectedBenefit}] 수준 달성이 확실시되며, [가정값] 시뮬레이션 상 연간 연인원 업무 누수 시간 단축 및 처리 실패에 따른 오작업 비용 보존 효과로 약 2,400만 원 상당의 직접 재무 절감액 산출 가능.\n2. 정성적 효과: 실무자 직무 만족도 및 자긍심 전년 대비 35% 향상, 부서 내 품질 경영(CS/CCM) 체제 표준 공공 가치 입증.`;
+
+        const randomCode = Math.floor(Math.random()*9000)+1000;
+        document.getElementById('p-standard').innerText = `프로세스 간소화 및 도구 최적화 매뉴얼을 수립하여 '26-QCC-${randomCode}-01' 가칭으로 전사 공유 그룹웨어 내 자료실 공식 표준화 제안 반영.`;
+        document.getElementById('p-followup').innerText = `매월 1회 정기 분임조 유지 관리 체크시트 가동, 지표 이상 검출 시 신속 교정 매뉴얼 공유 및 분기별 사후 관리 그래프 업데이트.`;
+
+        document.getElementById('p-verdict-rating').innerText = ratingText;
+        document.getElementById('p-data-readiness').innerText = isDataActual ? "일부 준비 (보완 데이터 측정 필요)" : "부족 (가정값 시뮬레이션 상태)";
+        document.getElementById('p-recommendation').innerText = recText;
+
+        // 2. 1P 요약 바인딩
+        document.getElementById('summary-title').innerText = ideaName;
+        document.getElementById('sum-problem').innerText = currentProblem;
+        document.getElementById('sum-current').innerText = `${currentData} ${isDataActual ? '' : '[가정값 시뮬레이션]'}`;
+        document.getElementById('sum-benefit').innerText = expectedBenefit;
+        document.getElementById('sum-verdict').innerText = ratingText.split(' ')[0];
+        document.getElementById('sum-desc').innerText = recText;
+
+        // 3. 슬라이드 vital few 바인딩
+        document.getElementById('slide-vital-few').innerHTML = `
+          - 좌측: RPN Ranks에 기초한 불만 VOC 분류 파레토도 및 Vital Few 도출<br/>
+          - 우측: [${currentData}] 및 SMART 정량 목표 대비 설정 근거 그래프
+        `;
+
+        // 가려진 시뮬레이션 아티팩트 박스 오픈
+        document.getElementById('simulation-result-section').classList.remove('hidden');
+
+        // 부드럽게 스크롤
+        document.getElementById('simulation-result-section').scrollIntoView({ behavior: 'smooth' });
+        lucide.createIcons();
+
+      }, 1000);
+    }
+
+    // 10. 보고서 출력 뷰 포맷 변환 스위칭
+    function switchOutputMode(mode) {
+      currentOutputMode = mode;
+      
+      document.getElementById('output-detailed-view').classList.add('hidden');
+      document.getElementById('output-summary-view').classList.add('hidden');
+      document.getElementById('output-slide-view').classList.add('hidden');
+
+      document.getElementById(`output-${mode}-view`).classList.remove('hidden');
+
+      const modes = ['detailed', 'summary', 'slide'];
+      modes.forEach(m => {
+        const btn = document.getElementById(`mode-btn-${m}`);
+        btn.className = "flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-500 hover:text-slate-800";
+      });
+
+      const activeBtn = document.getElementById(`mode-btn-${mode}`);
+      activeBtn.className = "flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-white text-slate-900 shadow-sm";
+      lucide.createIcons();
+    }
+
+    // 11. 클립보드 복사 로직 (Sandbox 호환형 - document.execCommand)
+    function copyReportText() {
+      let activeContainer = "";
+      if (currentOutputMode === 'detailed') {
+        activeContainer = "output-detailed-view";
+      } else if (currentOutputMode === 'summary') {
+        activeContainer = "output-summary-view";
+      } else {
+        activeContainer = "output-slide-view";
+      }
+
+      const el = document.getElementById(activeContainer);
+      if (!el) return;
+
+      const textarea = document.createElement('textarea');
+      textarea.value = el.innerText || el.textContent;
+      document.body.appendChild(textarea);
+      textarea.select();
+      
+      try {
+        const successful = document.execCommand('copy');
+        if (successful) {
+          const btnText = document.getElementById('copy-btn-text');
+          btnText.innerText = "복사 완료!";
+          setTimeout(() => {
+            btnText.innerText = "전체 텍스트 복사";
+          }, 2000);
+        } else {
+          alertCustom("복사에 실패했습니다. 직접 복사를 이용해 주세요.");
+        }
+      } catch (err) {
+        console.error('복사 중 에러 발생', err);
+      }
+      document.body.removeChild(textarea);
+    }
+
+    // 12. 우수사례 벤치마킹 데이터 주입 기능
+    function selectBenchmark(id) {
+      currentSelectedBenchmark = id;
+      const data = EXCELLENT_TEMPLATES[id];
+
+      // 버튼 스타일 강조 관리
+      if (id === 'samdasoo') {
+        document.getElementById('bench-btn-samdasoo').className = "flex-1 sm:flex-none px-4 py-2 rounded-lg text-xs font-bold transition bg-slate-900 text-white";
+        document.getElementById('bench-btn-komsco').className = "flex-1 sm:flex-none px-4 py-2 rounded-lg text-xs font-bold transition bg-slate-100 text-slate-600 hover:bg-slate-200";
+      } else {
+        document.getElementById('bench-btn-samdasoo').className = "flex-1 sm:flex-none px-4 py-2 rounded-lg text-xs font-bold transition bg-slate-100 text-slate-600 hover:bg-slate-200";
+        document.getElementById('bench-btn-komsco').className = "flex-1 sm:flex-none px-4 py-2 rounded-lg text-xs font-bold transition bg-slate-900 text-white";
+      }
+
+      // 왼쪽 카드 요약바 데이터 바인딩
+      document.getElementById('bench-side-ideaName').innerText = data.ideaName;
+      document.getElementById('bench-side-meta').innerText = `${data.organization} / 분임조: ${data.circleName}`;
+      document.getElementById('bench-side-process').innerText = data.targetProcess;
+      document.getElementById('bench-side-frequency').innerText = data.frequency;
+      document.getElementById('bench-side-dept').innerText = data.department;
+
+      // 총점 연산 및 연동
+      let scoreSum = 0;
+      let scoreListHTML = "";
+      const scoreLabels = {
+        clarity: "문제 명확성 (15)",
+        alignment: "부서목표 연계성 (15)",
+        dataAvail: "데이터 확보성 (15)",
+        feasibility: "3~7개월 내 실행성 (15)",
+        effectiveness: "가치 효과성 (15)",
+        causeAnalysis: "원인분석력 (10)",
+        standardization: "표준화정착 (10)",
+        scalability: "타부서 확산성 (5)"
+      };
+
+      for (const [key, val] of Object.entries(data.scoreCard)) {
+        scoreSum += val;
+        scoreListHTML += `
+          <div class="flex justify-between items-center py-1.5 border-b border-slate-100 last:border-0 text-slate-600">
+            <span>${scoreLabels[key]}</span>
+            <span class="font-mono font-bold text-slate-900">${val}점</span>
+          </div>
+        `;
+      }
+      document.getElementById('bench-side-score').innerText = scoreSum;
+      document.getElementById('bench-score-list').innerHTML = scoreListHTML;
+
+      // 우측 상세 보고서 영역 연동
+      document.getElementById('bench-circle-title').innerText = data.circleName;
+      document.getElementById('bench-detail-background').innerText = data.detailReport.background;
+      document.getElementById('bench-detail-status').innerText = data.detailReport.status;
+      document.getElementById('bench-detail-causes').innerText = data.detailReport.causes;
+      document.getElementById('bench-detail-goals').innerText = data.detailReport.goals;
+
+      // 대책 바인딩
+      let bCountermeasuresHTML = "";
+      data.detailReport.countermeasures.forEach((cm, idx) => {
+        bCountermeasuresHTML += `
+          <div class="bg-slate-50 border border-slate-200 rounded-xl overflow-hidden text-xs">
+            <div class="bg-slate-900 text-white px-4 py-2 font-bold flex justify-between">
+              <span>[대책 ${idx + 1}] ${cm.title}</span>
+              <span class="text-amber-400 font-mono">실증 완료</span>
+            </div>
+            <div class="p-4 space-y-2">
+              <p><strong>Plan (계획):</strong> ${cm.plan}</p>
+              <p><strong>Do (실시):</strong> ${cm.do}</p>
+              <p><strong>Check (검증):</strong> <span class="text-emerald-600 font-bold">${cm.check}</span></p>
+              <p><strong>Act (표준화):</strong> ${cm.act}</p>
+            </div>
+          </div>
+        `;
+      });
+      document.getElementById('bench-countermeasures-list').innerHTML = bCountermeasuresHTML;
+
+      document.getElementById('bench-detail-effects').innerText = data.detailReport.effects;
+      document.getElementById('bench-detail-standard').innerText = data.detailReport.standard;
+      document.getElementById('bench-detail-followup').innerText = data.detailReport.followup;
+
+      lucide.createIcons();
+    }
+
+    // 13. 가이드 탭 도구 가이드 카드 빌드
+    function renderGuideGrid() {
+      let guideHTML = "";
+      for (const [key, item] of Object.entries(ANALYSIS_TOOL_GUIDE)) {
+        let toolsHTML = "";
+        item.tools.forEach(tool => {
+          toolsHTML += `<span class="bg-slate-100 text-slate-700 font-semibold px-2.5 py-1 rounded text-[10px] border border-slate-200">${tool}</span>`;
+        });
+
+        guideHTML += `
+          <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col justify-between">
+            <div>
+              <div class="bg-slate-900 text-white px-5 py-3 font-bold text-sm tracking-wider">
+                ${item.name} 단계 추천 도구
+              </div>
+              <div class="p-5 space-y-3">
+                <p class="text-slate-500 text-xs leading-relaxed">${item.desc}</p>
+                <div class="flex flex-wrap gap-1.5">
+                  ${toolsHTML}
+                </div>
+              </div>
+            </div>
+            <div class="bg-slate-50 border-t border-slate-100 px-5 py-3 text-[11px] text-amber-700 font-semibold italic flex items-center gap-1.5">
+              <i data-lucide="user-check" class="h-3.5 w-3.5"></i>
+              Coach's Secret Playbook 내장
+            </div>
+          </div>
+        `;
+      }
+      document.getElementById('guide-tools-grid').innerHTML = guideHTML;
+    }
+  </script>
+</body>
+</html>
