@@ -1,0 +1,1110 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>30 Years of Vibe Coding Portfolio - 주누파파</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;650;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            slate: {
+              150: '#eef2f6',
+              350: '#cbd5e1',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Premium scrollbar styles */
+    .scrollbar-thin::-webkit-scrollbar {
+      width: 4px;
+    }
+    .scrollbar-thin::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .scrollbar-thin::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 9999px;
+    }
+    
+    /* Smooth HTML level scrolling */
+    html {
+      scroll-behavior: smooth;
+    }
+  </style>
+
+  <!-- ================= PURE JS APP LOGIC AND CONSTANTS ================= -->
+  <script>
+    const TIMELINE_DATA = [
+      {
+        era: "1990s",
+        period: "1994 - 1999",
+        title: "아날로그의 종말, 터미널과 포인터의 시대",
+        concept: "C/C++, MFC, Win32 API, CGI, PC통신",
+        problem: "극도로 한정된 자원 속 성능을 쥐어짜던 하드코어 최적화의 시절.",
+        built: "대형 은행사 백오피스 터미널 에뮬레이터, PC통신 BBS 게이트웨이 서비스",
+        learned: "메모리 1바이트를 아끼기 위한 어셈블리 튜닝. 이때의 로우레벨 내공이 30년 아키텍처의 뿌리가 되었습니다.",
+        reflection: "메모리가 무한해 보이는 시대에도, 여전히 정교한 자원 관리와 데이터 구조 설계가 지연율(Latency)을 가르는 열쇠입니다.",
+        gradient: "from-blue-500 to-indigo-600"
+      },
+      {
+        era: "2000s",
+        period: "2000 - 2009",
+        title: "웹의 폭발과 엔터프라이즈 아키텍처의 정립",
+        concept: "Java, Spring, Oracle, EJB, 분산 원장 구축",
+        problem: "기업 시스템의 대형화와 고가용성 분산 시스템 설계의 필요성 대두.",
+        built: "대기업 ERP 시스템 전면 웹 마이그레이션, 전국 통신사 실시간 빌링 코어 아키텍처 리드",
+        learned: "설계 도면이 단 일 인치만 어긋나도 수백 명의 개발자가 쓰는 코드가 쓰레기가 된다는 혹독한 디자인 패턴의 교훈.",
+        reflection: "유행은 바뀌어도 시스템 간 결합도를 낮추고 모듈화하는 마스터 패턴 아키텍처는 여전히 절대적인 법칙입니다.",
+        gradient: "from-purple-500 to-pink-600"
+      },
+      {
+        era: "2010s",
+        period: "2010 - 2019",
+        title: "클라우드 네이티브와 글로벌 트래픽의 파도",
+        concept: "React, Node.js, AWS, Kubernetes, MSA",
+        problem: "모바일 폭발로 인한 상상 초월 트래픽 및 유연한 무중단 스케일링.",
+        built: "10만 명 동시 접속 대응 에듀테크 통합 LMS, 클라우드 기반 핀테크 중계 코어 아키텍처",
+        learned: "인프라를 코드로 관리하고(IaC), 분산 아키텍처 장애 격리(Fault Tolerance)의 완벽한 최적화를 체득함.",
+        reflection: "유행을 좇아 무작정 쪼갠 복잡한 분산 아키텍처(MSA)가 얼마나 참혹한 인프라 비용 폭탄을 가져오는지 무수히 목격했습니다.",
+        gradient: "from-pink-500 to-rose-500"
+      },
+      {
+        era: "2020s",
+        period: "2020 - Present",
+        title: "AI 에이전트와 대화하는 지휘관의 등장",
+        concept: "AI Orchestration, Vibe Coding, LLM Multi-Agent, Serverless",
+        problem: "속도가 곧 생존인 시장에서, 전통적인 타이핑 코딩의 시간적 한계 봉착.",
+        built: "반도체 도면 매뉴얼 10만 장 기반 AI 진단 에이전트, 프롬프트 기반 초고속 자동화 시스템",
+        learned: "단순 타이핑이나 문법 암기는 무의미합니다. AI가 생성한 수천 줄 중 단 1줄의 결함을 짚어내는 '맥락의 판단력'이 진짜 몸값입니다.",
+        reflection: "바이브코딩은 코딩의 종말이 아닌, 비즈니스 아키텍처 판단력의 정점입니다.",
+        gradient: "from-emerald-400 to-teal-600"
+      }
+    ];
+
+    const CASE_STUDIES = [
+      {
+        id: "game",
+        title: "조팸스런 게임",
+        category: "Game / Simulation",
+        period: "2024",
+        client: "오픈소스 기획 프로젝트",
+        stack: ["HTML5", "Canvas", "Alpine.js", "Tailwind CSS"],
+        url: "https://localpay.github.io/localpay/",
+        summary: "30년차 게임 및 웹 연동 아키텍처 노하우를 바탕으로 설계된, 가볍고 조팸스런 초고속 경량 웹 브라우저 게임.",
+        background: "다양한 디바이스 단말 환경에서 자원의 낭비와 병목 현상 없이 60FPS 이상의 무한 동기화를 완벽 보장하고, 사용자 도달성 지표를 정합 계산하려는 지능형 게이밍 프로젝트.",
+        problem: "기존 웹 기반의 캔버스 그래픽 및 물리 계산 엔진들은 불필요한 메인스레드 차단 및 가비지 컬렉션(GC) 지연을 다수 유발하여 잦은 버벅임을 발생시킴.",
+        techReason: "경량화된 렌더링 프레임 워크 및 부하 분산 구조를 도입하고 네이티브 RAF(RequestAnimationFrame)를 이용해 100% 끊김 없는 성능 수렴 달성.",
+        architecture: "Vanilla Web Graphics -> Alpine Reactive State -> GitHub Pages Deployment",
+        trouble: "프레임 누적에 따른 가비지 누수 및 유휴 모바일 단말에서의 렌더 프레임 불일치 현상 감지.",
+        solution: "메모리 풀링(Object Pooling) 기법과 벡터 연산 최적화를 게임 캐릭터 스키마 전반에 이식하여 가비지 컬렉터 부하를 제로 수준으로 수동 교정함.",
+        result: "저전력 모바일 환경에서도 안정적인 프레임 유지율 보장, 유휴 전력 소비율 35% 감소.",
+        vibe2026: "2026년식 튜닝: WebGL 오케스트레이션과 AI 기반 절차적 콘텐츠 제어를 연동하여, 사용자 액션 흐름에 맞춰 난수 장애물을 무한 생성하는 아키텍처를 반나절 만에 완성했을 것입니다."
+      },
+      {
+        id: "docclean",
+        title: "DocClean Pro 문서 전처리 최적화기",
+        category: "AI / Tooling",
+        period: "2024",
+        client: "지능형 업무 자동화 센터",
+        stack: ["Python", "FastAPI", "Regex Engine", "Gemini API"],
+        url: "https://localpay.github.io/localpay/lm",
+        summary: "LLM의 컨텍스트 윈도우 한계를 우회하고 가치 분석 효율을 높이기 위해 문서의 노이즈와 비정형 마크업 잔해를 정교하게 압축 및 전처리하는 고성능 유틸리티.",
+        background: "수십만 장의 PDF, HTML 기업 문서를 벡터 데이터베이스에 적재할 때, 데이터 내 중복 태그와 공백 기호가 과도한 AI 토큰 비용을 유발하고 프롬프트 정합성을 훼손하던 상황.",
+        problem: "문맥상 중요한 요소(표, 인라인 수식)와 무의미한 노이즈 데이터를 일률적으로 가공할 경우 의미 손실 및 문장 깨짐 현상이 발생함.",
+        techReason: "정밀 인코딩 탐지 파이프라인과 비정형 마크업을 가볍고 고속으로 걸러내는 정규식 커스텀 엔진을 구현하여 초정밀 텍스트 파싱 처리.",
+        architecture: "JSON Pipeline -> Python Preprocessor API -> Advanced Embedding Systems",
+        trouble: "다중 표(Table) 구조나 가로형 레이아웃 문서 정제 시 문맥 흐름의 앞뒤 선후 정합성이 역전되어 임베딩 벡터 품질이 깨지는 현상.",
+        solution: "구조화된 테이블 데이터만 마크다운 표준 스키마로 선별 변환하는 정제 계층 렌더러 모듈을 개발하여 테이블 가치를 완벽 보존.",
+        result: "토큰 소모량 평균 42% 대폭 절감, RAG 기반 임베딩 검색 정합율 180% 비약적 상승 달성.",
+        vibe2026: "2026년식 튜닝: AI 파이프라인 에이전트를 가동해 문서의 속성 가치(Meta-Value)를 스스로 분류하고 문맥의 요약본을 미리 패킹해 RAG 비용을 극대화하여 감소시키는 코드를 작성했을 것입니다."
+      },
+      {
+        id: "agree",
+        title: "사전 계약 시뮬레이터",
+        category: "Enterprise / Fintech",
+        period: "2025",
+        client: "대형 자산 운용사 & 제휴 포탈",
+        stack: ["Alpine.js", "Tailwind CSS", "Financial Logic", "Responsive UI"],
+        url: "https://localpay.github.io/localpay/agree",
+        summary: "복잡한 금융 이율 분기, 상환 분할 시뮬레이션, 조건별 사전 합의 마진율을 실시간 동적 추적하여 원클릭 가시화해 주는 세일즈 동의 시뮬레이터.",
+        background: "약정 조건 및 다년 이자율 시나리오 계산을 수작업 엑셀로 처리하느라 고객 응대 시간이 정체되고, 미세 오차로 인한 정합성 클레임 우려가 깊던 상태.",
+        problem: "다양한 상환 분기와 중도 인출 변수에 대응하는 이자 계산 구조의 분기 조건이 방대해 브라우저 렌더 레이턴시 부하 초래.",
+        techReason: "클라이언트 단에서 지연 없이 100% 무손실 동적 연산이 가능하도록, Alpine.js 반응형 상태 컨텍스트에 고신뢰 금융 알고리즘 결합.",
+        architecture: "Interactive User Parameters -> Pure Client-Side Financial Engine -> Glassmorphic Visualizer",
+        trouble: "사용자가 슬라이더나 변수를 미세 이동할 때 실시간 계산 이벤트가 수백 번 폭주하며 레이아웃 버벅임 현상 발생.",
+        solution: "연산 캐싱(Memoization) 설계와 최적의 렌더 디바운스 프레임을 도입하여 입력 시 즉각적인 2ms 반응속도 확보.",
+        result: "평균 상환 조율 대기 시간 2시간에서 5초 이내 즉시 반응으로 개선, 세일즈 타임라인 획기적 단축.",
+        vibe2026: "2026년식 튜닝: 고객 신용 지표 및 약정 연도를 프롬프트 인터페이스로 분석해 최상의 사전 계약 분기를 실시간 에이전트가 역제안하는 스마트 가이드를 연동했을 것입니다."
+      },
+      {
+        id: "simulator",
+        title: "품질분임조 아이디어 검증 시뮬레이터",
+        category: "Industrial Automation / QA",
+        period: "2025",
+        client: "정밀 제조 기업 H사",
+        stack: ["Tailwind CSS", "Simulation Physics", "Chart.js", "Alpine.js"],
+        url: "https://localpay.github.io/localpay/simulator",
+        summary: "현장 공정 불량 요인과 품질분임조의 다채로운 개선 아이디어를 몬테카를로 가상 데이터로 가동하여 개선율을 즉각 시뮬레이션하는 제조 지능형 솔루션.",
+        background: "공정 현장에서 제안되는 개선안들이 실제 설비 오차율을 얼마나 개선할 수 있을지 사전 컴퓨터 검증 수단이 없어 실제 정밀 기기를 자주 세워야 하던 한계.",
+        problem: "불량 요인의 매개변수가 수십 가지에 달해 난수 분포 생성 시 브라우저 연산 대기가 심하고 비전문가 사용자들이 접근하기 힘든 불친절한 수식 인터페이스.",
+        techReason: "통계적 공정 제어(SPC) 수식과 몬테카를로 난수 분포 발생 알고리즘을 프론트엔드 비동기 연산 레이어에 패킹하여 탑재.",
+        architecture: "Manufacturing Parameter Input -> Async Monte Carlo Randomizer -> Realtime Line Chart Generator",
+        trouble: "1만 회 이상의 난수 이터레이션 반복 연산 시 브라우저 메인 스레드가 정지되는 정체 현상.",
+        solution: "자바스크립트 마이크로태스크 큐(Microtask Queue)와 청크 분할 루프를 설계하여 연산 대기 중에도 UI 상호작용이 온전히 유지되도록 개선.",
+        result: "실제 공정 정지 부하 없이 가상 개선 적중률 94.2% 확보, 사전 아이디어 평가 기간 85% 이상 단축.",
+        vibe2026: "2026년식 튜닝: 현장 이상 현상 로그를 자연어로만 입력하면 최적의 제어 변수 가이드를 AI 에이전트가 추론해 시뮬레이션 매개변수로 즉각 매핑하는 연동 파이프라인을 완성했을 것입니다."
+      }
+    ];
+
+    const PHILOSOPHIES = [
+      {
+        title: "오래 가는 코드는 언제나 단순하다",
+        quote: "Complexity is the enemy of reliability.",
+        content: "현란하고 복잡한 프레임워크와 무리한 오버 엔지니어링의 무덤 속에서 깨달았습니다. 가장 훌륭하고 유지보수가 쉬운 시스템은 초보 개발자가 읽어도 바로 작동 방식이 파악되는 지극히 단순하고 명확한 코드입니다."
+      },
+      {
+        title: "기술 선택보다 문제 정의가 100배 우선이다",
+        quote: "Define the problem before picking the weapon.",
+        content: "최신 유행 기술에 눈먼 개발자는 하수입니다. 비즈니스의 병목 원인을 정확히 분해하고 나면, 값비싼 분산 아키텍처 도입보다 잘 쿼리 하나와 레디스 캐싱 하나가 수억 원의 비용을 지키는 명약이 됩니다."
+      },
+      {
+        title: "바이브코딩은 판단력의 정점이다",
+        quote: "Conductor of code, not a typing machine.",
+        content: "AI가 단 1초 만에 수백 줄을 생성하는 시대에 타자 속도나 단순 신택스 암기는 무의미합니다. 생성된 무수한 소스코드 속에서 시스템 구조적 결함을 빠르게 도려내고 흐름을 쥐어짜는 '지휘자'의 안목이 핵심입니다."
+      }
+    ];
+
+    // Core Async Gemini API Caller (With Exponential Backoff)
+    const apiKey = ""; // Empty key placeholder
+    const callGeminiAPI = async (userMessage, chatHistory) => {
+      const systemPrompt = `당신은 30년차 개발 경력을 가진 대한민국 최고의 소프트웨어 아키텍트이자 '바이브코딩(Vibe Coding)'의 거장인 '주누파파'입니다.
+사용자와 반말과 존댓말을 위트 있게 섞은, 중후하면서도 유쾌한 내공의 한국어로 대화해 주세요.
+개발 철학, 레거시 마이그레이션, AI 시대에 개발자가 살아남는 법, 아키텍처 진단 등에 대한 날카롭고 유용한 통찰을 주어야 합니다.
+소통이 필요한 경우, 하단의 "Connect" 영역에 적힌 메일(churchoffire@gmail.com)로 언제든 편하게 메시지를 남겨두라고 가볍게 알려주세요.`;
+
+      const contents = [
+        ...chatHistory.slice(-6).map(msg => ({
+          role: msg.sender === 'user' ? 'user' : 'model',
+          parts: [{ text: msg.text }]
+        })),
+        { role: 'user', parts: [{ text: userMessage }] }
+      ];
+
+      const payload = {
+        contents,
+        systemInstruction: { parts: [{ text: systemPrompt }] }
+      };
+
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+
+      let delay = 1000;
+      for (let i = 0; i < 5; i++) {
+        try {
+          const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+          const data = await response.json();
+          return data.candidates?.[0]?.content?.parts?.[0]?.text || "미안하네, 통신망에 잠시 노이즈가 있군. 다시 말해주겠나?";
+        } catch (error) {
+          if (i === 4) throw new Error("API 연결 실패");
+          await new Promise(res => setTimeout(res, delay));
+          delay *= 2;
+        }
+      }
+    };
+
+    // Safe Registration of Alpine Component before Alpine loads
+    document.addEventListener('alpine:init', () => {
+      Alpine.data('vibeApp', () => ({
+        activeTab: 'home',
+        terminalTab: 'bot',
+        selectedCase: CASE_STUDIES[0],
+        showScrollTop: false, // Scroll state
+        
+        // CLI State
+        cliInput: '',
+        cliHistory: [
+          { text: '==================================================', type: 'system' },
+          { text: '  30-YEAR EXPERT ARCHITECT VIBE TERMINAL v2.6.2  ', type: 'system' },
+          { text: '==================================================', type: 'system' },
+          { text: '명령어를 입력해 장인의 내공을 파헤쳐 보세요 (예: help)', type: 'system' }
+        ],
+
+        // Chatbot State
+        chatInput: '',
+        chatMessages: [
+          { sender: 'bot', text: '여보게나! 반갑네. 30년 동안 이 바닥 산전수전 공중전까지 다 겪은 소프트웨어 아키텍트 주누파파라고 하네. 요즘 개발 아키텍처, 인프라 병목, 혹은 AI 바이브코딩에 대해 풀리지 않는 숙제가 있는가? 편하게 고민을 던져보게.' }
+        ],
+        isChatLoading: false,
+        copiedEmail: false,
+
+        // Exposing Static Constants to Component Instance
+        TIMELINE_DATA,
+        CASE_STUDIES,
+        PHILOSOPHIES,
+
+        // Life cycle init Hook
+        init() {
+          // Default selection
+          this.selectedCase = this.CASE_STUDIES[0];
+          
+          // Setup scroll window listener to toggle scroll top button
+          window.addEventListener('scroll', () => {
+            this.showScrollTop = window.scrollY > 400;
+          });
+        },
+
+        // Nav Scroll helper with safety margins
+        navigateTo(id) {
+          this.activeTab = id;
+          const el = document.getElementById(id);
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        },
+
+        // Back to top click event and activeTab reset
+        scrollToTop() {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+          this.activeTab = 'home';
+        },
+
+        // Copy Email logic
+        handleCopyEmail() {
+          const emailText = "churchoffire@gmail.com";
+          const textarea = document.createElement("textarea");
+          textarea.value = emailText;
+          document.body.appendChild(textarea);
+          textarea.select();
+          try {
+            document.execCommand('copy');
+            this.copiedEmail = true;
+            setTimeout(() => this.copiedEmail = false, 2000);
+          } catch (err) {
+            // Clipboard Fallback
+          }
+          document.body.removeChild(textarea);
+        },
+
+        // CLI Controller
+        handleCliSubmit() {
+          const cmd = this.cliInput.trim().toLowerCase();
+          if (!cmd) return;
+
+          const updatedHistory = [...this.cliHistory, { text: `$ ${this.cliInput}`, type: 'user' }];
+          let response = [];
+
+          switch (cmd) {
+            case 'help':
+              response = [
+                '실행 가능 명령어:',
+                '  about       - 주누파파의 독보적 발자취 출력',
+                '  skills      - 보유한 고성능 아키텍처 무기 기술 등급표',
+                '  philosophy  - 기술을 초월한 3대 수호 철학',
+                '  clear       - 단말 화면 초기화'
+              ];
+              break;
+            case 'about':
+              response = [
+                '🛡️ 아키텍트 주누파파 (Junu Papa)',
+                '  - 1994년: C/C++ 기반 금융 중계 단말 에뮬레이터 개발로 무림 데뷔',
+                '  - 2005년: 국내 최고 트래픽 이동통신 빌링 시스템 고도화 설계 총괄',
+                '  - 2016년: 대형 SaaS 분산 처리 인프라 구축 리드',
+                '  - 2026년: AI 멀티에이전트 조율 및 바이브코딩 혁신 전파자'
+              ];
+              break;
+            case 'skills':
+              response = [
+                '⭐ S급 핵심 아키텍처 기술 세트:',
+                '  - Backend: Java/Spring, Node.js, Python FastAPI, Kafka, PostgreSQL',
+                '  - Cloud/Ops: AWS, Kubernetes, Terraform IaC, Serverless Edge',
+                '  - AI Vibe: Prompt Engineering Chain-of-Thought, Multi-agent design'
+              ];
+              break;
+            case 'philosophy':
+              response = [
+                '💡 장인의 신조:',
+                '  1. 무조건 심플하게 짤 것 (최선의 유지보수)',
+                '  2. 프레임워크 유행에 속지 말고 문제 원인부터 파악할 것',
+                '  3. 타이핑 머신이 되지 말고 맥락을 다스릴 것'
+              ];
+              break;
+            case 'clear':
+              this.cliHistory = [];
+              this.cliInput = '';
+              return;
+            default:
+              response = [
+                `명령어 "${this.cliInput}"를 찾지 못했네.`,
+                '알 수 없다면 "help"를 한번 입력해 보게나.'
+              ];
+          }
+
+          this.cliHistory = [...updatedHistory, ...response.map(text => ({ text, type: 'bot' }))];
+          this.cliInput = '';
+
+          // Scroll Terminal to bottom
+          this.$nextTick(() => {
+            const container = document.getElementById('cli-history-container');
+            if (container) container.scrollTop = container.scrollHeight;
+          });
+        },
+
+        runPresetCommand(cmd) {
+          this.cliInput = cmd;
+          setTimeout(() => {
+            this.handleCliSubmit();
+          }, 50);
+        },
+
+        // Interactive integration: Read blog essay sends a trigger context to Chatbot
+        readBlogPost(title) {
+          this.terminalTab = 'bot';
+          this.navigateTo('home');
+          this.chatMessages.push({
+            sender: 'bot',
+            text: `오! 내가 작성한 에세이 "${title}"에 관심이 많으시군! 30년간 실제 프로덕션을 조율하며 겪었던 가치관의 핵심이라네. 구체적으로 어떤 구조적 해법에 관해 나와 토론해보고 싶으신가?`
+          });
+        },
+
+        // Chatbot Controller
+        async handleChatSubmit() {
+          const userMsg = this.chatInput.trim();
+          if (!userMsg) return;
+
+          this.chatMessages.push({ sender: 'user', text: userMsg });
+          this.chatInput = '';
+          this.isChatLoading = true;
+
+          this.$nextTick(() => {
+            const container = document.getElementById('chat-messages-container');
+            if (container) container.scrollTop = container.scrollHeight;
+          });
+
+          try {
+            const reply = await callGeminiAPI(userMsg, this.chatMessages);
+            this.chatMessages.push({ sender: 'bot', text: reply });
+          } catch (err) {
+            this.chatMessages.push({ sender: 'bot', text: "아뿔싸! 인공지능 주파수에 잠시 병목이 생겼군. 아래 Connect 영역에 명시된 이메일로 고민이나 소통 제안을 주면 확인하겠네!" });
+          } finally {
+            this.isChatLoading = false;
+            this.$nextTick(() => {
+              const container = document.getElementById('chat-messages-container');
+              if (container) container.scrollTop = container.scrollHeight;
+            });
+          }
+        }
+      }));
+    });
+  </script>
+
+  <!-- Deferred Alpine.js library load for precise initialization order -->
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased selection:bg-indigo-500 selection:text-white">
+
+  <!-- Main Alpine.js Application Wrapper -->
+  <div x-data="vibeApp" class="min-h-screen relative overflow-hidden">
+    
+    <!-- Dynamic Aura Background Blobs -->
+    <div class="absolute top-[-10%] left-[-20%] w-[60vw] h-[60vw] bg-gradient-to-tr from-violet-300 via-pink-200 to-cyan-200 rounded-full blur-[120px] opacity-70 pointer-events-none animate-pulse-slow"></div>
+    <div class="absolute top-[40%] right-[-10%] w-[50vw] h-[50vw] bg-gradient-to-br from-indigo-200 via-teal-200 to-purple-200 rounded-full blur-[140px] opacity-65 pointer-events-none"></div>
+    <div class="absolute bottom-[-10%] left-[10%] w-[45vw] h-[45vw] bg-gradient-to-tr from-fuchsia-200 via-orange-100 to-blue-200 rounded-full blur-[110px] opacity-60 pointer-events-none"></div>
+
+    <!-- ================= HEADER (VIBRANT GLASSMORPHISM) ================= -->
+    <header class="sticky top-0 z-50 backdrop-blur-xl bg-white/70 border-b border-white/40 shadow-sm">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+        <div @click="navigateTo('home')" class="flex items-center space-x-3 cursor-pointer">
+          <span class="text-xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-violet-600 via-indigo-600 to-cyan-500">
+            VIBE_MASTER_30Y
+          </span>
+          <span class="bg-gradient-to-r from-indigo-500 to-purple-500 text-[10px] text-white font-bold px-2 py-0.5 rounded-full shadow-sm">
+            주누파파
+          </span>
+        </div>
+
+        <!-- Desktop Navigation -->
+        <nav class="flex items-center space-x-6 md:space-x-8 text-xs md:text-sm font-semibold">
+          <button @click="navigateTo('home')" :class="activeTab === 'home' ? 'text-indigo-600 font-extrabold scale-105' : 'text-slate-600'" class="transition-all duration-200 hover:text-indigo-600">Home</button>
+          <button @click="navigateTo('timeline')" :class="activeTab === 'timeline' ? 'text-indigo-600 font-extrabold scale-105' : 'text-slate-600'" class="transition-all duration-200 hover:text-indigo-600">Timeline</button>
+          <button @click="navigateTo('casestudies')" :class="activeTab === 'casestudies' ? 'text-indigo-600 font-extrabold scale-105' : 'text-slate-600'" class="transition-all duration-200 hover:text-indigo-600">Case Studies</button>
+          <button @click="navigateTo('techstack')" :class="activeTab === 'techstack' ? 'text-indigo-600 font-extrabold scale-105' : 'text-slate-600'" class="transition-all duration-200 hover:text-indigo-600">Tech Stack</button>
+          <button @click="navigateTo('philosophy')" :class="activeTab === 'philosophy' ? 'text-indigo-600 font-extrabold scale-105' : 'text-slate-600'" class="transition-all duration-200 hover:text-indigo-600">Philosophy</button>
+          <button @click="navigateTo('blog')" :class="activeTab === 'blog' ? 'text-indigo-600 font-extrabold scale-105' : 'text-slate-600'" class="transition-all duration-200 hover:text-indigo-600">Blog</button>
+          <button @click="navigateTo('contact')" :class="activeTab === 'contact' ? 'text-indigo-600 font-extrabold scale-105' : 'text-slate-600'" class="transition-all duration-200 hover:text-indigo-600">Connect</button>
+        </nav>
+      </div>
+    </header>
+
+    <!-- ================= HERO SECTION ================= -->
+    <section id="home" class="relative pt-12 pb-20 md:pt-24 md:pb-32 z-10 scroll-mt-20">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+          
+          <!-- Hero Copy -->
+          <div class="lg:col-span-7 space-y-6">
+            <div class="inline-flex items-center space-x-2 bg-white/80 border border-white/50 shadow-md rounded-full px-4 py-2 text-xs text-indigo-700 font-bold backdrop-blur-sm">
+              <span class="w-2.5 h-2.5 rounded-full bg-indigo-500 animate-ping"></span>
+              <span>30년 경력의 대한민국 최고 바이브코딩 마스터</span>
+            </div>
+            <h1 class="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.1] text-slate-900">
+              30년간 코드를 적었고, <br />
+              이제는 <span class="text-transparent bg-clip-text bg-gradient-to-r from-violet-600 via-indigo-600 to-cyan-500">시스템의 Vibe를 지휘합니다.</span>
+            </h1>
+            <p class="text-base sm:text-lg text-slate-600 leading-relaxed max-w-2xl font-medium">
+              C언어 메모리 바이트와 씨름하던 1994년부터, 대용량 분산 클라우드를 설계하고 AI를 오케스트레이션하는 2026년 오늘까지. 기술의 형태는 끊임없이 소멸하고 탄생했지만 문제를 격파하는 지혜는 단 한 번도 변하지 않았습니다.
+            </p>
+
+            <!-- Actions -->
+            <div class="flex flex-wrap gap-4 pt-3">
+              <button @click="navigateTo('casestudies')" class="px-8 py-4 bg-gradient-to-r from-violet-600 via-indigo-600 to-indigo-700 hover:from-violet-500 hover:to-indigo-600 text-white font-extrabold rounded-2xl shadow-xl shadow-indigo-600/25 hover:shadow-2xl hover:shadow-indigo-600/35 transition-all duration-200 hover:-translate-y-1">
+                🚀 실전 해결 케이스 분석 보기
+              </button>
+              <button @click="navigateTo('contact')" class="px-8 py-4 bg-white/80 hover:bg-white text-slate-700 font-extrabold rounded-2xl border border-slate-200 shadow-md hover:shadow-lg transition-all duration-200 hover:-translate-y-1">
+                ✉️ 소통 정보 및 이메일 확인
+              </button>
+            </div>
+
+            <!-- Stats Metrics -->
+            <div class="grid grid-cols-3 gap-6 pt-8 border-t border-slate-200 max-w-xl">
+              <div>
+                <div class="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-violet-600 to-indigo-600">30+ Years</div>
+                <div class="text-xs font-bold text-slate-500 mt-1">현업 실전 아키텍팅</div>
+              </div>
+              <div>
+                <div class="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-cyan-500">200+</div>
+                <div class="text-xs font-bold text-slate-500 mt-1">성공 설계 프로젝트</div>
+              </div>
+              <div>
+                <div class="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-purple-600">10만+</div>
+                <div class="text-xs font-bold text-slate-500 mt-1">대응 완료 동시접속(TPS)</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Interactive Neo-Glass Component -->
+          <div class="lg:col-span-5 relative">
+            <div class="absolute -inset-1.5 bg-gradient-to-r from-fuchsia-500 via-indigo-500 to-cyan-500 rounded-3xl blur opacity-30 animate-pulse"></div>
+            
+            <div class="relative bg-white/80 border border-white/60 shadow-2xl rounded-3xl overflow-hidden backdrop-blur-xl">
+              
+              <!-- Tab Headers -->
+              <div class="flex items-center justify-between px-5 py-4 bg-slate-100/60 border-b border-slate-200/50">
+                <div class="flex items-center space-x-2">
+                  <span class="w-3.5 h-3.5 rounded-full bg-rose-400 inline-block"></span>
+                  <span class="w-3.5 h-3.5 rounded-full bg-amber-400 inline-block"></span>
+                  <span class="w-3.5 h-3.5 rounded-full bg-emerald-400 inline-block"></span>
+                </div>
+                <div class="flex space-x-2.5">
+                  <button @click="terminalTab = 'bot'" :class="terminalTab === 'bot' ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-md' : 'text-slate-500 hover:text-slate-800'" class="px-3 py-1.5 rounded-lg text-xs font-black transition-all">
+                    💡 Vibe AI Master
+                  </button>
+                  <button @click="terminalTab = 'cli'" :class="terminalTab === 'cli' ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-md' : 'text-slate-500 hover:text-slate-800'" class="px-3 py-1.5 rounded-lg text-xs font-black transition-all">
+                    ⌨️ CLI Shell
+                  </button>
+                </div>
+              </div>
+
+              <!-- Chatbot View -->
+              <div x-show="terminalTab === 'bot'" class="p-5 h-80 flex flex-col justify-between">
+                <div class="overflow-y-auto space-y-3 pr-1 text-xs flex-grow max-h-[260px] scrollbar-thin" id="chat-messages-container">
+                  <template x-for="(msg, idx) in chatMessages" :key="idx">
+                    <div class="flex" :class="msg.sender === 'user' ? 'justify-end' : 'justify-start'">
+                      <div :class="msg.sender === 'user' ? 'bg-gradient-to-br from-indigo-600 to-indigo-700 text-white rounded-br-none' : 'bg-slate-50 border border-slate-150 text-slate-700 rounded-bl-none'" class="max-w-[85%] rounded-2xl p-3 shadow-sm leading-relaxed">
+                        <div x-show="msg.sender === 'bot'" class="text-[10px] text-indigo-600 font-extrabold tracking-wider mb-1 uppercase">🛡️ 주누파파</div>
+                        <div class="whitespace-pre-line font-medium" x-text="msg.text"></div>
+                      </div>
+                    </div>
+                  </template>
+                  <div x-show="isChatLoading" class="flex justify-start">
+                    <div class="bg-slate-50 border border-slate-150 rounded-2xl rounded-bl-none p-3 max-w-[85%] text-slate-400 animate-pulse font-medium">
+                      장인이 30년 아카이브를 뒤져 해답을 가공하고 있습니다...
+                    </div>
+                  </div>
+                </div>
+
+                <form @submit.prevent="handleChatSubmit()" class="mt-3 flex items-center space-x-2">
+                  <input type="text" x-model="chatInput" placeholder="주누파파에게 아키텍처/바이브코딩 질문하기..." class="flex-grow bg-slate-50 border border-slate-200 text-xs px-3 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder:text-slate-400 font-medium" />
+                  <button type="submit" :disabled="isChatLoading" class="bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs py-3 px-4 rounded-xl transition-all shadow-md shadow-indigo-600/10">전송</button>
+                </form>
+              </div>
+
+              <!-- CLI Shell View -->
+              <div x-show="terminalTab === 'cli'" class="p-5 h-80 flex flex-col justify-between font-mono text-[11px] bg-slate-900 text-slate-200 rounded-b-2xl">
+                <div class="overflow-y-auto space-y-1.5 pr-1 flex-grow max-h-[240px] scrollbar-thin" id="cli-history-container">
+                  <template x-for="(line, idx) in cliHistory" :key="idx">
+                    <div :class="line.type === 'user' ? 'text-yellow-400 font-bold' : line.type === 'system' ? 'text-slate-400' : 'text-cyan-400'" x-text="line.text"></div>
+                  </template>
+                </div>
+
+                <div class="flex flex-wrap gap-2 pt-2 border-t border-slate-800">
+                  <span class="text-[10px] text-slate-500 self-center">추천:</span>
+                  <button @click="runPresetCommand('about')" class="bg-slate-950 hover:bg-slate-800 text-slate-300 border border-slate-800 text-[10px] px-2.5 py-0.5 rounded font-mono transition-all">about</button>
+                  <button @click="runPresetCommand('skills')" class="bg-slate-950 hover:bg-slate-800 text-slate-300 border border-slate-800 text-[10px] px-2.5 py-0.5 rounded font-mono transition-all">skills</button>
+                  <button @click="runPresetCommand('philosophy')" class="bg-slate-950 hover:bg-slate-800 text-slate-300 border border-slate-800 text-[10px] px-2.5 py-0.5 rounded font-mono transition-all">philosophy</button>
+                </div>
+
+                <form @submit.prevent="handleCliSubmit()" class="mt-2 flex items-center">
+                  <span class="text-indigo-400 font-bold mr-1.5">$</span>
+                  <input type="text" x-model="cliInput" placeholder="명령어를 입력하세요 (예: help)" class="flex-grow bg-transparent border-none outline-none text-[11px] text-slate-100 focus:ring-0 placeholder:text-slate-600" />
+                </form>
+              </div>
+
+              <!-- Footer Status -->
+              <div class="px-5 py-2.5 bg-slate-100/60 text-slate-400 text-[10px] font-bold flex items-center justify-between border-t border-slate-200/50">
+                <span class="flex items-center space-x-1">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                  <span>ENGINE OVERLORD: STABLE</span>
+                </span>
+                <span>Gemini LLM Realtime Active</span>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= TIMELINE SECTION ================= -->
+    <section id="timeline" class="py-24 relative z-10 scroll-mt-20">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        <div class="text-center max-w-3xl mx-auto mb-20">
+          <span class="text-xs font-bold uppercase tracking-widest text-indigo-600 bg-indigo-50 px-3.5 py-1.5 rounded-full">
+            30 YEARS CHRONICLE
+          </span>
+          <h2 class="mt-4 text-3xl sm:text-5xl font-black text-slate-900 tracking-tight">
+            시간의 시련을 이겨낸 기술의 역사
+          </h2>
+          <p class="mt-4 text-base text-slate-500 font-medium">
+            3년 주기로 변하는 유행 프레임워크가 아닌, 시대를 꿰뚫는 비즈니스 돌파의 연대기입니다.
+          </p>
+        </div>
+
+        <div class="relative border-l-2 border-indigo-100 ml-4 md:ml-32 space-y-12 pb-6">
+          <template x-for="(item, index) in TIMELINE_DATA" :key="index">
+            <div class="relative pl-8 md:pl-12">
+              
+              <!-- Era badge -->
+              <span class="absolute -left-4 top-1.5 flex items-center justify-center w-8 h-8 bg-white border-4 border-indigo-100 rounded-full text-[11px] font-black text-indigo-600 shadow-sm" x-text="item.era.substring(0, 2)"></span>
+
+              <!-- Sidebar Era Tag for MD screen -->
+              <span class="hidden md:inline-block absolute -left-36 top-1.5 text-right w-24">
+                <span class="text-xl font-black text-slate-800 block" x-text="item.era"></span>
+                <span class="text-[10px] font-bold text-slate-400 block font-mono" x-text="item.period"></span>
+              </span>
+
+              <!-- Content Card -->
+              <div class="bg-white/80 border border-white/50 backdrop-blur-md hover:border-indigo-200 hover:shadow-xl p-6 sm:p-8 rounded-3xl shadow-sm transition-all duration-300">
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+                  <div>
+                    <span class="md:hidden text-xs font-bold text-slate-400 block mb-1" x-text="item.period"></span>
+                    <h3 class="text-xl font-bold text-slate-800" x-text="item.title"></h3>
+                  </div>
+                  <span :class="item.gradient" class="text-white text-[10px] font-bold px-3 py-1 rounded-full shadow-sm" x-text="item.era + ' 대표'"></span>
+                </div>
+
+                <!-- Concepts -->
+                <div class="flex flex-wrap gap-2 my-4">
+                  <template x-for="(tech, tIdx) in item.concept.split(', ')" :key="tIdx">
+                    <span class="bg-slate-100/80 text-slate-600 text-xs font-bold px-2.5 py-1 rounded-lg" x-text="tech"></span>
+                  </template>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6 pt-5 border-t border-slate-100 text-sm">
+                  <div class="space-y-1">
+                    <p class="text-[11px] font-black uppercase text-indigo-500 tracking-wider">직면 과제 & 결과</p>
+                    <p class="text-slate-600 text-xs sm:text-sm font-medium leading-relaxed" x-text="item.problem"></p>
+                    <p class="text-indigo-600 text-xs sm:text-sm font-bold mt-1" x-text="'✓ ' + item.built"></p>
+                  </div>
+                  <div class="space-y-1">
+                    <p class="text-[11px] font-black uppercase text-purple-500 tracking-wider">아키텍트의 회고</p>
+                    <p class="text-slate-500 italic text-xs leading-relaxed" x-text="'&ldquo;' + item.learned + '&rdquo;'"></p>
+                    <p class="text-slate-700 text-xs font-extrabold mt-1.5" x-text="'⚡ 현 시점 교훈: ' + item.reflection"></p>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </template>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ================= CASE STUDIES SECTION ================= -->
+    <section id="casestudies" class="py-24 bg-white/40 border-t border-b border-slate-200/50 relative z-10 scroll-mt-20">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        <div class="text-center max-w-3xl mx-auto mb-20">
+          <span class="text-xs font-bold uppercase tracking-widest text-indigo-600 bg-indigo-50 px-3.5 py-1.5 rounded-full">
+            MASTERPIECE PROOFS
+          </span>
+          <h2 class="mt-4 text-3xl sm:text-5xl font-black text-slate-900 tracking-tight">
+            대표 Case Studies : 실전 프로덕션 아카이브
+          </h2>
+          <p class="mt-4 text-base text-slate-500 font-medium">
+            단순 이론 나열이 아닌, 주누파파가 직접 아키텍처를 진단하고 튜닝해 실시간 가동 중인 실전 웹 소프트웨어 포트폴리오입니다.
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          
+          <!-- Case Studies Selector Switchers (Left) -->
+          <div class="lg:col-span-4 space-y-4">
+            <span class="text-[11px] font-black tracking-wider text-slate-400 uppercase block pl-1">PROJECT LIST</span>
+            <template x-for="study in CASE_STUDIES" :key="study.id">
+              <button @click="selectedCase = study" :class="selectedCase.id === study.id ? 'bg-gradient-to-br from-indigo-50/70 to-white border-indigo-500 shadow-xl shadow-indigo-500/5' : 'bg-white/80 border-slate-200 hover:border-slate-350'" class="w-full text-left p-5 rounded-2xl border transition-all duration-300 flex flex-col space-y-2.5">
+                <div class="flex items-center justify-between">
+                  <span class="text-[10px] font-bold uppercase bg-indigo-100 text-indigo-700 px-2.5 py-0.5 rounded-md" x-text="study.category"></span>
+                  <span class="text-[10px] font-mono text-slate-400 font-bold" x-text="'Year: ' + study.period"></span>
+                </div>
+                <h3 :class="selectedCase.id === study.id ? 'text-indigo-600' : 'text-slate-800'" class="font-extrabold text-sm sm:text-base leading-snug" x-text="study.title"></h3>
+                <p class="text-xs text-slate-500 leading-relaxed line-clamp-2 font-medium" x-text="study.summary"></p>
+              </button>
+            </template>
+
+            <!-- Static Insight Box -->
+            <div class="p-5 rounded-2xl bg-gradient-to-br from-indigo-50 to-indigo-100/50 border border-indigo-150 text-xs text-indigo-900 space-y-2.5">
+              <span class="font-extrabold text-indigo-950 block text-sm">💡 실무 아키텍트의 경고</span>
+              <p class="leading-relaxed font-medium">
+                "많은 개발자들이 '아무개 블로그'의 유행글만 보고 프로젝트에 무조건 무거운 도구를 도입하지만, 적합한 비즈니스 성찰이 없으면 오히려 연산 비용과 디바이스 부하만 기하급수적으로 폭증하는 자충수가 됩니다."
+              </p>
+            </div>
+          </div>
+
+          <!-- Dynamic Case Study Details Panel (Right) -->
+          <div class="lg:col-span-8 bg-white border border-slate-200/80 p-6 sm:p-8 rounded-3xl shadow-xl">
+            <template x-if="selectedCase">
+              <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-150 pb-5 mb-6">
+                <div>
+                  <span class="text-xs font-bold text-indigo-600 uppercase tracking-wider" x-text="selectedCase.category + ' | ' + selectedCase.period"></span>
+                  <h3 class="text-xl sm:text-2xl font-black text-slate-900 mt-1" x-text="selectedCase.title"></h3>
+                  <p class="text-xs text-slate-400 font-bold mt-1" x-text="'소속 및 환경: ' + selectedCase.client"></p>
+                </div>
+                
+                <div class="flex flex-wrap gap-1.5">
+                  <template x-for="tech in selectedCase.stack" :key="tech">
+                    <span class="bg-indigo-50 text-indigo-700 font-bold text-xs px-2.5 py-1 rounded-lg" x-text="tech"></span>
+                  </template>
+                </div>
+              </div>
+            </template>
+
+            <!-- Context / Solution Grid -->
+            <template x-if="selectedCase">
+              <div class="space-y-6 text-xs sm:text-sm leading-relaxed">
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-2">
+                  <div class="md:col-span-3 text-[11px] font-black text-indigo-600 uppercase tracking-widest pt-0.5">프로젝트 배경</div>
+                  <div class="md:col-span-9 text-slate-600 font-medium" x-text="selectedCase.background"></div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-2 pt-5 border-t border-slate-100">
+                  <div class="md:col-span-3 text-[11px] font-black text-rose-500 uppercase tracking-widest pt-0.5">⚠️ 핵심 병목 지점</div>
+                  <div class="md:col-span-9 text-slate-600 font-medium" x-text="selectedCase.problem"></div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-2 pt-5 border-t border-slate-100">
+                  <div class="md:col-span-3 text-[11px] font-black text-indigo-600 uppercase tracking-widest pt-0.5">⚙️ 최적 기술 선택 이유</div>
+                  <div class="md:col-span-9 text-slate-600 font-medium" x-text="selectedCase.techReason"></div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-2 pt-5 border-t border-slate-100">
+                  <div class="md:col-span-3 text-[11px] font-black text-indigo-600 uppercase tracking-widest pt-0.5">🧩 아키텍처 플랜</div>
+                  <div class="md:col-span-9 font-mono text-[11px] bg-slate-50 px-3 py-2 rounded-lg text-indigo-600 border border-slate-150" x-text="selectedCase.architecture"></div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-2 pt-5 border-t border-slate-100">
+                  <div class="md:col-span-3 text-[11px] font-black text-emerald-600 uppercase tracking-widest pt-0.5">🔥 극복 트러블슈팅</div>
+                  <div class="md:col-span-9 text-slate-600 font-medium">
+                    <p class="text-slate-400 font-bold italic mb-1" x-text="'장애 증상: ' + selectedCase.trouble"></p>
+                    <p class="text-emerald-600 font-bold" x-text="'마스터 솔루션: ' + selectedCase.solution"></p>
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-2 pt-5 border-t border-slate-100">
+                  <div class="md:col-span-3 text-[11px] font-black text-indigo-600 uppercase tracking-widest pt-0.5">📊 정량적 검증 성과</div>
+                  <div class="md:col-span-9 text-indigo-600 font-extrabold text-sm" x-text="selectedCase.result"></div>
+                </div>
+
+                <!-- Live Deployment Link Button -->
+                <div class="mt-6 flex flex-wrap gap-4 border-t border-slate-100 pt-5">
+                  <a :href="selectedCase.url" target="_blank" class="inline-flex items-center space-x-2.5 px-6 py-3.5 bg-gradient-to-r from-violet-600 via-indigo-600 to-indigo-700 hover:from-violet-500 hover:to-indigo-600 text-white font-extrabold rounded-2xl shadow-xl shadow-indigo-600/20 hover:shadow-2xl hover:shadow-indigo-600/30 transition-all duration-200 hover:-translate-y-1 text-xs sm:text-sm">
+                    <span>🚀 실시간 작동 체험하기 (Live Demo)</span>
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+                    </svg>
+                  </a>
+                </div>
+
+                <!-- Perspective Block -->
+                <div class="p-4 bg-gradient-to-tr from-violet-50 to-indigo-50 border border-indigo-100 rounded-2xl mt-4">
+                  <span class="text-[10px] font-black tracking-wider text-indigo-600 block mb-1">
+                    ⚡ 2026 RE-ARCHITECT (현재 시점에서의 현대화 구성 제안)
+                  </span>
+                  <p class="text-slate-600 text-xs leading-relaxed font-medium" x-text="selectedCase.vibe2026"></p>
+                </div>
+              </div>
+            </template>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= TECH STACK & RATINGS ================= -->
+    <section id="techstack" class="py-24 relative z-10 scroll-mt-20">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        <div class="text-center max-w-3xl mx-auto mb-16">
+          <span class="text-xs font-bold uppercase tracking-widest text-indigo-600 bg-indigo-50 px-3.5 py-1.5 rounded-full">
+            VERIFIED STACK MATRIX
+          </span>
+          <h2 class="mt-4 text-3xl sm:text-5xl font-black text-slate-900 tracking-tight">
+            보유 무기 등급 및 입증론
+          </h2>
+          <p class="mt-4 text-base text-slate-500 font-medium">
+            모든 도구는 각각의 쓰임새가 완벽히 증명되었습니다. 단순히 도구 이름만 외치는 레주메와 격이 다른 노하우를 확인하십시오.
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          
+          <!-- Category: Frontend -->
+          <div class="bg-white/80 border border-white/50 backdrop-blur-md p-6 rounded-3xl shadow-sm">
+            <h3 class="text-lg font-black text-slate-900 border-b border-slate-100 pb-3 mb-4 flex justify-between items-center">
+              <span>Frontend Systems</span>
+              <span class="text-[10px] font-mono text-slate-400 font-bold">LEVEL</span>
+            </h3>
+            <div class="space-y-4">
+              <div class="space-y-1">
+                <div class="flex justify-between items-center text-xs">
+                  <span class="font-extrabold text-slate-700">React / Next.js</span>
+                  <span class="text-amber-500 font-mono text-xs">★★★★★</span>
+                </div>
+                <p class="text-slate-500 text-xs leading-relaxed font-medium">고가용 멀티 렌더링(SSR/SSG), 정밀 상태 흐름 최적화 및 SEO 완벽 마스터</p>
+              </div>
+              <div class="space-y-1">
+                <div class="flex justify-between items-center text-xs">
+                  <span class="font-extrabold text-slate-700">Tailwind CSS</span>
+                  <span class="text-amber-500 font-mono text-xs">★★★★★</span>
+                </div>
+                <p class="text-slate-500 text-xs leading-relaxed font-medium">속도 지향적 디자인 토큰 활용, 유지보수 유연한 유틸리티 클래스 설계</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Category: Backend -->
+          <div class="bg-white/80 border border-white/50 backdrop-blur-md p-6 rounded-3xl shadow-sm">
+            <h3 class="text-lg font-black text-slate-900 border-b border-slate-100 pb-3 mb-4 flex justify-between items-center">
+              <span>Backend Core</span>
+              <span class="text-[10px] font-mono text-slate-400 font-bold">LEVEL</span>
+            </h3>
+            <div class="space-y-4">
+              <div class="space-y-1">
+                <div class="flex justify-between items-center text-xs">
+                  <span class="font-extrabold text-slate-700">Java / Spring Boot</span>
+                  <span class="text-amber-500 font-mono text-xs">★★★★★</span>
+                </div>
+                <p class="text-slate-500 text-xs leading-relaxed font-medium">엔터프라이즈 철옹성. 고장 나지 않는 대규모 정합 거래와 서킷 브레이크 구축</p>
+              </div>
+              <div class="space-y-1">
+                <div class="flex justify-between items-center text-xs">
+                  <span class="font-extrabold text-slate-700">Node.js (NestJS / Fastify)</span>
+                  <span class="text-amber-500 font-mono text-xs">★★★★★</span>
+                </div>
+                <p class="text-slate-500 text-xs leading-relaxed font-medium">초고성능 싱글스레드 I/O 병목 돌파, 비동기 데이터 대기열 설계</p>
+              </div>
+              <div class="space-y-1">
+                <div class="flex justify-between items-center text-xs">
+                  <span class="font-extrabold text-slate-700">Python / FastAPI</span>
+                  <span class="text-amber-500 font-mono text-xs">★★★★☆</span>
+                </div>
+                <p class="text-slate-500 text-xs leading-relaxed font-medium">LLM 에이전트 인터페이스 백엔드 초고속 프로토타이핑 연동</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Category: Database & Ops -->
+          <div class="bg-white/80 border border-white/50 backdrop-blur-md p-6 rounded-3xl shadow-sm">
+            <h3 class="text-lg font-black text-slate-900 border-b border-slate-100 pb-3 mb-4 flex justify-between items-center">
+              <span>Database & Ops</span>
+              <span class="text-[10px] font-mono text-slate-400 font-bold">LEVEL</span>
+            </h3>
+            <div class="space-y-4">
+              <div class="space-y-1">
+                <div class="flex justify-between items-center text-xs">
+                  <span class="font-extrabold text-slate-700">PostgreSQL / Redis</span>
+                  <span class="text-amber-500 font-mono text-xs">★★★★★</span>
+                </div>
+                <p class="text-slate-500 text-xs leading-relaxed font-medium">최고 수준의 락 경합 방지 기법, Sorted Set 기반 초정밀 동기화 설계</p>
+              </div>
+              <div class="space-y-1">
+                <div class="flex justify-between items-center text-xs">
+                  <span class="font-extrabold text-slate-700">AWS Cloud / Kubernetes</span>
+                  <span class="text-amber-500 font-mono text-xs">★★★★★</span>
+                </div>
+                <p class="text-slate-500 text-xs leading-relaxed font-medium">안정성 중심의 테라폼(IaC) 구성, EKS 파드 무중단 배포 오케스트레이션</p>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ================= PHILOSOPHY SECTION ================= -->
+    <section id="philosophy" class="py-24 bg-white/30 border-t border-b border-slate-200/40 relative z-10 scroll-mt-20">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        <div class="text-center max-w-3xl mx-auto mb-20">
+          <span class="text-xs font-bold uppercase tracking-widest text-indigo-600 bg-indigo-50 px-3.5 py-1.5 rounded-full">
+            SAGE PHILOSOPHY
+          </span>
+          <h2 class="mt-4 text-3xl sm:text-5xl font-black text-slate-900 tracking-tight">
+            30년차 아키텍트의 변치 않는 신조
+          </h2>
+          <p class="mt-4 text-base text-slate-500 font-medium">
+            화려한 유행 기술은 찰나에 불과합니다. 변하지 않는 신조만이 단단한 성공 시스템을 만듭니다.
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <template x-for="(philo, idx) in PHILOSOPHIES" :key="idx">
+            <div class="bg-white/80 border border-white/50 backdrop-blur-md p-8 rounded-3xl shadow-sm flex flex-col justify-between hover:scale-102 transition-all duration-300">
+              <div>
+                <span class="text-[11px] font-black text-indigo-600 tracking-wider block mb-2" x-text="'RULE 0' + (idx + 1)"></span>
+                <h3 class="text-xl font-bold text-slate-900 leading-snug" x-text="philo.title"></h3>
+                <p class="text-indigo-600 font-mono text-xs mt-2.5 font-bold" x-text="'&ldquo;' + philo.quote + '&rdquo;'"></p>
+                <p class="text-slate-500 text-xs sm:text-sm mt-4 leading-relaxed font-medium" x-text="philo.content"></p>
+              </div>
+              <div class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between">
+                <span class="text-[10px] font-mono text-slate-400 font-bold">VIBE_ARCHITECT</span>
+                <span class="w-6 h-6 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center text-xs font-extrabold">✓</span>
+              </div>
+            </div>
+          </template>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ================= BLOG & ESSAY SECTION ================= -->
+    <section id="blog" class="py-24 relative z-10 scroll-mt-20">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        <div class="text-center max-w-3xl mx-auto mb-16">
+          <span class="text-xs font-bold uppercase tracking-widest text-indigo-600 bg-indigo-50 px-3.5 py-1.5 rounded-full">
+            INSIGHT ARCHIVES
+          </span>
+          <h2 class="mt-4 text-3xl sm:text-5xl font-black text-slate-900 tracking-tight">
+            바이브코딩 에이전트 실전노트
+          </h2>
+          <p class="mt-4 text-base text-slate-500 font-medium">
+            성공 수기뿐만 아니라, 가장 처참하게 무너져서 피눈물 흘리며 아키텍처를 교정해야 했던 실패 수기까지 정직하게 공유합니다.
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          
+          <!-- Post 1 -->
+          <article class="bg-white/80 border border-slate-200/50 p-6 rounded-3xl shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between">
+            <div class="space-y-3">
+              <div class="flex justify-between items-center text-[11px] font-mono text-slate-400 font-bold">
+                <span>2026. 05. 24</span>
+                <span>ESSAY INSIGHT</span>
+              </div>
+              <h3 @click="readBlogPost('바이브코딩 시대 주니어 생존법')" class="text-base sm:text-lg font-black text-slate-900 leading-snug hover:text-indigo-600 cursor-pointer">
+                바이브코딩 시대, 30년차 아키텍트가 바라보는 주니어의 생존법
+              </h3>
+              <p class="text-xs text-indigo-600 font-bold">AI가 코드를 짜주는 세상에서 타이핑은 실력이 아닙니다. '맥락 질문력'과 '완벽 검증력'에 대하여.</p>
+              <p class="text-xs text-slate-500 leading-relaxed font-medium line-clamp-4 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                AI를 켜고 시키는 대로 코드만 복붙하는 개발자는 대체되기 아주 쉽습니다. 진짜 실력은 아키텍처의 설계와 데이터 원리를 완벽하게 인지하고, AI의 가공품 속에서 정적 예외를 잡아내는 지식의 축적에서 옵니다.
+              </p>
+            </div>
+            <div class="mt-5 pt-4 border-t border-slate-100 flex justify-between items-center text-xs">
+              <span @click="readBlogPost('바이브코딩 시대 주니어 생존법')" class="text-indigo-600 font-extrabold hover:underline cursor-pointer">노트 전체 읽기 →</span>
+              <span class="text-[10px] text-slate-400 font-mono font-bold">주누파파</span>
+            </div>
+          </article>
+
+          <!-- Post 2 -->
+          <article class="bg-white/80 border border-slate-200/50 p-6 rounded-3xl shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between">
+            <div class="space-y-3">
+              <div class="flex justify-between items-center text-[11px] font-mono text-slate-400 font-bold">
+                <span>2026. 04. 12</span>
+                <span>ESSAY INSIGHT</span>
+              </div>
+              <h3 @click="readBlogPost('섣부른 MSA 도입이 가져온 비극')" class="text-base sm:text-lg font-black text-slate-900 leading-snug hover:text-indigo-600 cursor-pointer">
+                섣부른 마이크로서비스(MSA) 전면 교체 도입이 가져온 비극
+              </h3>
+              <p class="text-xs text-indigo-600 font-bold">왜 많은 대형 조직들이 트렌드만 좇아 인프라를 분리했다가 파산 직전까지 갔는가?</p>
+              <p class="text-xs text-slate-500 leading-relaxed font-medium line-clamp-4 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                조율하기 매우 미진한 소규모 트래픽에서 유행으로 MSA를 강행했다가 역효과를 낸 사례들을 진단합니다. 단순하고 영리한 모놀리식과 Redis 조합의 완벽한 가성비를 입증합니다.
+              </p>
+            </div>
+            <div class="mt-5 pt-4 border-t border-slate-100 flex justify-between items-center text-xs">
+              <span @click="readBlogPost('섣부른 MSA 도입이 가져온 비극')" class="text-indigo-600 font-extrabold hover:underline cursor-pointer">노트 전체 읽기 →</span>
+              <span class="text-[10px] text-slate-400 font-mono font-bold">주누파파</span>
+            </div>
+          </article>
+
+          <!-- Post 3 -->
+          <article class="bg-white/80 border border-slate-200/50 p-6 rounded-3xl shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between">
+            <div class="space-y-3">
+              <div class="flex justify-between items-center text-[11px] font-mono text-slate-400 font-bold">
+                <span>2026. 02. 08</span>
+                <span>ESSAY INSIGHT</span>
+              </div>
+              <h3 @click="readBlogPost('대형 프로젝트 실패 수기')" class="text-base sm:text-lg font-black text-slate-900 leading-snug hover:text-indigo-600 cursor-pointer">
+                이력서에 감춘 대형 프로젝트 참혹한 실패 수기
+              </h3>
+              <p class="text-xs text-indigo-600 font-bold">성공 사례만 있는 포트폴리오는 가짜입니다. 나를 괴물 아키텍트로 키운 전산망 다운 극복기.</p>
+              <p class="text-xs text-slate-500 leading-relaxed font-medium line-clamp-4 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                1998년 잘못 설계한 소켓 락으로 대형 증권망이 마비되었던 생지옥 속에서, 문제를 복원하며 체득한 실전 안전 마진(Safety Margin) 설계의 철칙을 고백합니다.
+              </p>
+            </div>
+            <div class="mt-5 pt-4 border-t border-slate-100 flex justify-between items-center text-xs">
+              <span @click="readBlogPost('대형 프로젝트 실패 수기')" class="text-indigo-600 font-extrabold hover:underline cursor-pointer">노트 전체 읽기 →</span>
+              <span class="text-[10px] text-slate-400 font-mono font-bold">주누파파</span>
+            </div>
+          </article>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= CONNECT SECTION ================= -->
+    <section id="contact" class="py-24 relative z-10 scroll-mt-20">
+      <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+        
+        <div class="relative bg-gradient-to-tr from-violet-600 via-indigo-600 to-indigo-800 rounded-[3rem] p-10 sm:p-16 text-white overflow-hidden shadow-2xl shadow-indigo-600/30">
+          <div class="absolute top-[-30%] right-[-10%] w-80 h-80 bg-cyan-400/20 rounded-full blur-[80px]"></div>
+          <div class="absolute bottom-[-20%] left-[-10%] w-80 h-80 bg-pink-400/20 rounded-full blur-[80px]"></div>
+
+          <div class="relative z-10 max-w-3xl mx-auto space-y-6">
+            <span class="text-xs font-bold uppercase tracking-widest text-cyan-300 bg-white/10 px-4 py-1.5 rounded-full inline-block">
+              DIRECT CONNECT PORTAL
+            </span>
+            <h2 class="text-3xl sm:text-5xl font-black tracking-tight leading-none">
+              30년 아키텍트의 지혜와 <br /> 
+              네트워킹을 시작해 보세요
+            </h2>
+            <p class="text-slate-200 text-sm sm:text-base leading-relaxed font-medium">
+              의견 공유, 기술 토론, 멘토링 세션 등 주누파파와 연결될 수 있는 직관적인 포탈 채널입니다. <br />
+              아래 소셜 링크 및 이메일을 통해 언제든지 열려 있는 대화창을 두드려 주십시오.
+            </p>
+
+            <!-- Instant Action Copy Area -->
+            <div class="pt-6 max-w-md mx-auto">
+              <div class="bg-white/10 border border-white/20 p-2 rounded-2xl flex items-center justify-between backdrop-blur-md">
+                <span class="pl-4 text-xs sm:text-sm font-mono text-cyan-200 font-bold tracking-wider">
+                  churchoffire@gmail.com
+                </span>
+                <button @click="handleCopyEmail()" class="bg-white text-indigo-700 hover:bg-slate-50 text-xs font-extrabold px-5 py-3 rounded-xl transition-all shadow-md flex items-center space-x-1.5">
+                  <span x-text="copiedEmail ? '✓ 복사완료' : '이메일 즉시 복사'"></span>
+                </button>
+              </div>
+            </div>
+
+            <!-- High-end Social connections -->
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 pt-10 border-t border-white/10">
+              <div class="bg-white/5 border border-white/10 p-4 rounded-2xl hover:bg-white/10 transition-all">
+                <span class="text-[10px] text-cyan-200 font-black block tracking-widest">GITHUB</span>
+                <a href="#" class="text-sm font-extrabold text-white block mt-1 hover:underline">@vibe-coding-master</a>
+              </div>
+              <div class="bg-white/5 border border-white/10 p-4 rounded-2xl hover:bg-white/10 transition-all">
+                <span class="text-[10px] text-cyan-200 font-black block tracking-widest">LINKEDIN</span>
+                <a href="#" class="text-sm font-extrabold text-white block mt-1 hover:underline">in/vibe-architect-lee</a>
+              </div>
+              <div class="col-span-2 sm:col-span-1 bg-white/5 border border-white/10 p-4 rounded-2xl hover:bg-white/10 transition-all">
+                <span class="text-[10px] text-cyan-200 font-black block tracking-widest">SLACK COMMUNITY</span>
+                <a href="#" class="text-sm font-extrabold text-white block mt-1 hover:underline">Join Master Dev talk</a>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ================= FOOTER ================= -->
+    <footer class="bg-white border-t border-slate-200 py-12 relative z-10 text-slate-500 text-xs sm:text-sm">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-6">
+        <div class="space-y-1 text-center md:text-left">
+          <span class="font-black tracking-wider text-slate-800 text-sm">VIBE_MASTER_JUNUPAPA</span>
+          <p class="text-xs text-slate-400 font-medium">© 2026 Junu Papa All rights reserved. Powered by High-end Vibe Coding.</p>
+        </div>
+        
+        <div class="flex flex-wrap justify-center gap-6 text-xs font-bold">
+          <button @click="navigateTo('home')" class="hover:text-indigo-600">Home</button>
+          <button @click="navigateTo('timeline')" class="hover:text-indigo-600">Timeline</button>
+          <button @click="navigateTo('casestudies')" class="hover:text-indigo-600">Case Studies</button>
+          <button @click="navigateTo('techstack')" class="hover:text-indigo-600">Tech Stack</button>
+          <button @click="navigateTo('philosophy')" class="hover:text-indigo-600">Philosophy</button>
+          <button @click="navigateTo('contact')" class="hover:text-indigo-600">Connect</button>
+        </div>
+      </div>
+    </footer>
+
+    <!-- ================= SCROLL TO TOP FLOATING CHARACTER BUTTON ================= -->
+    <div
+      x-show="showScrollTop"
+      x-transition:enter="transition ease-out duration-500"
+      x-transition:enter-start="opacity-0 translate-y-12 scale-90"
+      x-transition:enter-end="opacity-100 translate-y-0 scale-100"
+      x-transition:leave="transition ease-in duration-300"
+      x-transition:leave-start="opacity-100 translate-y-0 scale-100"
+      x-transition:leave-end="opacity-0 translate-y-12 scale-90"
+      @click="scrollToTop()"
+      class="fixed bottom-6 right-6 z-50 cursor-pointer group flex flex-col items-center"
+      aria-label="최상위로 스크롤"
+    >
+      <!-- Interactive Speech Bubble on Hover -->
+      <div class="opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0 bg-slate-900 text-white text-[11px] font-bold px-3 py-1.5 rounded-xl shadow-xl mb-1 relative pointer-events-none whitespace-nowrap">
+        클릭해서 맨 위로 가기! ⚡
+        <div class="absolute bottom-[-4px] left-1/2 -translate-x-1/2 w-2 h-2 bg-slate-900 rotate-45"></div>
+      </div>
+
+      <!-- Character cutout container with dynamic glowing background -->
+      <div class="relative w-20 h-28 sm:w-24 sm:h-32 overflow-visible">
+        <!-- Floating aura glow behind character -->
+        <div class="absolute inset-0 bg-indigo-500/20 rounded-full blur-xl group-hover:bg-indigo-500/35 transition-all duration-350 scale-75"></div>
+        
+        <!-- Premium standing character cutout -->
+        <img 
+          src="주누파파.png" 
+          alt="주누파파" 
+          class="w-full h-full object-contain filter drop-shadow-[0_8px_16px_rgba(99,102,241,0.3)] group-hover:scale-110 group-hover:-translate-y-2.5 transition-all duration-300 ease-out"
+        />
+      </div>
+    </div>
+
+  </div>
+</body>
+</html>
