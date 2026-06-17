@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ClearDoc Pro - Premium Watermark Remover & AI Inpainter</title>
+<title>DocClean Pro v3.0 - Premium Watermark Remover & AI Inpainter</title>
 <!-- JSZip 라이브러리: PPTX 분석 및 재생성을 위한 핵심 모듈 -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -785,6 +785,43 @@
     box-shadow: 0 4px 12px rgba(0,0,0,0.3);
   }
 
+
+
+  .zoom-picker {
+    width: 92px;
+    min-width: 82px;
+    background: var(--surface-card);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 6px;
+    padding: 6px 8px;
+    font-size: 11px;
+    font-weight: 700;
+    outline: none;
+  }
+
+  .zoom-picker:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(67,108,251,0.18);
+  }
+
+  @media (max-width: 768px) {
+    .toolbar-right {
+      gap: 6px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+    .zoom-picker {
+      width: 86px;
+      font-size: 10px;
+      padding: 6px;
+    }
+    .slide-index-viewer#zoom-value {
+      min-width: 64px;
+      text-align: center;
+    }
+  }
+
   /* Toast Notification */
   #toast {
     position: fixed;
@@ -983,7 +1020,150 @@
     .brand-title h1 span { display: none; }
   }
 
-</style>
+
+
+  /* ── DocClean share popup ── */
+  .share-header-btn {
+    width: 42px;
+    height: 42px;
+    border-radius: 14px;
+    border: 1px solid rgba(139,92,246,.55);
+    background: linear-gradient(135deg, rgba(67,108,251,.22), rgba(139,92,246,.18));
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    cursor: pointer;
+    box-shadow: 0 0 18px rgba(139,92,246,.22);
+    transition: transform .16s ease, border-color .16s ease, background .16s ease;
+    flex-shrink: 0;
+  }
+  .share-header-btn:hover,
+  .share-header-btn:focus {
+    transform: translateY(-1px);
+    border-color: var(--neon-purple);
+    background: linear-gradient(135deg, rgba(67,108,251,.35), rgba(139,92,246,.28));
+    outline: none;
+  }
+  .docclean-share-modal .modal-content {
+    background: rgba(12,18,35,.96);
+    border: 1px solid rgba(67,108,251,.35);
+    border-radius: 22px;
+    box-shadow: 0 25px 80px rgba(0,0,0,.65), 0 0 30px rgba(67,108,251,.14);
+    color: var(--text);
+    overflow: hidden;
+  }
+  .docclean-share-modal .modal-header,
+  .docclean-share-modal .modal-footer {
+    border-color: rgba(67,108,251,.18);
+  }
+  .share-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #c4b5fd;
+    background: rgba(139,92,246,.15);
+    border: 1px solid rgba(139,92,246,.25);
+    border-radius: 999px;
+    padding: 5px 10px;
+    margin-bottom: 10px;
+  }
+  .share-subtitle {
+    color: var(--text-muted);
+    font-size: 13px;
+    line-height: 1.55;
+  }
+  .share-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 18px;
+  }
+  .share-option {
+    min-height: 96px;
+    border-radius: 18px;
+    border: 1px solid rgba(67,108,251,.24);
+    background: linear-gradient(180deg, rgba(20,38,72,.9), rgba(14,25,48,.92));
+    color: var(--text);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    font-weight: 800;
+    font-size: 13px;
+    cursor: pointer;
+    transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease;
+  }
+  .share-option:hover,
+  .share-option:focus {
+    transform: translateY(-2px);
+    border-color: var(--accent-hover);
+    box-shadow: 0 12px 28px rgba(67,108,251,.18);
+    outline: none;
+  }
+  .share-option .share-emoji {
+    font-size: 28px;
+    line-height: 1;
+  }
+  .share-option.kakao { background: linear-gradient(180deg, rgba(86,68,0,.92), rgba(56,43,0,.95)); color: #ffe78a; }
+  .share-option.line { background: linear-gradient(180deg, rgba(0,68,21,.92), rgba(0,50,14,.95)); color: #7dffb2; }
+  .share-option.copy { background: linear-gradient(180deg, rgba(30,42,70,.92), rgba(14,25,48,.95)); }
+  .share-url-box {
+    margin-top: 16px;
+    border: 1px solid rgba(67,108,251,.18);
+    background: rgba(0,0,0,.24);
+    border-radius: 12px;
+    padding: 10px 12px;
+    color: var(--text-muted);
+    font: 11px var(--font-mono);
+    word-break: break-all;
+  }
+  .btn-close-docclean {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    border: 1px solid rgba(255,255,255,.12);
+    background: rgba(255,255,255,.06);
+    color: var(--text-muted);
+    font-size: 24px;
+    line-height: 1;
+    cursor: pointer;
+  }
+  @media (max-width: 767.98px) {
+    .share-header-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 13px;
+      font-size: 19px;
+      margin-left: auto;
+    }
+    .docclean-share-modal .modal-dialog {
+      margin: 0;
+      min-height: 100dvh;
+      display: flex;
+      align-items: center;
+      padding: 18px;
+    }
+    .docclean-share-modal .modal-content {
+      border-radius: 24px;
+    }
+    .share-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .share-option {
+      min-height: 92px;
+      font-size: 13px;
+    }
+  }
+
+
+
+  </style>
 </head>
 <body>
 
@@ -992,13 +1172,14 @@
   <div class="header-left">
     <div class="logo-wrapper">🧹</div>
     <div class="brand-title">
-      <h1>ClearDoc Pro v2.6 PDF FIX <span style="font-size:11px; font-weight:bold; color:var(--neon-purple);">[HF IOPAINT REST]</span></h1>
+      <h1>DocClean Pro v3.0 <span style="font-size:11px; font-weight:bold; color:var(--neon-purple);">[HF IOPAINT REST]</span></h1>
       <p>PPTX/PDF 실제 미리보기 기반 로스리스 워터마크 교체 및 HuggingFace AI 픽셀 인페인팅 정제</p>
     </div>
   </div>
   <div class="header-meta">
     <span class="badge-premium">HuggingFace IOPaint REST JSON · LaMa</span>
   </div>
+  <button type="button" class="share-header-btn" onclick="openDocCleanShareModal()" aria-label="DocClean Pro 알리기" title="DocClean Pro 알리기">📤</button>
 </header>
 
 <!-- MAIN CONTAINER -->
@@ -1063,8 +1244,17 @@
           <button class="toolbar-btn" id="btn-next" onclick="nextSlide()" disabled>다음 ▶</button>
         </div>
         <div class="toolbar-right">
-          <button class="toolbar-btn" onclick="zoomFit()">🔍 맞춤 배율</button>
-          <span class="slide-index-viewer" id="zoom-value" style="font-size:10px;">100%</span>
+          <button class="toolbar-btn" onclick="toggleZoomPicker()">🔍 맞춤 배율</button>
+          <select id="zoom-select" class="zoom-picker" onchange="setZoomMode(this.value)" aria-label="미리보기 배율 선택">
+            <option value="fit" selected>맞춤</option>
+            <option value="0.5">50%</option>
+            <option value="0.75">75%</option>
+            <option value="1">100%</option>
+            <option value="1.25">125%</option>
+            <option value="1.5">150%</option>
+            <option value="2">200%</option>
+          </select>
+          <span class="slide-index-viewer" id="zoom-value" style="font-size:10px;">맞춤</span>
         </div>
       </div>
 
@@ -1251,6 +1441,38 @@
   </div>
 </main>
 
+
+</div>
+</div>
+
+
+<!-- DocClean Pro Share Modal -->
+<div class="modal fade docclean-share-modal" id="doccleanShareModal" tabindex="-1" aria-labelledby="doccleanShareModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header px-4 py-3">
+        <div>
+          <div class="share-pill">📣 DocClean Pro v3.0 알리기</div>
+          <h5 class="modal-title fw-bold" id="doccleanShareModalLabel">친구와 함께 워터마크 없이 깔끔한 문서를 공유하세요!</h5>
+          <div class="share-subtitle mt-2">PDF/PPTX 문서를 깔끔하게 정제하는 DocClean Pro v3.0을 원하는 채널로 바로 공유할 수 있습니다.</div>
+        </div>
+        <button type="button" class="btn-close-docclean" data-bs-dismiss="modal" aria-label="닫기">×</button>
+      </div>
+      <div class="modal-body px-4 pb-4">
+        <div class="share-grid" role="group" aria-label="공유 수단 선택">
+          <button type="button" class="share-option" onclick="shareDocClean('sms')"><span class="share-emoji">💬</span><span>문자</span></button>
+          <button type="button" class="share-option kakao" onclick="shareDocClean('kakao')"><span class="share-emoji">💛</span><span>카카오톡</span></button>
+          <button type="button" class="share-option" onclick="shareDocClean('email')"><span class="share-emoji">📧</span><span>이메일</span></button>
+          <button type="button" class="share-option" onclick="shareDocClean('x')"><span class="share-emoji">🐦</span><span>X(트위터)</span></button>
+          <button type="button" class="share-option line" onclick="shareDocClean('line')"><span class="share-emoji">💚</span><span>라인</span></button>
+          <button type="button" class="share-option copy" onclick="shareDocClean('copy')"><span class="share-emoji">🔗</span><span>링크 복사</span></button>
+        </div>
+        <div class="share-url-box" id="docclean-share-url"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
@@ -1275,6 +1497,8 @@ const state = {
   fileType: '',
   pdfDoc: null,
   pdfPages: [],
+  zoomMode: 'fit',
+  zoomMultiplier: 1,
 };
 
 const REL_NS = 'http://schemas.openxmlformats.org/package/2006/relationships';
@@ -1667,14 +1891,10 @@ function renderPdfPreviewInto(body) {
   const page = state.pdfPages[state.activeIdx];
   if (!page) return false;
   updateActivePageDimensions();
-  const container = document.getElementById('preview-body-container');
-  const bodyRect = container.getBoundingClientRect();
-  const maxW = Math.max(bodyRect.width - 48, 320);
-  const maxH = Math.max(bodyRect.height - 48, 220);
-  const ratio = Math.min(maxW / page.width, maxH / page.height);
+  const ratio = getCanvasRenderRatio(page.width, page.height);
   const vw = Math.round(page.width * ratio);
   const vh = Math.round(page.height * ratio);
-  document.getElementById('zoom-value').textContent = `${Math.round(ratio * 100)}%`;
+  document.getElementById('zoom-value').textContent = getZoomDisplayLabel(ratio, page.width, page.height);
   const statusStr = page.dirty ? '정제 완료' : '원본 PDF 래스터';
   body.innerHTML = `
     <div id="slide-canvas-wrap" class="selectable" onpointerdown="onPreviewPointerDown(event)" style="width:${vw}px; height:${vh}px; background:#ffffff; position:relative;">
@@ -1818,7 +2038,7 @@ async function downloadCleanedPdf() {
     const fmt = page.dataUrl.startsWith('data:image/jpeg') ? 'JPEG' : 'PNG';
     pdf.addImage(page.dataUrl, fmt, 0, 0, page.width, page.height, undefined, 'FAST');
   });
-  const outName = state.cleanedFileName || state.fileName.replace(/\.pdf$/i, '_ClearDoc_Cleaned.pdf');
+  const outName = state.cleanedFileName || state.fileName.replace(/\.pdf$/i, '_DocClean_Cleaned.pdf');
   pdf.save(outName);
   log(`PDF 다운로드 완료: ${outName}`, 'success');
   toast('PDF 정제 파일 다운로드 완료', 'success');
@@ -1898,6 +2118,48 @@ async function jumpToSlide(idx) {
 // ── Interactive Coordinates Brush ──
 function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
 function pct(n) { return Math.round(n * 10) / 10; }
+
+
+function getCanvasFitRatio(width, height) {
+  const container = document.getElementById('preview-body-container');
+  const bodyRect = container.getBoundingClientRect();
+  const maxW = Math.max(bodyRect.width - 48, 320);
+  const maxH = Math.max(bodyRect.height - 48, 220);
+  return Math.min(maxW / width, maxH / height);
+}
+
+function getCanvasRenderRatio(width, height) {
+  const fit = getCanvasFitRatio(width, height);
+  if (state.zoomMode === 'fit') return fit;
+  return fit * (state.zoomMultiplier || 1);
+}
+
+function getZoomDisplayLabel(ratio, width, height) {
+  if (state.zoomMode !== 'fit') return `${Math.round((state.zoomMultiplier || 1) * 100)}%`;
+  const visualPct = state.fileType === 'pptx' ? Math.round(ratio * 10000) : Math.round(ratio * 100);
+  return `맞춤 ${visualPct}%`;
+}
+
+function setZoomMode(value) {
+  if (value === 'fit') {
+    state.zoomMode = 'fit';
+    state.zoomMultiplier = 1;
+  } else {
+    state.zoomMode = 'manual';
+    state.zoomMultiplier = parseFloat(value) || 1;
+  }
+  renderPreview();
+}
+
+function toggleZoomPicker() {
+  const select = document.getElementById('zoom-select');
+  if (select) {
+    select.focus();
+    if (typeof select.showPicker === 'function') {
+      try { select.showPicker(); } catch (e) {}
+    }
+  }
+}
 
 function setCoordInputsFromSelection(sel) {
   document.getElementById('cx-min').value = pct(sel.xMin * 100);
@@ -2058,7 +2320,7 @@ function targetPrecisionLabel(el, sel) {
 function isClearDocAreaEraser(sp) {
   const cNvPr = findAll(sp, 'cNvPr')[0];
   const name = (cNvPr && (cNvPr.getAttribute('name') || cNvPr.getAttribute('descr') || '') || '').toLowerCase();
-  return name.includes('cleardoc-area-eraser') || name.includes('cleardoc selection eraser');
+  return name.includes('docclean-area-eraser') || name.includes('docclean selection eraser');
 }
 
 function getShapeTree(xmlDoc) {
@@ -2093,7 +2355,7 @@ function createAreaEraserShapeXml(xmlDoc, sel, label = 'manual') {
   const xml = `
 <p:sp xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
   <p:nvSpPr>
-    <p:cNvPr id="${id}" name="ClearDoc-Area-Eraser-${label}" descr="ClearDoc selection eraser"/>
+    <p:cNvPr id="${id}" name="DocClean-Area-Eraser-${label}" descr="DocClean selection eraser"/>
     <p:cNvSpPr/>
     <p:nvPr/>
   </p:nvSpPr>
@@ -2331,7 +2593,7 @@ async function addReplacementImageToZip() {
   const ext = state.replacementImage.ext || 'png';
   const contentType = imageContentTypeFromExt(ext);
   await ensureContentTypeDefault(ext, contentType);
-  const safeBase = `cleardoc_replace_${Date.now()}_${Math.random().toString(36).slice(2,8)}.${ext}`;
+  const safeBase = `docclean_replace_${Date.now()}_${Math.random().toString(36).slice(2,8)}.${ext}`;
   const mediaPath = `ppt/media/${safeBase}`;
   state.zip.file(mediaPath, state.replacementImage.arrayBuffer, { binary: true });
   state.mediaCache[mediaPath] = state.replacementImage.dataUrl;
@@ -2518,7 +2780,7 @@ async function applyDragAreaV16(allSlides = false) {
   await autoDetectWatermarksSilently();
 
   state.isCleaned = true;
-  state.cleanedFileName = state.fileName.replace(/\.pptx$/i, '') + '_ClearDoc_v2.0_Cleaned.pptx';
+  state.cleanedFileName = state.fileName.replace(/\.pptx$/i, '') + '_DocClean_v2.0_Cleaned.pptx';
   await buildCleanedBlobIfNeeded('cleaned');
   
   document.getElementById('btn-apply').disabled = false;
@@ -2957,7 +3219,7 @@ async function buildCleanedBlobIfNeeded(reason = 'manual') {
     mimeType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
   });
   state.cleanedBlob = new Blob([arrayBuffer], { type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' });
-  state.cleanedFileName = state.cleanedFileName || state.fileName.replace(/\.pptx$/i, '') + '_ClearDoc_v2.0_Cleaned.pptx';
+  state.cleanedFileName = state.cleanedFileName || state.fileName.replace(/\.pptx$/i, '') + '_DocClean_v2.0_Cleaned.pptx';
   document.getElementById('btn-apply').disabled = false;
   return state.cleanedBlob;
 }
@@ -2992,7 +3254,7 @@ async function downloadCleanedPptx() {
     }
     state.cleanedBlob = null; // Always force rebuild based on latest zip state
     const blob = await buildCleanedBlobIfNeeded('manual');
-    const outName = state.cleanedFileName || state.fileName.replace(/\.pptx$/i, '_ClearDoc_v2.0_Cleaned.pptx');
+    const outName = state.cleanedFileName || state.fileName.replace(/\.pptx$/i, '_DocClean_v2.0_Cleaned.pptx');
     saveBlob(blob, outName);
     toast('파일 다운로드가 즉시 개시되었습니다.', 'success');
     log(`다운로드 기록 보관 완료: ${outName}`, 'success');
@@ -3037,16 +3299,11 @@ async function renderPreview() {
 
   const slide = state.slides[state.activeIdx];
   const W = state.slideWidth, H = state.slideHeight;
-  const container = document.getElementById('preview-body-container');
-  const bodyRect = container.getBoundingClientRect();
-  
-  const maxW = Math.max(bodyRect.width - 48, 320);
-  const maxH = Math.max(bodyRect.height - 48, 220);
-  const ratio = Math.min(maxW / W, maxH / H);
+  const ratio = getCanvasRenderRatio(W, H);
   const vw = Math.round(W * ratio);
   const vh = Math.round(H * ratio);
   
-  document.getElementById('zoom-value').textContent = `${Math.round(ratio * 10000)}%`;
+  document.getElementById('zoom-value').textContent = getZoomDisplayLabel(ratio, W, H);
 
   const slideTargets = state.targets.filter(t => t.slideIdx === state.activeIdx);
   let elements = '';
@@ -3169,6 +3426,10 @@ function resetState() {
   state.fileType = '';
   state.pdfDoc = null;
   state.pdfPages = [];
+  state.zoomMode = 'fit';
+  state.zoomMultiplier = 1;
+  const zoomSelect = document.getElementById('zoom-select');
+  if (zoomSelect) zoomSelect.value = 'fit';
 }
 
 function resetAll() {
@@ -3281,9 +3542,182 @@ renderPreview = async function() {
   updateMobileLabelsForFileType();
 };
 
-log('ClearDoc Pro v2.6 PDF FIX AI 인페인팅 엔진 탑재 성공. 처리를 진행할 PPTX 파일을 로드하여 주십시오.', 'system');
+
+
+// ── Developer support modal ──
+let supportCoffeeCount = 1;
+const SUPPORT_COFFEE_PRICE = 5;
+const SUPPORT_URL = 'https://litt.ly/komsco';
+
+function updateSupportAmountUI() {
+  const total = supportCoffeeCount * SUPPORT_COFFEE_PRICE;
+  const countEl = document.getElementById('support-coffee-count');
+  const amountEl = document.getElementById('support-amount');
+  const tipBtn = document.getElementById('support-tip-btn');
+  if (countEl) countEl.textContent = String(supportCoffeeCount);
+  if (amountEl) amountEl.value = `$ ${total}`;
+  if (tipBtn) tipBtn.textContent = `Tip $${total}`;
+}
+
+
+
+
+
+
+
+
+// ── DocClean Pro share popup ──
+const DOCCLEAN_SHARE = {
+  title: 'DocClean Pro v3.0',
+  text: '친구와 함께 워터마크 없이 깔끔한 문서를 공유하세요!',
+  url: 'https://localpay.github.io/localpay/docclean_pro_v3_0_share_popup.html'
+};
+
+function getDocCleanShareUrl() {
+  try {
+    const current = window.location.href || DOCCLEAN_SHARE.url;
+    return current.split('#')[0] || DOCCLEAN_SHARE.url;
+  } catch (e) {
+    return DOCCLEAN_SHARE.url;
+  }
+}
+
+function openDocCleanShareModal() {
+  const url = getDocCleanShareUrl();
+  const box = document.getElementById('docclean-share-url');
+  if (box) box.textContent = url;
+  const modalEl = document.getElementById('doccleanShareModal');
+  if (window.bootstrap && modalEl) {
+    bootstrap.Modal.getOrCreateInstance(modalEl).show();
+  } else {
+    shareDocClean('native');
+  }
+}
+
+async function copyDocCleanShareLink() {
+  const url = getDocCleanShareUrl();
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(url);
+    } else {
+      const ta = document.createElement('textarea');
+      ta.value = url;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    }
+    toast('DocClean Pro v3.0 링크를 복사했습니다.', 'success');
+    log('DocClean Pro v3.0 공유 링크 복사 완료', 'success');
+  } catch (e) {
+    toast('링크 복사에 실패했습니다.', 'error');
+    log(`공유 링크 복사 실패: ${e.message}`, 'error');
+  }
+}
+
+function shareDocClean(channel) {
+  const url = getDocCleanShareUrl();
+  const text = DOCCLEAN_SHARE.text;
+  const title = DOCCLEAN_SHARE.title;
+  const encodedUrl = encodeURIComponent(url);
+  const encodedText = encodeURIComponent(`${text}
+${url}`);
+  const encodedSubject = encodeURIComponent('DocClean Pro v3.0 공유');
+  const encodedBody = encodeURIComponent(`${text}
+
+${url}`);
+
+  if (channel === 'copy') return copyDocCleanShareLink();
+
+  if (channel === 'native' && navigator.share) {
+    navigator.share({ title, text, url }).catch(() => {});
+    return;
+  }
+
+  if (channel === 'kakao') {
+    // Kakao SDK가 없는 환경에서는 Web Share API 또는 링크 복사로 안전하게 fallback.
+    if (navigator.share) {
+      navigator.share({ title, text, url }).catch(() => copyDocCleanShareLink());
+    } else {
+      copyDocCleanShareLink();
+      toast('카카오톡에 붙여넣을 링크를 복사했습니다.', 'success');
+    }
+    return;
+  }
+
+  const routes = {
+    sms: `sms:?&body=${encodedText}`,
+    email: `mailto:?subject=${encodedSubject}&body=${encodedBody}`,
+    x: `https://twitter.com/intent/tweet?text=${encodedText}`,
+    line: `https://social-plugins.line.me/lineit/share?url=${encodedUrl}`
+  };
+
+  const target = routes[channel];
+  if (!target) return copyDocCleanShareLink();
+
+  if (channel === 'x' || channel === 'line') {
+    window.open(target, '_blank', 'noopener,noreferrer');
+  } else {
+    window.location.href = target;
+  }
+  log(`DocClean Pro v3.0 공유 실행: ${channel}`, 'system');
+}
+
+log('DocClean Pro v3.0 AI 인페인팅 엔진 탑재 성공. 처리를 진행할 PPTX 파일을 로드하여 주십시오.', 'system');
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+
+<footer class="developer-footer" aria-label="Developer credit and support">
+  <span>⚙ Developed by <strong>박찬혁</strong> • 2026</span>
+  <a href="https://litt.ly/komsco" target="_blank" rel="noopener noreferrer" class="coffee-link" title="서비스 후원하기" aria-label="서비스 후원하기">☕</a>
+</footer>
+<style>
+.developer-footer{
+  position:fixed;
+  bottom:0;
+  left:0;
+  width:100%;
+  height:48px;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap:8px;
+  background:rgba(8,12,25,.92);
+  backdrop-filter:blur(12px);
+  -webkit-backdrop-filter:blur(12px);
+  border-top:1px solid rgba(255,255,255,.08);
+  color:#dfe7ff;
+  z-index:9999;
+  font-size:13px;
+}
+.coffee-link{
+  text-decoration:none;
+  font-size:18px;
+  line-height:1;
+  transition:transform .2s ease, filter .2s ease;
+}
+.coffee-link:hover{
+  transform:scale(1.15);
+  filter:drop-shadow(0 0 8px rgba(255,220,120,.6));
+}
+body{padding-bottom:52px!important}
+@media(max-width:768px){
+  .developer-footer{
+    height:46px;
+    font-size:12px;
+    padding:0 10px;
+  }
+  .coffee-link{font-size:18px}
+  body{padding-bottom:50px!important}
+}
+</style>
+
 </body>
+
+<!-- DocClean v3.5: old floating support button/modal removed; compact coffee footer only. -->
 </html>
