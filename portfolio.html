@@ -199,7 +199,7 @@
       const systemPrompt = `당신은 30년차 개발 경력을 가진 대한민국 최고의 소프트웨어 아키텍트이자 '바이브코딩(Vibe Coding)'의 거장인 '주누파파'입니다.
 사용자와 반말과 존댓말을 위트 있게 섞은, 중후하면서도 유쾌한 내공의 한국어로 대화해 주세요.
 개발 철학, 레거시 마이그레이션, AI 시대에 개발자가 살아남는 법, 아키텍처 진단 등에 대한 날카롭고 유용한 통찰을 주어야 합니다.
-소통이 필요한 경우, 하단의 "Connect" 영역에 적힌 메일(churchoffire@gmail.com)로 언제든 편하게 메시지를 남겨두라고 가볍게 알려주세요.`;
+소통이 필요한 경우, 하단의 "Connect" 영역에 적힌 메일(junupapa@vibecoding.io)로 언제든 편하게 메시지를 남겨두라고 가볍게 알려주세요.`;
 
       const contents = [
         ...chatHistory.slice(-6).map(msg => ({
@@ -293,7 +293,7 @@
 
         // Copy Email logic
         handleCopyEmail() {
-          const emailText = "churchoffire@gmail.com";
+          const emailText = "junupapa@vibecoding.io";
           const textarea = document.createElement("textarea");
           textarea.value = emailText;
           document.body.appendChild(textarea);
@@ -421,7 +421,7 @@
   </script>
 
   <!-- Deferred Alpine.js library load for precise initialization order -->
-  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
 <body class="bg-slate-50 text-slate-800 antialiased selection:bg-indigo-500 selection:text-white">
 
@@ -1023,7 +1023,7 @@
             <div class="pt-6 max-w-md mx-auto">
               <div class="bg-white/10 border border-white/20 p-2 rounded-2xl flex items-center justify-between backdrop-blur-md">
                 <span class="pl-4 text-xs sm:text-sm font-mono text-cyan-200 font-bold tracking-wider">
-                  churchoffire@gmail.com
+                  junupapa@vibecoding.io
                 </span>
                 <button @click="handleCopyEmail()" class="bg-white text-indigo-700 hover:bg-slate-50 text-xs font-extrabold px-5 py-3 rounded-xl transition-all shadow-md flex items-center space-x-1.5">
                   <span x-text="copiedEmail ? '✓ 복사완료' : '이메일 즉시 복사'"></span>
