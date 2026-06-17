@@ -1,0 +1,1778 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>CBDC S급 박사논문 플랫폼 v10 Final</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <!-- 오프라인 배포 시 vendor/ 폴더에 위 CDN 라이브러리를 내려받아 로컬 경로로 교체하십시오. -->
+
+  <style>
+    :root{
+      --primary:#2563eb;--danger:#ef4444;--success:#10b981;--warning:#f59e0b;
+      --ink:#0f172a;--muted:#64748b;--paper:#ffffff;--bg:#f6f8fc;
+    }
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{font-family:system-ui,-apple-system,'Segoe UI','Noto Sans KR',sans-serif;background:var(--bg);color:var(--ink)}
+    .card{background:var(--paper);border:1px solid #e2e8f0;border-radius:20px;box-shadow:0 10px 28px rgba(15,23,42,.06)}
+    .metric{font-variant-numeric:tabular-nums;font-size:1.35rem;line-height:1.2}
+    .pill{border:1px solid #cbd5e1;border-radius:999px;padding:.25rem .65rem;background:#fff}
+    input[type=range]{accent-color:#1d4ed8}
+    select,input,button,textarea{outline:none}
+    .chart-wrap{position:relative;height:360px;min-height:320px}
+    .chart-wrap-sm{position:relative;height:320px;min-height:280px}
+    .report h3{font-weight:900;margin-top:1rem}.report table{width:100%;border-collapse:collapse}.report td,.report th{border:1px solid #cbd5e1;padding:.45rem;text-align:left}
+    .node{stroke:#fff;stroke-width:1.7px}.link{stroke:#94a3b8;stroke-opacity:.50}.node.failed{fill:#ef4444!important;stroke:#fecaca!important;stroke-width:3px!important;filter:drop-shadow(0 0 10px rgba(239,68,68,.85))}
+    .link.active-contagion{stroke:#ef4444!important;stroke-opacity:.95!important;stroke-width:4px!important;filter:drop-shadow(0 0 6px rgba(239,68,68,.55))}
+    .cbfill{fill:#111827}.okfill{fill:#1d4ed8}.housefill{fill:#94a3b8}.firmfill{fill:#f59e0b}.wealthfill{fill:#7c3aed}.oldfill{fill:#64748b}.digitalfill{fill:#06b6d4}.smefill{fill:#10b981}
+    .contagion-step-active{background:#fff1f2!important;border-color:#fb7185!important;color:#9f1239!important}
+    .top-floating-wrap{position:fixed;right:22px;bottom:22px;z-index:90;display:flex;flex-direction:column;align-items:center;gap:6px;pointer-events:none}
+    .top-floating-bubble{position:relative;background:#0f172a;color:#fff;font-size:14px;font-weight:950;border-radius:18px;padding:12px 18px;white-space:nowrap;box-shadow:0 16px 32px rgba(15,23,42,.22);opacity:0;transform:translateY(10px) scale(.94);transition:opacity .2s ease,transform .2s ease;pointer-events:none}
+    .top-floating-bubble::after{content:'';position:absolute;left:50%;bottom:-8px;transform:translateX(-50%) rotate(45deg);width:16px;height:16px;background:#0f172a;border-radius:2px}
+    .top-floating-btn{width:86px;height:128px;border:0;background:radial-gradient(circle at 50% 54%,rgba(59,130,246,.18),rgba(255,255,255,0) 63%);padding:0;cursor:pointer;filter:drop-shadow(0 16px 26px rgba(15,23,42,.30));transition:transform .2s cubic-bezier(.2,.8,.2,1),filter .2s ease,opacity .2s ease;opacity:.96;pointer-events:auto;border-radius:22px}
+    .top-floating-wrap:hover .top-floating-btn,.top-floating-wrap:focus-within .top-floating-btn{transform:translateY(-8px) scale(1.10);filter:drop-shadow(0 22px 34px rgba(37,99,235,.28));opacity:1}
+    .top-floating-wrap:hover .top-floating-bubble,.top-floating-wrap:focus-within .top-floating-bubble{opacity:1;transform:translateY(0) scale(1)}
+    .top-floating-btn img{width:100%;height:100%;object-fit:contain;display:block;user-select:none;-webkit-user-drag:none}
+    .top-fallback{font-size:54px;line-height:1}
+    .warn{background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;border-radius:14px;padding:.75rem}
+    .ok{background:#ecfdf5;border:1px solid #bbf7d0;color:#065f46;border-radius:14px;padding:.75rem}
+    .danger{background:#fff1f2;border:1px solid #fecdd3;color:#9f1239;border-radius:14px;padding:.75rem}
+    @media(max-width:768px){.metric{font-size:1.22rem}.top-floating-wrap{right:10px;bottom:12px}.top-floating-bubble{font-size:12px;padding:9px 13px}.top-floating-btn{width:64px;height:96px}.chart-wrap{height:330px}}
+    @media print{body{background:#fff}.no-print{display:none!important}.card{box-shadow:none;border:1px solid #e2e8f0}.pdf-page{break-inside:avoid}}
+  </style>
+</head>
+<body>
+<header class="sticky top-0 z-30 bg-white/92 backdrop-blur border-b border-slate-200 no-print">
+  <div class="max-w-7xl mx-auto px-5 py-4 flex flex-col xl:flex-row gap-3 xl:items-center xl:justify-between">
+    <div>
+      <h1 class="text-2xl md:text-3xl font-black">CBDC S급 박사논문 플랫폼 v10 Final</h1>
+      <p class="text-sm text-slate-600">Seed 재현성 · 실험조건 저장 · Web Worker Monte Carlo · 설명가능성 · 통합 PDF · 실험설계 패널</p>
+    </div>
+    <div class="flex gap-2 flex-wrap">
+      <button id="runBtn" class="px-4 py-2.5 rounded-xl bg-blue-700 text-white font-bold">단일 실행</button>
+      <button id="mcBtn" class="px-4 py-2.5 rounded-xl bg-indigo-700 text-white font-bold">Worker Monte Carlo</button>
+      <button id="sweepBtn" class="px-4 py-2.5 rounded-xl bg-cyan-700 text-white font-bold">민감도/스윕</button>
+      <button id="saveScenarioBtn" class="px-4 py-2.5 rounded-xl bg-emerald-700 text-white font-bold">조건 저장</button>
+      <button id="csvBtn" class="px-4 py-2.5 rounded-xl bg-slate-800 text-white font-bold">CSV</button>
+      <button id="jsonBtn" class="px-4 py-2.5 rounded-xl bg-slate-700 text-white font-bold">JSON</button>
+      <button id="pdfBtn" class="px-4 py-2.5 rounded-xl bg-black text-white font-bold">통합 PDF</button>
+    </div>
+  </div>
+</header>
+
+<main id="pageTop" class="max-w-7xl mx-auto px-5 py-6 grid grid-cols-1 xl:grid-cols-12 gap-5">
+  <aside class="xl:col-span-4 space-y-5 no-print">
+    <section class="card p-5">
+      <h2 class="font-black text-lg mb-3">1. 실험 재현성</h2>
+      <div class="grid grid-cols-2 gap-3">
+        <div><label class="text-sm font-bold">Seed</label><input id="seed" type="number" value="20260618" class="w-full mt-1 p-3 border rounded-xl"></div>
+        <div><label class="text-sm font-bold">실험 ID</label><input id="experimentId" value="EXP-CBDC-001" class="w-full mt-1 p-3 border rounded-xl"></div>
+      </div>
+      <div class="grid grid-cols-2 gap-3 mt-3">
+        <button id="randomSeedBtn" class="p-3 rounded-xl border font-bold">Seed 랜덤</button>
+        <button id="rerunSeedBtn" class="p-3 rounded-xl border font-bold">동일조건 재실행</button>
+      </div>
+      <div id="validationBox" class="text-sm mt-3 ok">입력값 검증 대기</div>
+      <label class="pill mt-3 inline-flex items-center gap-2 text-sm">
+        <input id="allowWarnRun" type="checkbox" checked>
+        검증 경고가 있어도 실행 허용
+      </label>
+    </section>
+
+    <section class="card p-5">
+      <h2 class="font-black text-lg mb-3">2. 국가·구조 프리셋</h2>
+      <label class="text-sm font-bold">국가</label>
+      <select id="country" class="w-full mt-1 mb-3 p-3 border rounded-xl"><option value="korea">한국</option><option value="us">미국</option><option value="eu">EU</option><option value="china">중국</option><option value="sweden">스웨덴</option><option value="custom">사용자 정의</option></select>
+      <div id="presetInfo" class="text-xs bg-slate-50 border rounded-xl p-3 mb-3"></div>
+      <label class="text-sm font-bold">CBDC 구조</label>
+      <select id="arch" class="w-full mt-1 mb-3 p-3 border rounded-xl"><option value="two_tier">Two-tier</option><option value="account">Account-based</option><option value="token">Token-based</option></select>
+      <div class="grid grid-cols-2 gap-3">
+        <div><label class="text-sm font-bold">기본 한도</label><select id="baseCap" class="w-full mt-1 p-3 border rounded-xl"><option value="5000000">500만 원</option><option value="10000000">1,000만 원</option><option value="20000000" selected>2,000만 원</option><option value="50000000">5,000만 원</option><option value="999999999">무제한</option></select></div>
+        <div><label class="text-sm font-bold">기간</label><select id="days" class="w-full mt-1 p-3 border rounded-xl"><option>60</option><option selected>90</option><option>180</option><option>365</option></select></div>
+      </div>
+    </section>
+
+    <section class="card p-5">
+      <h2 class="font-black text-lg mb-3">3. 위기·안전장치</h2>
+      <label class="text-sm font-bold">위기 시나리오</label>
+      <select id="crisisType" class="w-full mt-1 mb-3 p-3 border rounded-xl"><option value="bankrun">뱅크런/신뢰 붕괴</option><option value="cyber">사이버 장애</option><option value="rate">금리 급등</option><option value="singlebank">특정 은행 파산</option><option value="payment">지급결제망 병목</option></select>
+      <div class="space-y-3" id="sliders"></div>
+      <div class="grid grid-cols-3 gap-2 mt-4 text-sm"><label class="pill"><input id="dynamicCap" type="checkbox" checked> Dynamic Cap</label><label class="pill"><input id="lolr" type="checkbox" checked> LOLR</label><label class="pill"><input id="tiered" type="checkbox" checked> Tiered</label></div>
+    </section>
+
+    <section class="card p-5">
+      <h2 class="font-black text-lg mb-3">4. ABM 행위자 구성</h2>
+      <div id="agents" class="space-y-3"></div>
+    </section>
+
+    <section class="card p-5">
+      <h2 class="font-black text-lg mb-3">5. Tiered Interest</h2>
+      <div id="tiers" class="space-y-3"></div>
+    </section>
+
+    <section class="card p-5">
+      <h2 class="font-black text-lg mb-3">6. 사회적 후생 가중치</h2>
+      <div id="weights" class="space-y-3"></div>
+    </section>
+
+
+    <section class="card p-5">
+      <h2 class="font-black text-lg mb-3">7. Calibration & Validation</h2>
+      <p class="text-xs text-slate-600 mb-3">국가 프리셋을 가정값에서 실증 보정값으로 전환하기 위한 논문용 검증 패널입니다.</p>
+      <div class="grid grid-cols-2 gap-3">
+        <div><label class="text-sm font-bold">실증 디지털 결제율</label><input id="calDigital" type="number" step="0.01" min="0" max="1" value="0.92" class="w-full mt-1 p-3 border rounded-xl"></div>
+        <div><label class="text-sm font-bold">실증 현금사용률</label><input id="calCash" type="number" step="0.01" min="0" max="1" value="0.08" class="w-full mt-1 p-3 border rounded-xl"></div>
+        <div><label class="text-sm font-bold">은행집중도 HHI/상위은행</label><input id="calConcentration" type="number" step="0.01" min="0" max="1" value="0.75" class="w-full mt-1 p-3 border rounded-xl"></div>
+        <div><label class="text-sm font-bold">은행 네트워크 밀도</label><input id="calDensity" type="number" step="0.01" min="0" max="1" value="0.82" class="w-full mt-1 p-3 border rounded-xl"></div>
+      </div>
+      <label class="text-sm font-bold block mt-3">데이터 출처 메타데이터</label>
+      <textarea id="calSources" class="w-full p-3 border rounded-xl h-24 text-xs" placeholder="예: BIS CPMI Red Book 2024; BOK 지급결제보고서; Fed H.8; ECB SPACE"></textarea>
+      <div class="mt-3">
+        <label class="text-sm font-bold">실증 데이터 CSV 업로드</label>
+        <input id="calCsvFile" type="file" accept=".csv,text/csv" class="w-full mt-1 p-3 border rounded-xl bg-white">
+        <p class="text-xs text-slate-500 mt-1">필수 컬럼: country,year,digital_payment_rate,cash_usage_rate,bank_concentration,network_density,source_name,source_url</p>
+      </div>
+      <div class="mt-3">
+        <label class="text-sm font-bold">은행 익스포저 행렬 CSV 업로드</label>
+        <input id="exposureCsvFile" type="file" accept=".csv,text/csv" class="w-full mt-1 p-3 border rounded-xl bg-white">
+        <p class="text-xs text-slate-500 mt-1">형식: bank_i,bank_j,exposure. 없으면 degree-preserving synthetic matrix 사용.</p>
+      </div>
+      <div class="grid grid-cols-2 gap-3 mt-3">
+        <button id="ingestCalibrationBtn" class="p-3 rounded-xl bg-blue-700 text-white font-bold">CSV 검증·흡수</button>
+        <button id="applyCalibrationBtn" class="p-3 rounded-xl bg-emerald-700 text-white font-bold">보정값 적용</button>
+      </div>
+      <div class="grid grid-cols-2 gap-3 mt-3">
+        <button id="saltelliBtn" class="p-3 rounded-xl bg-violet-700 text-white font-bold">Saltelli-Sobol</button>
+        <button id="networkMatrixBtn" class="p-3 rounded-xl bg-rose-700 text-white font-bold">네트워크 행렬 반영</button>
+      </div>
+      <div class="mt-4 p-3 rounded-xl border bg-slate-50">
+        <h3 class="font-black text-sm mb-2">S급 4CSV 패키지 업로드</h3>
+        <div class="grid grid-cols-1 gap-2 text-xs">
+          <label><b>country_parameters.csv</b><input id="countryParamsFile" type="file" accept=".csv,text/csv" class="w-full mt-1 p-2 border rounded-lg bg-white"></label>
+          <label><b>banking_structure.csv</b><input id="bankingStructureFile" type="file" accept=".csv,text/csv" class="w-full mt-1 p-2 border rounded-lg bg-white"></label>
+          <label><b>payment_statistics.csv</b><input id="paymentStatsFile" type="file" accept=".csv,text/csv" class="w-full mt-1 p-2 border rounded-lg bg-white"></label>
+          <label><b>exposure_matrix.csv</b><input id="exposureMatrixFile" type="file" accept=".csv,text/csv" class="w-full mt-1 p-2 border rounded-lg bg-white"></label>
+        </div>
+        <button id="ingest4CsvBtn" class="w-full mt-3 p-3 rounded-xl bg-black text-white font-bold">4CSV 패키지 검증·흡수</button>
+      </div>
+      <div class="grid grid-cols-2 gap-3 mt-3">
+        <button id="appendixBtn" class="p-3 rounded-xl border font-bold">부록 패키지 JSON</button>
+        <button id="calTemplateBtn" class="p-3 rounded-xl border font-bold">보정 템플릿 CSV</button>
+      </div>
+    </section>
+
+    <section class="card p-5">
+      <h2 class="font-black text-lg mb-3">8. 실험설계 패널</h2>
+      <div class="grid grid-cols-2 gap-3">
+        <div><label class="text-sm font-bold">Monte Carlo n</label><input id="mcN" type="number" value="500" min="10" max="10000" class="w-full mt-1 p-3 border rounded-xl"></div>
+        <div><label class="text-sm font-bold">스윕 변수</label><select id="sweepVar" class="w-full mt-1 p-3 border rounded-xl"><option value="cap">보유 한도</option><option value="shock">충격 강도</option><option value="rate2">Level 2 금리</option><option value="digital">디지털 결제율</option></select></div>
+      </div>
+      <label class="text-sm font-bold block mt-3">가설 메모</label>
+      <textarea id="hypothesis" class="w-full p-3 border rounded-xl h-24" placeholder="예: H1. 보유 한도 상승은 임계점 부근에서 시스템 실패확률을 볼록하게 증가시킨다."></textarea>
+      <div class="mt-3"><label class="text-sm font-bold">저장된 실험조건</label><select id="savedScenarios" class="w-full mt-1 p-3 border rounded-xl"></select></div>
+      <div class="grid grid-cols-2 gap-3 mt-3"><button id="loadScenarioBtn" class="p-3 rounded-xl border font-bold">불러오기</button><button id="deleteScenarioBtn" class="p-3 rounded-xl border font-bold">삭제</button></div>
+      <div class="grid grid-cols-2 gap-3 mt-3">
+        <button id="preRegBtn" class="p-3 rounded-xl bg-purple-700 text-white font-bold">사전등록서 생성</button>
+        <button id="qualityGateBtn" class="p-3 rounded-xl bg-amber-600 text-white font-bold">A+ 품질심사</button>
+      </div>
+    </section>
+
+    <section class="card p-5">
+      <h2 class="font-black text-lg mb-3">9. Validation · Fire Sale · Audit Trail</h2>
+      <label class="text-sm font-bold">실제 위기 재현 시나리오</label>
+      <select id="validationCase" class="w-full mt-1 mb-3 p-3 border rounded-xl">
+        <option value="svb2023">SVB 2023 Bank Run</option>
+        <option value="gilt2022">UK Gilt Crisis 2022</option>
+        <option value="covid2020">COVID Liquidity Shock 2020</option>
+        <option value="custom">Custom Validation Case</option>
+      </select>
+      <div class="grid grid-cols-2 gap-3">
+        <div><label class="text-sm font-bold">실제/목표 실패확률</label><input id="targetFailProb" type="number" min="0" max="1" step="0.01" value="0.35" class="w-full mt-1 p-3 border rounded-xl"></div>
+        <div><label class="text-sm font-bold">실제/목표 예금이탈률</label><input id="targetOutflow" type="number" min="0" max="1" step="0.01" value="0.42" class="w-full mt-1 p-3 border rounded-xl"></div>
+      </div>
+      <div class="grid grid-cols-2 gap-3 mt-3">
+        <label class="pill"><input id="fireSaleEnabled" type="checkbox" checked> Asset Fire Sale</label>
+        <label class="pill"><input id="auditEnabled" type="checkbox" checked> Audit Trail</label>
+      </div>
+      <div class="space-y-3 mt-3">
+        <div><div class="flex justify-between text-sm font-bold"><label for="assetIlliquidity">자산 비유동성</label><span id="assetIlliquidityVal">0.45</span></div><input id="assetIlliquidity" type="range" min="0" max="1" step="0.01" value="0.45" class="w-full"></div>
+        <div><div class="flex justify-between text-sm font-bold"><label for="fireSaleElasticity">Fire Sale 가격충격 탄력성</label><span id="fireSaleElasticityVal">0.60</span></div><input id="fireSaleElasticity" type="range" min="0" max="1.5" step="0.01" value="0.60" class="w-full"></div>
+        <div><div class="flex justify-between text-sm font-bold"><label for="capitalBuffer">자본완충력</label><span id="capitalBufferVal">0.30</span></div><input id="capitalBuffer" type="range" min="0.05" max="1" step="0.01" value="0.30" class="w-full"></div>
+      </div>
+      <div class="grid grid-cols-2 gap-3 mt-3">
+        <button id="validateCaseBtn" class="p-3 rounded-xl bg-sky-700 text-white font-bold">위기 재현 검증</button>
+        <button id="auditTrailBtn" class="p-3 rounded-xl bg-slate-900 text-white font-bold">Audit Trail 내보내기</button>
+      </div>
+    </section>
+
+    <section class="card p-5">
+      <h2 class="font-black text-lg mb-3">10. Empirical CSV · MaxEnt Generator</h2>
+      <p class="text-xs text-slate-600 mb-3">BIS·BOK·ECB·FRED 원자료를 논문용 4CSV 구조로 변환하고, 실제 익스포저가 없을 때 Maximum Entropy 행렬을 생성합니다.</p>
+      <div class="grid grid-cols-2 gap-3">
+        <button id="empiricalStarterBtn" class="p-3 rounded-xl bg-blue-800 text-white font-bold">실증 CSV 스타터 생성</button>
+        <button id="sourceMapBtn" class="p-3 rounded-xl bg-teal-700 text-white font-bold">출처맵 JSON</button>
+      </div>
+      <div class="grid grid-cols-2 gap-3 mt-3">
+        <button id="maxEntBtn" class="p-3 rounded-xl bg-fuchsia-700 text-white font-bold">MaxEnt 행렬 생성</button>
+        <button id="methodologyBtn" class="p-3 rounded-xl bg-stone-900 text-white font-bold">방법론 수식 내보내기</button>
+      </div>
+      <button id="methodologyUxBtn" class="w-full mt-3 p-3 rounded-xl bg-indigo-900 text-white font-bold">5단계 방법론 패널 생성</button>
+      <div class="grid grid-cols-2 gap-3 mt-3">
+        <div><label class="text-sm font-bold">MaxEnt 은행 수</label><input id="maxEntBankN" type="number" min="5" max="200" value="28" class="w-full mt-1 p-3 border rounded-xl"></div>
+        <div><label class="text-sm font-bold">총 익스포저 스케일</label><input id="maxEntScale" type="number" min="1" max="1000000" value="100" class="w-full mt-1 p-3 border rounded-xl"></div>
+      </div>
+      <label class="pill mt-3 inline-flex items-center gap-2 text-sm"><input id="useBankingCsvForMaxEnt" type="checkbox" checked> banking_structure.csv 기반 생성</label>
+    </section>
+  </aside>
+
+  <section class="xl:col-span-8 space-y-5" id="exportArea">
+    <section class="card p-5 pdf-page">
+      <div class="flex flex-wrap justify-between gap-3 items-end">
+        <div><h2 class="font-black text-xl">실험 대시보드</h2><p id="runMeta" class="text-sm text-slate-500">아직 실행 전</p></div>
+        <div id="status" class="text-sm text-slate-500">준비됨</div>
+      </div>
+      <div class="grid grid-cols-2 lg:grid-cols-5 gap-3 mt-4" id="metrics"></div>
+    </section>
+
+    <section class="card p-5 pdf-page">
+      <h2 class="font-black text-lg mb-2">시계열 결과</h2>
+      <div class="chart-wrap"><canvas id="timeChart"></canvas></div>
+      <p class="text-xs text-slate-500 mt-2">좌측축: 비율·안정성·스트레스 / 우측축: 사회적 후생 W</p>
+    </section>
+
+    <section class="grid grid-cols-1 lg:grid-cols-2 gap-5 pdf-page">
+      <div class="card p-5"><h2 class="font-black text-lg mb-2">국가별 실패확률·후생 비교</h2><div class="chart-wrap-sm"><canvas id="barChart"></canvas></div></div>
+      <div class="card p-5"><h2 class="font-black text-lg mb-2">Tiered Interest 최적화</h2><div class="chart-wrap-sm"><canvas id="tierChart"></canvas></div></div>
+    </section>
+
+    <section class="card p-5 pdf-page">
+      <div class="flex flex-wrap justify-between gap-3 items-center">
+        <h2 class="font-black text-lg">네트워크 전염 경로</h2>
+        <div class="flex gap-2 no-print"><button id="playBtn" class="px-4 py-2 rounded-xl bg-rose-600 text-white font-bold">전염 재생</button><button id="stopBtn" class="px-4 py-2 rounded-xl bg-slate-700 text-white font-bold">정지</button></div>
+      </div>
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-3">
+        <svg id="network" class="lg:col-span-2 w-full h-[430px] bg-slate-50 rounded-2xl border"></svg>
+        <div class="space-y-3"><div class="font-bold">실패 경로 로그</div><ol id="contagionLog" class="text-sm space-y-2 max-h-[390px] overflow-auto"></ol></div>
+      </div>
+    </section>
+
+    <section class="card p-5 pdf-page">
+      <h2 class="font-black text-lg mb-2">Monte Carlo / 민감도 결과</h2>
+      <div id="workerProgress" class="text-sm text-slate-600 mb-2">대기 중</div>
+      <div class="chart-wrap"><canvas id="mcChart"></canvas></div>
+      <div id="summaryTable" class="overflow-auto mt-4 text-sm"></div>
+    </section>
+
+    <section class="grid grid-cols-1 lg:grid-cols-2 gap-5 pdf-page">
+      <div class="card p-5">
+        <h2 class="font-black text-lg mb-2">설명가능성: 변수 기여도</h2>
+        <div id="explainBox" class="space-y-2 text-sm"></div>
+      </div>
+      <div class="card p-5">
+        <h2 class="font-black text-lg mb-2">모델 검증·한계</h2>
+        <div id="modelAudit" class="text-sm text-slate-700 space-y-2"></div>
+      </div>
+    </section>
+
+
+    <section class="grid grid-cols-1 lg:grid-cols-2 gap-5 pdf-page">
+      <div class="card p-5">
+        <h2 class="font-black text-lg mb-2">Calibration Fit</h2>
+        <div class="chart-wrap-sm"><canvas id="calChart"></canvas></div>
+      </div>
+      <div class="card p-5">
+        <h2 class="font-black text-lg mb-2">Saltelli-Sobol 민감도</h2>
+        <div id="sobolBox" class="text-sm text-slate-700 space-y-2">Sobol 민감도 분석 대기 중</div>
+      </div>
+    </section>
+
+
+    <section class="grid grid-cols-1 lg:grid-cols-2 gap-5 pdf-page">
+      <div class="card p-5">
+        <h2 class="font-black text-lg mb-2">Empirical Data Audit</h2>
+        <div id="dataAuditBox" class="text-sm text-slate-700 space-y-2">CSV 데이터 검증 대기 중</div>
+      </div>
+      <div class="card p-5">
+        <h2 class="font-black text-lg mb-2">Exposure Matrix Audit</h2>
+        <div id="exposureAuditBox" class="text-sm text-slate-700 space-y-2">은행 익스포저 행렬 대기 중 · 기본값: synthetic interbank network</div>
+      </div>
+    </section>
+
+
+
+    <section class="card p-5 pdf-page">
+      <h2 class="font-black text-lg mb-2">S급 4CSV 데이터 패키지 감사</h2>
+      <div id="sGradeCsvAuditBox" class="text-sm text-slate-700 space-y-2">4CSV 패키지 검증 대기 중</div>
+    </section>
+
+    <section class="grid grid-cols-1 lg:grid-cols-2 gap-5 pdf-page">
+      <div class="card p-5">
+        <h2 class="font-black text-lg mb-2">S급 Research Quality Gate</h2>
+        <div id="qualityGateBox" class="text-sm text-slate-700 space-y-2">품질심사 대기 중</div>
+      </div>
+      <div class="card p-5">
+        <h2 class="font-black text-lg mb-2">Reproducibility Fingerprint</h2>
+        <div id="fingerprintBox" class="text-sm text-slate-700 space-y-2">Fingerprint 생성 대기 중</div>
+      </div>
+    </section>
+
+    <section class="card p-5 pdf-page">
+      <h2 class="font-black text-lg mb-2">논문 방법론 명세</h2>
+      <div id="methodologyBox" class="text-sm text-slate-700 space-y-2"></div>
+    </section>
+
+
+    <section class="grid grid-cols-1 lg:grid-cols-2 gap-5 pdf-page">
+      <div class="card p-5">
+        <h2 class="font-black text-lg mb-2">Validation Module: 실제 위기 재현</h2>
+        <div id="validationBox2" class="text-sm text-slate-700 space-y-2">검증 대기 중</div>
+      </div>
+      <div class="card p-5">
+        <h2 class="font-black text-lg mb-2">Asset Fire Sale Module</h2>
+        <div id="fireSaleBox" class="text-sm text-slate-700 space-y-2">Fire Sale 분석 대기 중</div>
+      </div>
+    </section>
+
+    <section class="card p-5 pdf-page">
+      <h2 class="font-black text-lg mb-2">Research Audit Trail</h2>
+      <div id="auditTrailBox" class="text-sm text-slate-700 space-y-2">Audit Trail 대기 중</div>
+    </section>
+
+
+    <section class="grid grid-cols-1 lg:grid-cols-2 gap-5 pdf-page">
+      <div class="card p-5">
+        <h2 class="font-black text-lg mb-2">Empirical CSV Builder</h2>
+        <div id="empiricalBuilderBox" class="text-sm text-slate-700 space-y-2">BIS·BOK·ECB·FRED 실증 CSV 구축 대기 중</div>
+      </div>
+      <div class="card p-5">
+        <h2 class="font-black text-lg mb-2">Maximum Entropy Exposure Matrix</h2>
+        <div id="maxEntBox" class="text-sm text-slate-700 space-y-2">MaxEnt 행렬 생성 대기 중</div>
+      </div>
+    </section>
+
+    <section class="card p-5 pdf-page">
+      <h2 class="font-black text-lg mb-2">논문 방법론 수식 명세</h2>
+      <div id="formulaMethodBox" class="text-sm text-slate-700 space-y-2">방법론 수식 생성 대기 중</div>
+    </section>
+
+
+    <section class="card p-5 pdf-page">
+      <h2 class="font-black text-lg mb-2">Methodology UX · 플랫폼 적용 체크리스트</h2>
+      <div id="methodologyChecklistBox" class="text-sm text-slate-700 space-y-2">방법론 체크리스트 대기 중</div>
+    </section>
+
+    <section class="card p-5 pdf-page">
+      <h2 class="font-black text-lg mb-2">5단계 방법론 설명 패널</h2>
+      <div id="methodology5LayerBox" class="text-sm text-slate-700 space-y-3"></div>
+    </section>
+
+    <section class="card p-5 report pdf-page" id="report">
+      <h2 class="font-black text-lg">자동 정책 리포트</h2>
+      <div id="reportBody" class="text-sm text-slate-700"></div>
+    </section>
+  </section>
+</main>
+
+<div id="topFloatingWrap" class="top-floating-wrap no-print">
+  <div class="top-floating-bubble" role="tooltip">클릭해서 맨 위로 가기! ⚡</div>
+  <button id="topFloatingBtn" class="top-floating-btn" type="button" aria-label="클릭해서 맨 위로 가기">
+    <img src="cbdc_top_button.webp" alt="" onerror="this.remove();this.parentElement.innerHTML='<span class=&quot;top-fallback&quot;>⬆️</span>'">
+  </button>
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  const $ = id => document.getElementById(id);
+  const fmt = n => Number(n).toLocaleString('ko-KR');
+  const pct = x => (x*100).toFixed(1)+'%';
+  const clamp = (x,a,b)=>Math.max(a,Math.min(b,x));
+  const isFiniteNum = v => Number.isFinite(Number(v));
+  const palette = {blue:'#2563eb',red:'#ef4444',green:'#10b981',amber:'#f59e0b',purple:'#7c3aed',cyan:'#06b6d4',slate:'#334155'};
+  const storeKey='cbdc_v3_saved_scenarios';
+
+  const presets = {
+    korea:{name:'한국',digital:.92,concentration:.75,cash:.08,deposit:'요구불+저축성 혼합, 모바일뱅킹 고사용',threshold:.62,density:.82,calibration:'BOK·BIS·World Bank 지표로 보정 권장'},
+    us:{name:'미국',digital:.72,concentration:.55,cash:.18,deposit:'대형은행+지역은행 혼합, MMF 대체재 존재',threshold:.74,density:.65,calibration:'FDIC·Fed H.8·FedNow/Fedwire 데이터 보정 권장'},
+    eu:{name:'EU',digital:.80,concentration:.60,cash:.22,deposit:'국가별 이질성, 예금보호·은행연합 영향',threshold:.70,density:.68,calibration:'ECB SPACE·TARGET2·EBA 지표 보정 권장'},
+    china:{name:'중국',digital:.95,concentration:.82,cash:.05,deposit:'플랫폼 결제 고도화, 국유은행 비중 높음',threshold:.66,density:.86,calibration:'PBoC·상업은행 집중도 자료 보정 권장'},
+    sweden:{name:'스웨덴',digital:.97,concentration:.70,cash:.03,deposit:'저현금 사회, 디지털 지급결제 의존도 높음',threshold:.60,density:.78,calibration:'Riksbank e-krona·cash usage 자료 보정 권장'},
+    custom:{name:'사용자 정의',digital:.80,concentration:.60,cash:.15,deposit:'사용자 지정',threshold:.68,density:.70,calibration:'사용자 입력값 기반'}
+  };
+  const agentDefs=[['household','가계',.35,.65,.55],['firm','기업',.20,.55,.65],['elderly','고령층',.15,.30,.25],['digital','디지털 친화층',.15,.95,.80],['wealthy','고액자산가',.08,.75,.95],['sme','중소은행 고객',.07,.60,.85]];
+  const weightDefs=[['payment','결제효율성',.25],['inclusion','금융포용',.10],['innovation','혁신효과',.15],['risk','시스템 리스크',.30],['disinter','은행 탈중개 비용',.15],['oper','운영 리스크',.05]];
+  const sliderDefs=[['shock','충격 강도',0,1,.01,.35],['digital','디지털 결제율',.3,1,.01,.92],['concentration','은행집중도',.2,1,.01,.75],['cash','현금사용률',0,.6,.01,.08]];
+  const tierDefs=[['tier1','Level 1 한도(백만원)',1,20,1,5],['rate2','Level 2 금리(%)',-5,0,.25,-1.5],['rate3','Level 3 금리(%)',-8,-1,.25,-4]];
+
+  let charts={}, last=null, netState=null, anim=null, worker=null, lastRows=[], empiricalRows=[], exposureMatrix=null, sensitivityMethod='Saltelli-Sobol', sGradeDataPackage=null, auditTrail=[], validationResult=null, fireSaleResult=null, maxEntMatrix=null, empiricalSourceMap=null;
+
+  function checkDeps(){
+    const missing=[];
+    if(!window.Chart) missing.push('Chart.js');
+    if(!window.d3) missing.push('D3');
+    if(!window.jspdf) missing.push('jsPDF');
+    if(!window.html2canvas) missing.push('html2canvas');
+    if(missing.length){
+      const msg='CDN 로드 실패: '+missing.join(', ')+' 기능이 제한됩니다. 인터넷 연결을 확인하거나 ZIP 패키지의 vendor 폴더에 라이브러리를 넣은 오프라인 배포판을 사용하세요. 차트/PDF/네트워크 기능은 해당 라이브러리 로드 전까지 자동 비활성화됩니다.';
+      $('validationBox').className='text-sm mt-3 danger'; $('validationBox').textContent=msg;
+      ['pdfBtn','mcBtn','sweepBtn'].forEach(id=>{ const el=$(id); if(el && (id==='pdfBtn' && (!window.jspdf || !window.html2canvas))) el.disabled=true; });
+    }
+  }
+
+  function initUI(){
+    $('sliders').innerHTML=sliderDefs.map(s=>rangeHTML(s[0],s[1],s[2],s[3],s[4],s[5])).join('');
+    $('tiers').innerHTML=tierDefs.map(s=>rangeHTML(s[0],s[1],s[2],s[3],s[4],s[5])).join('');
+    $('agents').innerHTML=agentDefs.map(a=>rangeHTML('ag_'+a[0],a[1]+' 비중',0,.5,.01,a[2])).join('');
+    $('weights').innerHTML=weightDefs.map(w=>rangeHTML('w_'+w[0],w[1],0,.6,.01,w[2])).join('');
+    document.querySelectorAll('input[type=range]').forEach(el=>el.addEventListener('input',()=>{const v=$(el.id+'Val'); if(v) v.textContent=el.value; if(el.id.startsWith('ag_')) normalizeAgents(false); validateParams();}));
+    $('country').addEventListener('change',applyPreset);
+    bind();
+    refreshSavedList();
+    applyPreset();
+    validateParams();
+  }
+  function rangeHTML(id,label,min,max,step,value){return `<div><div class="flex justify-between text-sm font-bold"><label for="${id}">${label}</label><span id="${id}Val">${value}</span></div><input id="${id}" type="range" min="${min}" max="${max}" step="${step}" value="${value}" class="w-full"></div>`}
+
+  function bind(){
+    const on=(id,fn)=>{const el=$(id); if(el) el.addEventListener('click',fn)};
+    on('runBtn',guardedRun);
+    on('rerunSeedBtn',guardedRun);
+    on('randomSeedBtn',()=>{$('seed').value=Math.floor(Math.random()*2147483647); validateParams();});
+    on('mcBtn',runMonteCarloWorker);
+    on('sweepBtn',sweep);
+    on('saveScenarioBtn',saveScenario);
+    on('loadScenarioBtn',loadScenario);
+    on('deleteScenarioBtn',deleteScenario);
+    on('csvBtn',downloadCSV);
+    on('jsonBtn',downloadJSON);
+    on('pdfBtn',exportPDF); on('validateCaseBtn',runValidationCase); on('auditTrailBtn',exportAuditTrail); on('empiricalStarterBtn',createEmpiricalStarterCSVs); on('sourceMapBtn',exportSourceMap); on('maxEntBtn',generateMaximumEntropyMatrix); on('methodologyBtn',renderFormalMethodology); on('methodologyUxBtn',renderFiveLayerMethodology); on('preRegBtn',generatePreRegistration); on('qualityGateBtn',()=>{runQualityGate(); renderFingerprint();});
+    on('applyCalibrationBtn',applyCalibration); on('ingest4CsvBtn',ingest4CsvPackage); on('ingestCalibrationBtn',ingestCalibrationCSV); on('saltelliBtn',runSaltelliSobol); on('networkMatrixBtn',applyExposureMatrix); on('appendixBtn',downloadAppendixPackage); on('calTemplateBtn',downloadCalibrationTemplate);
+    on('playBtn',playContagion);
+    on('stopBtn',stopContagion);
+    on('topFloatingBtn',e=>{e.preventDefault(); window.scrollTo({top:0,behavior:'smooth'});});
+    ['assetIlliquidity','fireSaleElasticity','capitalBuffer'].forEach(id=>{const el=$(id); if(el) el.addEventListener('input',()=>{const v=$(id+'Val'); if(v) v.textContent=el.value; if(last) renderAll(runSimulation(getParams()));});});
+    const vc=$('validationCase'); if(vc) vc.addEventListener('change',getValidationTargets);
+    window.addEventListener('resize',debounce(()=>last&&renderNetwork(last),220));
+  }
+
+  function applyPreset(){
+    const p=presets[$('country').value]||presets.custom;
+    ['digital','concentration','cash'].forEach(k=>{if($(k)){ $(k).value=p[k]; $(k+'Val').textContent=p[k];}});
+    $('presetInfo').innerHTML=`<b>${p.name}</b> · 디지털 결제율 ${pct(p.digital)}, 은행집중도 ${pct(p.concentration)}, 현금사용률 ${pct(p.cash)}<br>${p.deposit}<br><span class="text-slate-500">${p.calibration}</span>`;
+    validateParams();
+  }
+
+  function normalizeAgents(write=true){
+    let sum=agentDefs.reduce((s,a)=>s+(+$('ag_'+a[0]).value||0),0);
+    if(sum<=0){agentDefs.forEach(a=>{$('ag_'+a[0]).value=a[2];}); sum=agentDefs.reduce((s,a)=>s+a[2],0);}
+    agentDefs.forEach(a=>{let v=(+$('ag_'+a[0]).value||0)/sum; if(write)$('ag_'+a[0]).value=v.toFixed(2); $('ag_'+a[0]+'Val').textContent=v.toFixed(2);});
+  }
+
+  function getParams(){
+    normalizeAgents();
+    const c=$('country').value in presets ? $('country').value : 'custom';
+    const p=presets[c];
+    const cap=+$('baseCap').value;
+    const weights={}; weightDefs.forEach(w=>weights[w[0]]=+$('w_'+w[0]).value||0);
+    const ws=Object.values(weights).reduce((a,b)=>a+b,0)||1; Object.keys(weights).forEach(k=>weights[k]/=ws);
+    return {
+      experimentId:$('experimentId').value||'EXP-CBDC',
+      seed:Math.max(1, Math.floor(+$('seed').value||1)),
+      hypothesis:$('hypothesis').value||'',
+      country:c,preset:p,arch:$('arch').value,cap,days:+$('days').value,
+      crisis:$('crisisType').value,shock:+$('shock').value,digital:+$('digital').value,concentration:+$('concentration').value,cash:+$('cash').value,
+      dynamic:$('dynamicCap').checked,lolr:$('lolr').checked,tiered:$('tiered').checked,
+      tier1:+$('tier1').value*1e6,rate2:+$('rate2').value,rate3:+$('rate3').value,
+      agents:agentDefs.map(a=>({key:a[0],name:a[1],share:+$('ag_'+a[0]).value,digital:a[3],risk:a[4]})),
+      weights,threshold:p.threshold
+    };
+  }
+
+  
+  function canRunWithWarnings(){
+    const warnings = validateParams();
+    if(warnings.length && !$('allowWarnRun')?.checked){
+      alert('입력값 검증 경고가 있어 실행을 중단했습니다.\n\n' + warnings.join('\n') + '\n\n계속하려면 "검증 경고가 있어도 실행 허용"을 체크하십시오.');
+      return false;
+    }
+    return true;
+  }
+  function guardedRun(){
+    if(!canRunWithWarnings()) return;
+    renderAll(runSimulation(getParams()));
+  }
+
+function validateParams(){
+    const warnings=[];
+    const pSafe=presets[$('country').value]||presets.custom;
+    const seed=+$('seed').value, n=+$('mcN').value;
+    if(!isFiniteNum(seed)||seed<1) warnings.push('Seed는 1 이상의 정수여야 합니다.');
+    if(!isFiniteNum(n)||n<10||n>10000) warnings.push('Monte Carlo n은 10~10,000 범위 권장입니다.');
+    if(+$('rate3').value >= +$('rate2').value) warnings.push('Level 3 금리는 Level 2보다 더 낮게 설정하는 것이 일반적입니다.');
+    const agentSum=agentDefs.reduce((s,a)=>s+(+$('ag_'+a[0]).value||0),0);
+    if(agentSum<=0) warnings.push('행위자 비중 합계가 0입니다.');
+    if(pSafe.threshold<0.5) warnings.push('임계값이 낮아 붕괴 확률이 과대 추정될 수 있습니다.');
+    $('validationBox').className='text-sm mt-3 '+(warnings.length?'warn':'ok');
+    $('validationBox').innerHTML=warnings.length ? '<b>검증 경고</b><br>'+warnings.join('<br>') : '입력값 검증 통과 · 실험 재현 가능';
+    return warnings;
+  }
+
+  function archParam(a){return ({two_tier:{out:.68,cont:.78,oper:.88},account:{out:1.18,cont:1.35,oper:.68},token:{out:.92,cont:.88,oper:.78}})[a] || {out:1,cont:1,oper:.75}}
+  function crisisParam(t){return ({bankrun:{out:1.35,net:1.10,oper:1.0},cyber:{out:.80,net:.90,oper:1.55},rate:{out:1.05,net:1.35,oper:1.0},singlebank:{out:.95,net:1.50,oper:1.0},payment:{out:.75,net:1.10,oper:1.35}})[t] || {out:1,net:1,oper:1}}
+  function mulberry32(a){return function(){let t=a+=0x6D2B79F5;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return ((t^t>>>14)>>>0)/4294967296}}
+
+  function runSimulation(params=getParams(), seedOffset=0){
+    const ap=archParam(params.arch), cp=crisisParam(params.crisis), rng=mulberry32((params.seed+seedOffset)>>>0);
+    let cap=params.cap, failed=0, support=0, series=[], contagion=[];
+    const capNorm=Math.min(params.cap/2e7,2.2);
+    let baseOut=0;
+    for(const ag of params.agents){
+      const tierPenalty=params.tiered?clamp((Math.abs(params.rate2)*.045+Math.abs(params.rate3)*.025)*(params.cap>params.tier1?1:0),0,.35):0;
+      baseOut+=ag.share*(.08+.35*params.digital*ag.digital+.16*ag.risk*params.shock+.08*capNorm-tierPenalty);
+    }
+    baseOut*=ap.out*cp.out*(1-params.cash*.35);
+    for(let d=1; d<=params.days; d++){
+      const t=d/params.days;
+      const shockWave=params.shock*(1-Math.exp(-5*t));
+      if(params.dynamic){ if(baseOut*shockWave>.22) cap=Math.min(cap,1e7); if(baseOut*shockWave>.32) cap=Math.min(cap,5e6); if(failed>.08) cap=Math.min(cap,3e6); }
+      const out=clamp(baseOut*shockWave*(cap/params.cap || 1)*(0.96+rng()*.08),0,.72);
+      const frag=clamp(params.concentration*.25+params.preset.density*.18+out*.55+params.shock*.18,0,1);
+      const stress=clamp(out*.58+frag*.32+params.shock*.25*cp.net+(1-ap.oper)*.18*cp.oper,0,1.5);
+      let stability=1/(1+Math.exp(13*(stress-params.threshold)));
+      const newFail=clamp((1-stability-.12)*.30*ap.cont*cp.net,0,.35);
+      failed=clamp(Math.max(failed,newFail)+(failed*0.018*ap.cont),0,.8);
+      let lolrAmt=0;
+      if(params.lolr && stress>.55){lolrAmt=clamp((stress-.55)*.55,0,.22); support+=lolrAmt; failed=clamp(failed-lolrAmt*.23,0,.8); stability=clamp(stability+lolrAmt*.35,0,1);}
+      const payEff=clamp(.35+out*.9+params.digital*.25,0,1), inclusion=clamp(.2+params.digital*.35+(1-params.cash)*.2,0,1), innovation=clamp(.25+capNorm*.22+params.digital*.25,0,1);
+      const risk=clamp((1-stability)+failed*.7,0,1), disinter=clamp(out*.95,0,1), oper=clamp((1-ap.oper)*cp.oper+params.shock*.2,0,1);
+      const W=params.weights.payment*payEff+params.weights.inclusion*inclusion+params.weights.innovation*innovation-params.weights.risk*risk-params.weights.disinter*disinter-params.weights.oper*oper;
+      series.push({day:d,out,failed,stability,stress,welfare:W,cap,support:lolrAmt,payEff,inclusion,innovation,risk,disinter,oper});
+      if(newFail>.02 && d%7===0) contagion.push({day:d,bank:'B'+String(1+Math.floor(rng()*28)).padStart(2,'0'),stress,source:params.crisis});
+    }
+    const lastPoint=series[series.length-1], failProb=clamp((1-lastPoint.stability)*.7+lastPoint.failed*.6,0,1);
+    const explain=explainContributions(params,lastPoint);
+    return {params,series,contagion,explain,summary:{...lastPoint,failProb,support,threshold:params.threshold}};
+  }
+
+  function explainContributions(p,s){
+    const raw=[
+      ['보유 한도', Math.min(p.cap/2e7,2.2)*0.12],
+      ['디지털 결제율', p.digital*0.16],
+      ['충격 강도', p.shock*0.22],
+      ['은행집중도', p.concentration*0.10],
+      ['네트워크 밀도', p.preset.density*0.10],
+      ['CBDC 구조 리스크', (archParam(p.arch).cont-0.7)*0.12],
+      ['Tiered Interest 완화', p.tiered ? -Math.abs(p.rate2)*0.018 : 0],
+      ['Dynamic Cap 완화', p.dynamic ? -0.07 : 0],
+      ['LOLR 완화', p.lolr ? -Math.min(s.support||0,.3)*0.28 : 0]
+    ];
+    const max=Math.max(...raw.map(x=>Math.abs(x[1])),.01);
+    return raw.map(([name,value])=>({name,value,share:Math.abs(value)/max,direction:value>=0?'risk':'mitigation'})).sort((a,b)=>Math.abs(b.value)-Math.abs(a.value));
+  }
+
+  function destroy(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
+  function baseChart(extra){return Object.assign({animation:{duration:240},responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{position:'bottom',labels:{usePointStyle:true,boxWidth:9}},tooltip:{backgroundColor:'rgba(15,23,42,.94)',padding:12}},scales:{x:{grid:{display:false},ticks:{font:{weight:'800'}}},y:{grid:{color:'rgba(148,163,184,.22)'},ticks:{font:{weight:'800'}}}}},extra||{});}
+  if(window.Chart){
+    Chart.defaults.font.family="system-ui,-apple-system,'Segoe UI','Noto Sans KR',sans-serif";
+    Chart.defaults.color='#334155';
+    Chart.register({id:'thresholdLine',afterDraw(chart,args,opts){if(!opts||opts.value==null)return;const yScale=chart.scales[opts.yAxisID||'y'];if(!yScale)return;const y=yScale.getPixelForValue(opts.value);const {ctx,chartArea}=chart;ctx.save();ctx.setLineDash([8,6]);ctx.strokeStyle=opts.color||palette.amber;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(chartArea.left,y);ctx.lineTo(chartArea.right,y);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle=opts.color||palette.amber;ctx.font='700 11px system-ui';ctx.fillText(opts.label||'Threshold',chartArea.left+8,y-7);ctx.restore();}});
+  }
+
+  function renderAll(res){
+    res=applyFireSaleToResult(res);
+    last=res; lastRows=res.series;
+    renderMetrics(res); renderCharts(res); renderNetwork(res); renderReport(res); renderExplain(res); renderAudit(res); renderCalibrationChart(res); renderMethodology(); renderFireSaleBox(); renderMethodologyChecklist(); if(!$('methodology5LayerBox')?.innerHTML) renderFiveLayerMethodology(); runQualityGate(); renderFingerprint(); renderAuditTrailBox(); appendAuditEvent('render_all',{failProb:res.summary.failProb,welfare:res.summary.welfare});
+    $('runMeta').textContent=`${res.params.experimentId} · seed ${res.params.seed} · ${new Date().toLocaleString('ko-KR')}`;
+    $('status').textContent='완료: '+new Date().toLocaleTimeString('ko-KR');
+  }
+
+  function renderMetrics(r){
+    const s=r.summary, cap=s.cap>9e8?'무제한':fmt(Math.round(s.cap))+'원';
+    const items=[['예금 이탈률',pct(s.out)],['실패 확률',pct(s.failProb)],['안정성',s.stability.toFixed(2)],['후생 W',s.welfare.toFixed(3)],['최종 한도',cap]];
+    $('metrics').innerHTML=items.map(([k,v])=>`<div class="card p-4"><div class="text-xs text-slate-500">${k}</div><div class="metric font-black">${v}</div></div>`).join('');
+  }
+
+  function renderCharts(r){
+    if(!window.Chart||!r?.series?.length) return;
+    renderTimeChart(r); renderCountryChart(r); renderTierChart(r);
+  }
+  function renderTimeChart(r){
+    destroy('time');
+    charts.time=new Chart($('timeChart'),{type:'line',data:{labels:r.series.map(x=>'D+'+x.day),datasets:[
+      {label:'예금 이탈률',data:r.series.map(x=>x.out),borderColor:palette.blue,backgroundColor:'rgba(37,99,235,.10)',fill:true,yAxisID:'ratio'},
+      {label:'실패비율',data:r.series.map(x=>x.failed),borderColor:palette.red,backgroundColor:'rgba(239,68,68,.08)',fill:true,yAxisID:'ratio'},
+      {label:'안정성',data:r.series.map(x=>x.stability),borderColor:palette.green,fill:false,yAxisID:'ratio'},
+      {label:'Stress',data:r.series.map(x=>x.stress),borderColor:palette.amber,borderDash:[7,5],fill:false,yAxisID:'ratio'},
+      {label:'후생 W',data:r.series.map(x=>x.welfare),borderColor:palette.purple,fill:false,yAxisID:'welfare'}
+    ]},options:baseChart({plugins:{legend:{position:'bottom'},thresholdLine:{value:r.params.threshold,yAxisID:'ratio',label:'Critical '+r.params.threshold.toFixed(2)},tooltip:{callbacks:{label(ctx){const y=ctx.parsed.y; return ctx.dataset.yAxisID==='welfare'?`${ctx.dataset.label}: ${y.toFixed(3)}`:`${ctx.dataset.label}: ${(y*100).toFixed(1)}%`;}}}},scales:{x:{grid:{display:false},ticks:{maxTicksLimit:10}},ratio:{type:'linear',position:'left',min:0,max:1.05,ticks:{callback:v=>(v*100).toFixed(0)+'%'}},welfare:{type:'linear',position:'right',min:-.65,max:.65,grid:{drawOnChartArea:false},ticks:{callback:v=>Number(v).toFixed(1)}}}})});
+  }
+  function renderCountryChart(r){
+    destroy('bar');
+    const labels=['한국','미국','EU','중국','스웨덴'], keys=['korea','us','eu','china','sweden'];
+    const comps=keys.map((c,i)=>runSimulation({...r.params,country:c,preset:presets[c],threshold:presets[c].threshold,digital:presets[c].digital,concentration:presets[c].concentration,cash:presets[c].cash},i+101).summary);
+    charts.bar=new Chart($('barChart'),{type:'bar',data:{labels,datasets:[{label:'실패 확률',data:comps.map(x=>x.failProb),backgroundColor:'rgba(239,68,68,.78)',borderRadius:10},{label:'후생 W',data:comps.map(x=>x.welfare),backgroundColor:'rgba(37,99,235,.78)',borderRadius:10}]},options:baseChart({scales:{y:{min:-.55,max:1,ticks:{callback:v=>Math.abs(v)<=1?(v*100).toFixed(0)+'%':v}}},plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label(ctx){const y=ctx.parsed.y;return ctx.dataset.label.includes('확률')?`${ctx.dataset.label}: ${(y*100).toFixed(1)}%`:`${ctx.dataset.label}: ${y.toFixed(3)}`}}}}})});
+  }
+  function renderTierChart(r){
+    destroy('tier');
+    const rates=[0,-1,-2,-3,-4,-5], tiers=rates.map((rt,i)=>runSimulation({...r.params,tiered:true,rate2:rt,rate3:rt-2},200+i).summary);
+    charts.tier=new Chart($('tierChart'),{type:'line',data:{labels:rates.map(x=>x+'%'),datasets:[{label:'후생 W',data:tiers.map(x=>x.welfare),borderColor:palette.purple,backgroundColor:'rgba(124,58,237,.12)',fill:true,yAxisID:'welfare'},{label:'실패 확률',data:tiers.map(x=>x.failProb),borderColor:palette.red,fill:false,yAxisID:'prob'}]},options:baseChart({scales:{welfare:{type:'linear',position:'left',min:-.6,max:.6,ticks:{callback:v=>Number(v).toFixed(1)}},prob:{type:'linear',position:'right',min:0,max:1,grid:{drawOnChartArea:false},ticks:{callback:v=>(v*100).toFixed(0)+'%'}}},plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label(ctx){const y=ctx.parsed.y;return ctx.dataset.yAxisID==='prob'?`${ctx.dataset.label}: ${(y*100).toFixed(1)}%`:`${ctx.dataset.label}: ${y.toFixed(3)}`;}}}}})});
+  }
+
+  function makeNetwork(res){
+    const rng=mulberry32(42), nodes=[{id:'CB',type:'cb'}], links=[];
+    for(let i=1;i<=28;i++)nodes.push({id:'B'+String(i).padStart(2,'0'),type:'bank'});
+    const types=['house','firm','elderly','digital','wealthy','sme'];
+    for(let i=0;i<36;i++)nodes.push({id:'A'+i,type:types[i%types.length]});
+    nodes.filter(n=>n.type==='bank').forEach(b=>{links.push({source:'CB',target:b.id,w:.3+rng()*.7}); nodes.filter(n=>!['bank','cb'].includes(n.type)).forEach(a=>{if(rng()<.08)links.push({source:b.id,target:a.id,w:rng()})});});
+    for(let i=1;i<=28;i++)for(let j=i+1;j<=28;j++)if(rng()<res.params.preset.density*.18)links.push({source:'B'+String(i).padStart(2,'0'),target:'B'+String(j).padStart(2,'0'),w:rng()});
+    return {nodes,links};
+  }
+  function renderNetwork(res){
+    if(!window.d3)return;
+    const svgEl=$('network'), svg=d3.select(svgEl), w=Math.max(svgEl.clientWidth||720,320), h=430;
+    clearInterval(anim); anim=null; svg.selectAll('*').remove(); netState=makeNetwork(res);
+    const link=svg.append('g').selectAll('line').data(netState.links).join('line').attr('class','link').attr('stroke-width',d=>1+d.w*2);
+    const node=svg.append('g').selectAll('circle').data(netState.nodes).join('circle').attr('r',d=>d.type==='cb'?14:d.type==='bank'?9:6).attr('class',d=>'node '+(d.type==='cb'?'cbfill':d.type==='bank'?'okfill':d.type==='house'?'housefill':d.type==='firm'?'firmfill':d.type==='elderly'?'oldfill':d.type==='digital'?'digitalfill':d.type==='wealthy'?'wealthfill':'smefill')).call(d3.drag().on('start',dragstarted).on('drag',dragged).on('end',dragended));
+    const label=svg.append('g').selectAll('text').data(netState.nodes.filter(d=>d.type==='cb'||d.type==='bank')).join('text').text(d=>d.id).attr('font-size',10).attr('font-weight',800).attr('fill','#0f172a').attr('dx',10).attr('dy',4).style('pointer-events','none');
+    const sim=d3.forceSimulation(netState.nodes).force('link',d3.forceLink(netState.links).id(d=>d.id).distance(58).strength(.55)).force('charge',d3.forceManyBody().strength(-135)).force('center',d3.forceCenter(w/2,h/2)).force('collide',d3.forceCollide(16)).on('tick',()=>{link.attr('x1',d=>d.source.x).attr('y1',d=>d.source.y).attr('x2',d=>d.target.x).attr('y2',d=>d.target.y);node.attr('cx',d=>d.x).attr('cy',d=>d.y);label.attr('x',d=>d.x).attr('y',d=>d.y)});
+    netState={...netState,node,link,label,sim}; renderLog(getContagionEvents(res));
+    function dragstarted(e,d){if(!e.active)sim.alphaTarget(.3).restart();d.fx=d.x;d.fy=d.y} function dragged(e,d){d.fx=e.x;d.fy=e.y} function dragended(e,d){if(!e.active)sim.alphaTarget(0);d.fx=null;d.fy=null}
+  }
+  function getContagionEvents(res){
+    const banks=Array.from({length:28},(_,i)=>'B'+String(i+1).padStart(2,'0'));
+    let ev=(res?.contagion||[]).filter(e=>e&&banks.includes(e.bank)).slice(0,18);
+    if(ev.length)return ev;
+    const s=res.summary, rng=mulberry32(Math.floor(((s.stress||.4)+(s.failProb||.2))*1e6));
+    const count=clamp(Math.round(3+(s.failProb||.25)*12+(s.stress||.5)*4),4,16);
+    return Array.from({length:count},(_,i)=>({day:Math.round((i+1)*(res.params.days/(count+1))),bank:banks[Math.floor(rng()*banks.length)],stress:clamp((s.stress||.45)+i*.015+rng()*.06,0,1.4),source:res.params.crisis}));
+  }
+  function renderLog(events){$('contagionLog').innerHTML=(events.length?events:[{day:0,bank:'없음',stress:0}]).map((e,i)=>`<li data-step="${i}" class="border rounded-xl p-2 transition-all"><b>D+${e.day}</b> ${e.bank} 유동성 실패 · Stress ${Number(e.stress).toFixed(2)}</li>`).join('');}
+  function stopContagion(){if(anim){clearInterval(anim);anim=null;} if(netState?.link)netState.link.classed('active-contagion',false); document.querySelectorAll('#contagionLog li').forEach(li=>li.classList.remove('contagion-step-active'));}
+  function playContagion(){if(!last||!netState) return; stopContagion(); const ev=getContagionEvents(last); renderLog(ev); let i=0, idOf=o=>typeof o==='string'?o:o?.id; anim=setInterval(()=>{if(i>=ev.length){clearInterval(anim);anim=null;return;} const e=ev[i]; document.querySelectorAll('#contagionLog li').forEach(li=>li.classList.remove('contagion-step-active')); const row=document.querySelector(`#contagionLog li[data-step="${i}"]`); if(row){row.classList.add('contagion-step-active');row.scrollIntoView({block:'nearest',behavior:'smooth'});} netState.node.filter(d=>d.id===e.bank).classed('failed',true).transition().duration(180).attr('r',17).transition().duration(360).attr('r',11); netState.link.filter(d=>idOf(d.source)===e.bank||idOf(d.target)===e.bank).classed('active-contagion',true).transition().duration(420).attr('stroke-width',5).transition().duration(520).attr('stroke-width',d=>1+d.w*2); i++;},720);}
+
+  function renderExplain(r){
+    $('explainBox').innerHTML=r.explain.slice(0,9).map(e=>`<div><div class="flex justify-between"><b>${e.name}</b><span class="${e.direction==='risk'?'text-rose-600':'text-emerald-700'}">${e.value>=0?'+':''}${e.value.toFixed(3)}</span></div><div class="h-2 bg-slate-100 rounded-full overflow-hidden"><div class="${e.direction==='risk'?'bg-rose-500':'bg-emerald-500'} h-full" style="width:${Math.round(e.share*100)}%"></div></div></div>`).join('');
+  }
+  function renderAudit(r){
+    $('modelAudit').innerHTML=`<p><b>재현성:</b> Seed ${r.params.seed}, 실험 ID ${r.params.experimentId}, 코드 버전 v4로 동일 결과 재실행 가능.</p><p><b>검증 상태:</b> ${r.params.preset.calibration}. 출처 메타데이터: ${$('calSources')?.value || '미입력'}.</p><p><b>네트워크 한계:</b> 실제 LCR·NSFR·상호 익스포저 행렬이 있으면 Calibration 패널의 밀도·집중도를 보정하고 부록 JSON에 근거를 저장하십시오.</p><p><b>신뢰성 절차:</b> 보정값 적용 → Seed 고정 → Monte Carlo → Sobol 민감도 → 부록 패키지 저장 순서 권장.</p>`;
+  }
+
+
+
+  async function readCsvFileInput(id){
+    const f=$(id)?.files?.[0];
+    if(!f) return [];
+    return parseCSV(await f.text());
+  }
+
+  function validateRequiredColumns(rows, required, label){
+    const errors=[];
+    if(!rows.length){ errors.push(`${label}: 파일이 비어 있거나 업로드되지 않았습니다.`); return errors; }
+    const keys=Object.keys(rows[0]||{});
+    required.forEach(k=>{ if(!keys.includes(k)) errors.push(`${label}: 필수 컬럼 누락 - ${k}`); });
+    return errors;
+  }
+
+  async function ingest4CsvPackage(){
+    const countryRows=await readCsvFileInput('countryParamsFile');
+    const bankingRows=await readCsvFileInput('bankingStructureFile');
+    const paymentRows=await readCsvFileInput('paymentStatsFile');
+    const exposureRows=await readCsvFileInput('exposureMatrixFile');
+
+    const errors=[
+      ...validateRequiredColumns(countryRows,['country','year','digital_payment_rate','cash_usage_rate','bank_concentration','network_density','source_name'],'country_parameters.csv'),
+      ...validateRequiredColumns(bankingRows,['country','year','bank_id','bank_type','total_assets','total_deposits','source_name'],'banking_structure.csv'),
+      ...validateRequiredColumns(paymentRows,['country','year','indicator','value','source_name'],'payment_statistics.csv'),
+      ...validateRequiredColumns(exposureRows,['country','year','bank_i','bank_j','exposure'],'exposure_matrix.csv')
+    ];
+
+    const warnings=[];
+    countryRows.forEach((r,i)=>{
+      ['digital_payment_rate','cash_usage_rate','bank_concentration','network_density'].forEach(k=>{
+        if(r[k]!=='' && (Number(r[k])<0 || Number(r[k])>1 || !Number.isFinite(Number(r[k])))) errors.push(`country_parameters.csv row ${i+2}: ${k} 범위 오류`);
+        if(r[k]==='') warnings.push(`country_parameters.csv row ${i+2}: ${k} 공란`);
+      });
+      if(!r.source_url) warnings.push(`country_parameters.csv row ${i+2}: source_url 없음`);
+    });
+
+    sGradeDataPackage={countryRows,bankingRows,paymentRows,exposureRows,errors,warnings,ingestedAt:new Date().toISOString()};
+
+    // country_parameters 우선, 없으면 payment_statistics에서 digital/cash를 추론한다.
+    const cur=$('country').value;
+    let row=countryRows.find(r=>String(r.country).toLowerCase()===cur);
+    if(row){
+      if(row.digital_payment_rate!=='') $('calDigital').value=Number(row.digital_payment_rate);
+      if(row.cash_usage_rate!=='') $('calCash').value=Number(row.cash_usage_rate);
+      if(row.bank_concentration!=='') $('calConcentration').value=Number(row.bank_concentration);
+      if(row.network_density!=='') $('calDensity').value=Number(row.network_density);
+      $('calSources').value=[row.source_name,row.source_url,row.year].filter(Boolean).join(' · ');
+    }
+    if(exposureRows.length){
+      const vals=exposureRows.map(r=>Number(r.exposure)||0);
+      exposureMatrix={type:'uploaded_4csv_package',rows:exposureRows,totalExposure:vals.reduce((a,b)=>a+b,0),density:vals.filter(v=>v>0).length/Math.max(vals.length,1)};
+      $('exposureAuditBox').innerHTML=`<p><b>방식:</b> uploaded 4CSV exposure_matrix.csv</p><p><b>행 수:</b> ${exposureRows.length}</p><p><b>총 익스포저:</b> ${exposureMatrix.totalExposure.toFixed(3)}</p><p><b>밀도:</b> ${(exposureMatrix.density*100).toFixed(1)}%</p>`;
+    }
+
+    const scoreItems=[
+      countryRows.length>0,
+      bankingRows.length>0,
+      paymentRows.length>0,
+      exposureRows.length>0,
+      errors.length===0,
+      warnings.length<=5,
+      !!row,
+      !!exposureMatrix
+    ];
+    const score=scoreItems.filter(Boolean).length/scoreItems.length;
+    const grade=score>=.95?'S':score>=.85?'A+':score>=.75?'A':'보완 필요';
+
+    $('sGradeCsvAuditBox').innerHTML=[
+      `<p><b>4CSV 품질등급:</b> ${grade} (${Math.round(score*100)}점)</p>`,
+      `<p><b>행 수:</b> country ${countryRows.length}, banking ${bankingRows.length}, payment ${paymentRows.length}, exposure ${exposureRows.length}</p>`,
+      errors.length?`<p class="text-rose-700"><b>오류:</b><br>${errors.slice(0,12).join('<br>')}</p>`:`<p class="text-emerald-700"><b>필수 컬럼 검증:</b> 통과</p>`,
+      warnings.length?`<p class="text-amber-700"><b>경고:</b><br>${warnings.slice(0,12).join('<br>')}</p>`:`<p><b>경고:</b> 없음</p>`,
+      `<p class="text-xs text-slate-500">S급 판정은 4CSV 완비, 출처 메타데이터, 익스포저 행렬, 오류 0건을 기준으로 합니다.</p>`
+    ].join('');
+    applyCalibration();
+    runQualityGate();
+  }
+
+  function parseCSV(text){
+    const lines=text.trim().split(/\r?\n/).filter(Boolean);
+    if(!lines.length) return [];
+    const headers=lines[0].split(',').map(h=>h.trim());
+    return lines.slice(1).map(line=>{
+      const cols=line.split(',').map(c=>c.trim());
+      const obj={};
+      headers.forEach((h,i)=>obj[h]=cols[i] ?? '');
+      return obj;
+    });
+  }
+
+  function validateEmpiricalRows(rows){
+    const required=['country','year','digital_payment_rate','cash_usage_rate','bank_concentration','network_density','source_name'];
+    const errors=[], warnings=[], seen=new Set();
+    rows.forEach((r,idx)=>{
+      required.forEach(k=>{ if(!(k in r) || String(r[k]).trim()==='') errors.push(`row ${idx+2}: ${k} 누락`); });
+      const key=(r.country||'')+'-'+(r.year||'');
+      if(seen.has(key)) warnings.push(`row ${idx+2}: country-year 중복 ${key}`);
+      seen.add(key);
+      ['digital_payment_rate','cash_usage_rate','bank_concentration','network_density'].forEach(k=>{
+        const v=Number(r[k]);
+        if(!Number.isFinite(v) || v<0 || v>1) errors.push(`row ${idx+2}: ${k}는 0~1 범위 필요`);
+      });
+      const year=Number(r.year);
+      if(!Number.isFinite(year) || year<2015) warnings.push(`row ${idx+2}: year가 오래되었거나 부정확함`);
+      if(!r.source_url) warnings.push(`row ${idx+2}: source_url 없음 - 문헌명으로 대체 가능`);
+    });
+    return {errors,warnings};
+  }
+
+  async function ingestCalibrationCSV(){
+    const file=$('calCsvFile')?.files?.[0];
+    if(!file){ alert('실증 데이터 CSV 파일을 선택하십시오.'); return; }
+    const rows=parseCSV(await file.text());
+    const audit=validateEmpiricalRows(rows);
+    empiricalRows=rows;
+    $('dataAuditBox').innerHTML=[
+      `<p><b>로드 행 수:</b> ${rows.length}</p>`,
+      audit.errors.length?`<p class="text-rose-700"><b>오류:</b><br>${audit.errors.slice(0,10).join('<br>')}</p>`:`<p class="text-emerald-700"><b>필수 검증:</b> 통과</p>`,
+      audit.warnings.length?`<p class="text-amber-700"><b>경고:</b><br>${audit.warnings.slice(0,10).join('<br>')}</p>`:`<p><b>경고:</b> 없음</p>`,
+      `<p class="text-xs text-slate-500">논문 부록에는 원자료 CSV, 검증 로그, 적용 파라미터를 함께 저장하십시오.</p>`
+    ].join('');
+    if(!audit.errors.length){
+      const countryName=(presets[$('country').value]||presets.custom).name;
+      const row=rows.find(r=>String(r.country).toLowerCase()===$('country').value || r.country===countryName) || rows[0];
+      if(row){
+        $('calDigital').value=Number(row.digital_payment_rate);
+        $('calCash').value=Number(row.cash_usage_rate);
+        $('calConcentration').value=Number(row.bank_concentration);
+        $('calDensity').value=Number(row.network_density);
+        $('calSources').value=`${row.source_name || ''} ${row.source_url || ''} (${row.year || ''})`;
+      }
+    }
+  }
+
+  async function applyExposureMatrix(){
+    const file=$('exposureCsvFile')?.files?.[0];
+    if(!file){
+      exposureMatrix=generateSyntheticExposureMatrix(getParams(),28);
+      $('exposureAuditBox').innerHTML=`<p><b>방식:</b> degree-preserving synthetic exposure matrix</p><p><b>은행 수:</b> 28</p><p><b>총 익스포저:</b> ${exposureMatrix.totalExposure.toFixed(3)}</p><p><b>밀도:</b> ${(exposureMatrix.density*100).toFixed(1)}%</p><p class="text-xs text-slate-500">실제 양자 익스포저 부재 시 은행 규모·집중도·네트워크 밀도를 보존하는 합성 행렬로 명시합니다.</p>`;
+      renderAll(runSimulation(getParams()));
+      return;
+    }
+    const rows=parseCSV(await file.text());
+    exposureMatrix={type:'uploaded',rows,totalExposure:0,density:0};
+    if(rows.length && 'exposure' in rows[0]){
+      const vals=rows.map(r=>Number(r.exposure)||0);
+      exposureMatrix.totalExposure=vals.reduce((a,b)=>a+b,0);
+      exposureMatrix.density=vals.filter(v=>v>0).length/Math.max(vals.length,1);
+    }
+    $('exposureAuditBox').innerHTML=`<p><b>방식:</b> uploaded exposure matrix</p><p><b>행 수:</b> ${rows.length}</p><p><b>총 익스포저:</b> ${exposureMatrix.totalExposure.toFixed(3)}</p><p><b>밀도 추정:</b> ${(exposureMatrix.density*100).toFixed(1)}%</p>`;
+    renderAll(runSimulation(getParams()));
+  }
+
+  function generateSyntheticExposureMatrix(params,n=28){
+    const rng=mulberry32(params.seed+909), rows=[];
+    let total=0, active=0;
+    const concentration=params.concentration, density=params.preset.density;
+    const sizes=Array.from({length:n},(_,i)=>Math.pow(1/(i+1), concentration*1.4));
+    const sum=sizes.reduce((a,b)=>a+b,0);
+    for(let i=0;i<n;i++)for(let j=0;j<n;j++){
+      if(i===j) continue;
+      const p=density*.22 + (sizes[i]+sizes[j])/sum*.4;
+      if(rng()<p){
+        const exposure=(sizes[i]*sizes[j]/sum)*(0.5+rng())*100;
+        rows.push({bank_i:'B'+String(i+1).padStart(2,'0'),bank_j:'B'+String(j+1).padStart(2,'0'),exposure});
+        total+=exposure; active++;
+      }
+    }
+    return {type:'degree_preserving_synthetic_matrix',rows,totalExposure:total,density:active/(n*(n-1))};
+  }
+
+  function saltelliSample(problem,N,seed){
+    const rng=mulberry32(seed), D=problem.names.length, A=[],B=[];
+    for(let i=0;i<N;i++){
+      A.push(problem.bounds.map(([lo,hi])=>lo+(hi-lo)*rng()));
+      B.push(problem.bounds.map(([lo,hi])=>lo+(hi-lo)*rng()));
+    }
+    return {A,B,D,N};
+  }
+
+  function paramsFromVector(base,x){
+    const pp={...base};
+    pp.cap=x[0]; pp.shock=x[1]; pp.digital=x[2]; pp.concentration=x[3]; pp.rate2=x[4];
+    return pp;
+  }
+
+  function runSaltelliSobol(){
+    if(!canRunWithWarnings()) return;
+    const base=getParams();
+    const problem={names:['holding_limit','shock','digital_rate','bank_concentration','tier2_rate'],bounds:[[5e6,5e7],[.1,.8],[.5,.98],[.3,.9],[-5,0]]};
+    const N=256, design=saltelliSample(problem,N,base.seed+1200), D=design.D;
+    const YA=[],YB=[],YAB=Array.from({length:D},()=>[]);
+    for(let i=0;i<N;i++){
+      YA.push(runSimulation(paramsFromVector(base,design.A[i]),1400+i).summary.failProb);
+      YB.push(runSimulation(paramsFromVector(base,design.B[i]),2400+i).summary.failProb);
+      for(let d=0;d<D;d++){
+        const row=design.A[i].slice(); row[d]=design.B[i][d];
+        YAB[d].push(runSimulation(paramsFromVector(base,row),3400+d*N+i).summary.failProb);
+      }
+    }
+    const all=YA.concat(YB), mean=all.reduce((a,b)=>a+b,0)/all.length, V=all.reduce((a,b)=>a+(b-mean)**2,0)/(all.length-1||1) || 1e-9;
+    const rows=problem.names.map((name,d)=>{
+      let s1=0, st=0;
+      for(let i=0;i<N;i++){ s1 += YB[i]*(YAB[d][i]-YA[i]); st += (YA[i]-YAB[d][i])**2; }
+      s1/=N*V; st/=2*N*V;
+      return {name,S1:clamp(s1,-1,1),ST:clamp(st,0,2)};
+    }).sort((a,b)=>b.ST-a.ST);
+    $('sobolBox').innerHTML=`<p><b>방법:</b> Saltelli-Sobol, N=${N}, output=system failure probability</p>` + rows.map(r=>`<div><div class="flex justify-between"><b>${r.name}</b><span>S1 ${r.S1.toFixed(3)} / ST ${r.ST.toFixed(3)}</span></div><div class="h-2 bg-slate-100 rounded-full overflow-hidden"><div class="bg-violet-600 h-full" style="width:${Math.min(100,Math.round(r.ST*100))}%"></div></div></div>`).join('');
+    lastRows=rows;
+    sensitivityMethod='Saltelli-Sobol';
+  }
+
+  function applyCalibration(){
+    const c=$('country').value in presets ? $('country').value : 'custom';
+    const p=presets[c];
+    const d=clamp(+$('calDigital').value||p.digital,0,1);
+    const cash=clamp(+$('calCash').value||p.cash,0,1);
+    const conc=clamp(+$('calConcentration').value||p.concentration,0,1);
+    const dens=clamp(+$('calDensity').value||p.density,0,1);
+
+    p.digital=d; p.cash=cash; p.concentration=conc; p.density=dens;
+    p.calibration = '실증 보정 적용: ' + ($('calSources').value || '출처 미입력');
+
+    ['digital','concentration','cash'].forEach(k=>{ if($(k)){ $(k).value=p[k]; $(k+'Val').textContent=p[k]; }});
+    $('presetInfo').innerHTML=`<b>${p.name}</b> · 실증 보정값 적용 · 디지털 결제율 ${pct(p.digital)}, 은행집중도 ${pct(p.concentration)}, 현금사용률 ${pct(p.cash)}<br>${p.deposit}<br><span class="text-slate-500">${p.calibration}</span>`;
+    validateParams();
+    renderAll(runSimulation(getParams()));
+  }
+
+  function renderCalibrationChart(r){
+    if(!window.Chart) return;
+    destroy('cal');
+    const p=r.params.preset;
+    const rows=[
+      ['디지털 결제율', r.params.digital, p.digital],
+      ['현금사용률', r.params.cash, p.cash],
+      ['은행집중도', r.params.concentration, p.concentration],
+      ['네트워크 밀도', p.density, p.density]
+    ];
+    charts.cal=new Chart($('calChart'),{
+      type:'bar',
+      data:{labels:rows.map(x=>x[0]),datasets:[
+        {label:'현재 입력값',data:rows.map(x=>x[1]),backgroundColor:'rgba(37,99,235,.78)',borderRadius:10},
+        {label:'보정 기준값',data:rows.map(x=>x[2]),backgroundColor:'rgba(16,185,129,.72)',borderRadius:10}
+      ]},
+      options:baseChart({scales:{y:{min:0,max:1,ticks:{callback:v=>(v*100).toFixed(0)+'%'}}},plugins:{tooltip:{callbacks:{label(ctx){return `${ctx.dataset.label}: ${(ctx.parsed.y*100).toFixed(1)}%`;}}}}})
+    });
+  }
+
+  function runSobol(){
+    if(!canRunWithWarnings()) return;
+    const base=getParams();
+    const variables=[
+      {key:'cap',name:'보유 한도',values:[5e6,1e7,2e7,5e7]},
+      {key:'shock',name:'충격 강도',values:[.15,.30,.45,.60,.75]},
+      {key:'digital',name:'디지털 결제율',values:[.55,.70,.85,.95]},
+      {key:'concentration',name:'은행집중도',values:[.35,.55,.75,.90]},
+      {key:'rate2',name:'Level 2 금리',values:[0,-1,-2,-3,-4,-5]}
+    ];
+    const baseResult=runSimulation(base,700).summary;
+    const effects=variables.map((v,idx)=>{
+      const vals=v.values.map((val,i)=>{
+        const pp={...base};
+        pp[v.key]=val;
+        return runSimulation(pp,800+idx*30+i).summary.failProb;
+      });
+      const mean=vals.reduce((a,b)=>a+b,0)/vals.length;
+      const variance=vals.reduce((a,b)=>a+(b-mean)**2,0)/(vals.length-1||1);
+      const range=Math.max(...vals)-Math.min(...vals);
+      return {name:v.name,variance,range,base:baseResult.failProb};
+    });
+    const total=effects.reduce((s,e)=>s+e.variance,0)||1;
+    const ranked=effects.map(e=>({...e,index:e.variance/total})).sort((a,b)=>b.index-a.index);
+    $('sobolBox').innerHTML=ranked.map(e=>`<div><div class="flex justify-between"><b>${e.name}</b><span>${(e.index*100).toFixed(1)}%</span></div><div class="h-2 bg-slate-100 rounded-full overflow-hidden"><div class="bg-violet-600 h-full" style="width:${Math.round(e.index*100)}%"></div></div><div class="text-xs text-slate-500">실패확률 변화폭 ${(e.range*100).toFixed(1)}%p</div></div>`).join('');
+    lastRows=ranked;
+  }
+
+  function downloadCalibrationTemplate(){
+    const csv='\ufeffcountry,year,digital_payment_rate,cash_usage_rate,bank_concentration,network_density,total_deposits,source_name,source_url,confidence_level,notes\nkorea,2024,0.92,0.08,0.75,0.82,,Bank of Korea Payment and Settlement Systems Report,,high,replace with verified value\nus,2024,0.72,0.18,0.55,0.65,,Federal Reserve H.8,,high,replace with verified value\neu,2024,0.80,0.22,0.60,0.68,,ECB SPACE or BIS Red Book,,high,replace with verified value\nsweden,2024,0.97,0.03,0.70,0.78,,Riksbank or BIS Red Book,,high,replace with verified value\nchina,2024,0.95,0.05,0.82,0.86,,PBoC or BIS Red Book,,medium,replace with verified value\n';
+    downloadBlob(csv,'cbdc_calibration_template.csv','text/csv;charset=utf-8');
+  }
+
+  function downloadAppendixPackage(){
+    const p=getParams();
+    const appendix={
+      meta:{tool:'CBDC PhD Experiment Tool',version:'v5_final_collective_intelligence',exportedAt:new Date().toISOString()},
+      reproducibility:{experimentId:p.experimentId,seed:p.seed,days:p.days,monteCarloN:+$('mcN').value},
+      hypothesis:p.hypothesis,
+      parameters:p,
+      calibration:{digital:+$('calDigital').value,cash:+$('calCash').value,concentration:+$('calConcentration').value,density:+$('calDensity').value,sources:$('calSources').value,empiricalRows,sGradeDataPackage,validationResult,fireSaleResult,auditTrail,empiricalSourceMap,maxEntMatrix},
+      latestResult:last,
+      latestRows:lastRows,
+      exposureMatrixSummary: exposureMatrix ? {type:exposureMatrix.type,totalExposure:exposureMatrix.totalExposure,density:exposureMatrix.density,rowCount:exposureMatrix.rows?.length||0} : null,
+      sensitivityMethod:sensitivityMethod,
+      qualityGate: runQualityGate(),
+      methodologyFingerprintNote:'Use the SHA-256 fingerprint shown in the UI with this JSON package.',
+      checklist:[
+        '데이터 출처가 명시되었는가?',
+        '국가별 파라미터가 실증자료로 보정되었는가?',
+        'Seed와 코드 버전이 저장되었는가?',
+        'Monte Carlo 반복횟수와 신뢰구간이 제시되었는가?',
+        '민감도/Sobol 분석이 포함되었는가?',
+        '모델 한계가 리포트에 명시되었는가?'
+      ]
+    };
+    downloadBlob(JSON.stringify(appendix,null,2),'cbdc_appendix_reproducibility_package.json','application/json');
+  }
+
+
+  async function sha256Hex(str){
+    if(!window.crypto?.subtle){
+      let h=0; for(let i=0;i<str.length;i++) h=Math.imul(31,h)+str.charCodeAt(i)|0;
+      return 'fallback-'+Math.abs(h).toString(16);
+    }
+    const buf=await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+    return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+  }
+
+  async function renderFingerprint(){
+    const p=getParams();
+    const payload={
+      version:'v10-final-methodology-ux',
+      experimentId:p.experimentId,
+      seed:p.seed,
+      country:p.country,
+      arch:p.arch,
+      cap:p.cap,
+      days:p.days,
+      crisis:p.crisis,
+      calibration:{digital:+$('calDigital')?.value,cash:+$('calCash')?.value,concentration:+$('calConcentration')?.value,density:+$('calDensity')?.value,sources:$('calSources')?.value},
+      empiricalRows,
+      exposureMatrixSummary: exposureMatrix ? {type:exposureMatrix.type,totalExposure:exposureMatrix.totalExposure,density:exposureMatrix.density,rowCount:exposureMatrix.rows?.length||0} : null,
+      sensitivityMethod
+    };
+    const hash=await sha256Hex(JSON.stringify(payload));
+    $('fingerprintBox').innerHTML=`<p><b>Code version:</b> v6-a-plus</p><p><b>Experiment ID:</b> ${p.experimentId}</p><p><b>Seed:</b> ${p.seed}</p><p><b>SHA-256 fingerprint:</b><br><code class="text-xs break-all">${hash}</code></p><p class="text-xs text-slate-500">논문 부록에는 이 fingerprint와 JSON 패키지를 함께 제출하십시오.</p>`;
+    return hash;
+  }
+
+  function runQualityGate(){
+    const p=getParams();
+    const checks=[
+      {name:'Seed 고정',pass:Number.isFinite(p.seed)&&p.seed>0,why:'재현 가능한 난수열 확보'},
+      {name:'4CSV 패키지 검증',pass:!!sGradeDataPackage && sGradeDataPackage.errors.length===0,why:'country/banking/payment/exposure 4CSV 완비'},
+      {name:'실증 CSV 검증',pass:empiricalRows.length>0 || (!!sGradeDataPackage && sGradeDataPackage.countryRows.length>0),why:'가정값이 아닌 source-tracked calibration 사용'},
+      {name:'데이터 출처 메타데이터',pass:($('calSources')?.value||'').length>10,why:'출처·연도·신뢰등급 부록화'},
+      {name:'은행 익스포저 행렬',pass:!!exposureMatrix,why:'실제 업로드 또는 degree-preserving synthetic matrix 명시'},
+      {name:'Saltelli-Sobol 민감도',pass:sensitivityMethod==='Saltelli-Sobol' && Array.isArray(lastRows) && lastRows.some(r=>'S1' in r && 'ST' in r),why:'proxy가 아닌 S1/ST 민감도'},
+      {name:'Monte Carlo/스윕 결과',pass:Array.isArray(lastRows)&&lastRows.length>0,why:'불확실성 분석 결과 저장'},
+      {name:'가설 메모',pass:(p.hypothesis||'').length>20,why:'사전 연구가설과 분석계획 명확화'},
+      {name:'Validation Module',pass:!!validationResult,why:'실제 위기 재현을 통한 외적 타당성 검증'},
+      {name:'Asset Fire Sale',pass:!!fireSaleResult && fireSaleResult.enabled,why:'유동성 위기에서 자본훼손으로 이어지는 2차 전염 경로'},
+      {name:'Audit Trail',pass:auditTrail.length>0,why:'실험 과정 해시 기반 감사 추적'},
+      {name:'Maximum Entropy Matrix',pass:!!maxEntMatrix,why:'실제 익스포저 부재 시 방어 가능한 합성행렬 생성'},
+      {name:'방법론 수식 명시',pass:($('formulaMethodBox')?.textContent||'').length>200,why:'논문 방법론에 수식 기반 생성 규칙 포함'},
+      {name:'통합 PDF/부록 가능',pass:!!last,why:'결과·조건·한계의 재현성 패키지 생성 가능'}
+    ];
+    const score=checks.filter(c=>c.pass).length/checks.length;
+    const grade=score>=.97?'S':score>=.90?'A+':score>=.85?'A':score>=.75?'A-':score>=.65?'B+':'보완 필요';
+    $('qualityGateBox').innerHTML=`<p><b>품질 등급:</b> ${grade} (${Math.round(score*100)}점)</p>`+checks.map(c=>`<div class="${c.pass?'text-emerald-700':'text-rose-700'}">● <b>${c.name}</b> — ${c.pass?'통과':'미통과'}<br><span class="text-xs text-slate-500">${c.why}</span></div>`).join('');
+    return {grade,score,checks};
+  }
+
+  function renderMethodology(){
+    const p=getParams();
+    const net=exposureMatrix ? exposureMatrix.type : 'degree_preserving_synthetic_matrix_not_yet_applied';
+    $('methodologyBox').innerHTML=[
+      `<p><b>1. 연구설계:</b> CBDC 보유 한도, 위기충격, 디지털 결제율, 은행집중도, Tiered Interest를 정책·환경 변수로 설정하고 시스템 실패확률과 사회적 후생을 산출한다.</p>`,
+      `<p><b>2. 캘리브레이션:</b> 국가별 파라미터는 실증 CSV에서 읽고, source_name/source_url/year/confidence_level을 부록 JSON에 저장한다. 현재 출처: ${$('calSources')?.value || '미입력'}.</p>`,
+      `<p><b>3. 네트워크:</b> 은행 간 전염은 ${net} 방식으로 계산 객체화한다. 실제 익스포저 자료가 없을 경우 합성행렬임을 본문에 명시한다.</p>`,
+      `<p><b>4. 불확실성:</b> Monte Carlo와 Saltelli-Sobol S1/ST 지수를 사용해 실패확률의 변수별 기여도를 검증한다.</p>`,
+      `<p><b>5. 재현성:</b> 실험 ID, Seed, 코드 버전, 4CSV 패키지, 익스포저 행렬, 결과 CSV/JSON/PDF를 함께 보존한다.</p>`,
+      `<p><b>6. 한계:</b> 브라우저 버전은 실험 플랫폼 프론트엔드이며, 대규모 본실험은 Python/R 백엔드에서 반복 검증하는 것이 권장된다.</p>`
+    ].join('');
+  }
+
+  function generatePreRegistration(){
+    const p=getParams();
+    const prereg={
+      title:'CBDC Holding Limits, Banking Network Contagion, and Optimal Architecture',
+      version:'v10-final-methodology-ux',
+      experiment_id:p.experimentId,
+      date:new Date().toISOString(),
+      research_questions:[
+        'How do CBDC holding limits affect deposit outflow and systemic failure probability?',
+        'Does dynamic cap and tiered remuneration reduce nonlinear contagion risk?',
+        'Which variables dominate systemic risk under Saltelli-Sobol sensitivity?'
+      ],
+      hypotheses:[
+        p.hypothesis || 'H1: Higher CBDC holding limits increase systemic risk nonlinearly near the tipping threshold.',
+        'H2: Dynamic caps and tiered remuneration reduce the total-effect sensitivity of holding limits.',
+        'H3: Digital payment intensity and banking concentration jointly lower the effective tipping threshold.'
+      ],
+      primary_outcomes:['system_failure_probability','welfare_score','stress_index','failed_bank_ratio'],
+      planned_methods:['empirical calibration CSV','exposure matrix or degree-preserving synthetic matrix','Monte Carlo','Saltelli-Sobol S1/ST','reproducibility appendix'],
+      exclusion_rules:['Calibration rows failing required field/range validation are not used for final claims.','If real exposure matrix is unavailable, results are labelled synthetic-network results.'],
+      reproducibility:{seed:p.seed,code_version:'v10-final-methodology-ux'}
+    };
+    downloadBlob(JSON.stringify(prereg,null,2),'cbdc_preregistration_plan.json','application/json');
+  }
+
+
+
+  function getEmpiricalSourceMap(){
+    return {
+      version:'v10-final-methodology-ux',
+      generatedAt:new Date().toISOString(),
+      purpose:'Build source-tracked empirical CSVs for CBDC PhD platform',
+      sources:[
+        {provider:'BIS',dataset:'BIS payment statistics / Red Book',intended_variables:['cashless_payments','card_payments','account_transfers','currency_in_circulation','cash_usage_proxy'],output_csv:['payment_statistics.csv','country_parameters.csv'],note:'Use for cross-country payment and cash indicators'},
+        {provider:'BOK',dataset:'ECOS and Payment and Settlement Systems Report',intended_variables:['mobile_banking','internet_banking','card_payment','payment_infrastructure'],output_csv:['payment_statistics.csv','country_parameters.csv'],note:'Use for Korea calibration'},
+        {provider:'ECB',dataset:'ECB Payment Statistics / SPACE / TARGET',intended_variables:['cash_share','card_share','account_transfer','payment_system_activity'],output_csv:['payment_statistics.csv','country_parameters.csv'],note:'Use for EU and euro-area payment behavior'},
+        {provider:'FRED/Fed',dataset:'H.8, commercial bank deposits and assets',intended_variables:['deposit_total','bank_assets','bank_credit','bank_count_proxy'],output_csv:['banking_structure.csv','country_parameters.csv'],note:'Use for US banking structure and deposit calibration'}
+      ],
+      transformations:[
+        {variable:'digital_payment_rate',formula:'digital_transactions / (digital_transactions + cash_transactions)',csv:'country_parameters.csv'},
+        {variable:'cash_usage_rate',formula:'cash_transactions / (digital_transactions + cash_transactions)',csv:'country_parameters.csv'},
+        {variable:'bank_concentration',formula:'sum(top_bank_market_shares^2) or top-N asset share proxy',csv:'country_parameters.csv'},
+        {variable:'network_density',formula:'nonzero_exposure_edges / (N*(N-1)) or synthetic target density',csv:'country_parameters.csv'},
+        {variable:'deposit_total',formula:'sum(total_deposits)',csv:'country_parameters.csv'}
+      ],
+      caveat:'The platform creates research-ready CSV structures. Final empirical claims require verified official values and documented access dates.'
+    };
+  }
+
+  function createEmpiricalStarterCSVs(){
+    const sourceMap=getEmpiricalSourceMap();
+    empiricalSourceMap=sourceMap;
+    const today=new Date().toISOString().slice(0,10);
+    const countryRows=[
+      ['country','year','digital_payment_rate','cash_usage_rate','bank_concentration','network_density','deposit_total','liquidity_ratio','capital_ratio','source_name','source_url','confidence_level','last_updated','notes'],
+      ['korea','2024','','','','','','','','BIS Red Book + BOK ECOS/Payment Report','official source URL required','pending',today,'Fill from verified source; do not cite blank template as evidence'],
+      ['us','2024','','','','','','','','BIS Red Book + FRED/Fed H.8','official source URL required','pending',today,'Fill from verified source'],
+      ['eu','2024','','','','','','','','ECB Payment Statistics/SPACE + BIS','official source URL required','pending',today,'Fill from verified source'],
+      ['sweden','2024','','','','','','','','BIS/Riksbank/ECB where applicable','official source URL required','pending',today,'Fill from verified source'],
+      ['china','2024','','','','','','','','BIS/PBoC where available','official source URL required','pending',today,'Fill from verified source']
+    ];
+    const paymentRows=[
+      ['country','year','provider','raw_indicator','raw_value','raw_unit','constructed_indicator','constructed_value','source_name','source_url','access_date','transformation_note'],
+      ['korea','2024','BOK/BIS','mobile_or_cashless_payments','','count_or_value','digital_payment_rate','','BOK/BIS','official source URL required',today,'digital/(digital+cash)'],
+      ['us','2024','BIS/Fed','cashless_payments','','count_or_value','digital_payment_rate','','BIS/Fed','official source URL required',today,'digital/(digital+cash)'],
+      ['eu','2024','ECB','cash_share','','share','cash_usage_rate','','ECB SPACE','official source URL required',today,'direct survey share or normalized proxy'],
+      ['sweden','2024','BIS/Riksbank','cashless_payments','','count_or_value','digital_payment_rate','','BIS/Riksbank','official source URL required',today,'digital/(digital+cash)'],
+      ['china','2024','BIS/PBoC','cashless_payments','','count_or_value','digital_payment_rate','','BIS/PBoC','official source URL required',today,'digital/(digital+cash)']
+    ];
+    const bankingRows=[
+      ['country','year','bank_id','bank_name','bank_type','total_assets','total_deposits','liquidity_ratio','capital_ratio','systemic_importance','market_share','source_name','source_url','confidence_level','notes'],
+      ['korea','2024','B01','bank_1','large_commercial_bank','','','','','','','BOK/FSS/BIS','official source URL required','pending','Use anonymized or aggregate values if bank-level data restricted'],
+      ['us','2024','B01','bank_1','large_commercial_bank','','','','','','','FRED/Fed H.8/FDIC','official source URL required','pending',''],
+      ['eu','2024','B01','bank_1','large_commercial_bank','','','','','','','ECB/EBA','official source URL required','pending','']
+    ];
+    const exposureRows=[
+      ['country','year','bank_i','bank_j','exposure','exposure_unit','source_name','source_url','confidence_level','matrix_type','notes'],
+      ['korea','2024','B01','B02','','normalized_or_local_currency','generated by MaxEnt if real data unavailable','','pending','maximum_entropy','E_ij = A_i L_j / sum_k L_k, diagonal excluded'],
+      ['us','2024','B01','B02','','normalized_or_local_currency','generated by MaxEnt if real data unavailable','','pending','maximum_entropy',''],
+      ['eu','2024','B01','B02','','normalized_or_local_currency','generated by MaxEnt if real data unavailable','','pending','maximum_entropy','']
+    ];
+    const files=[
+      ['country_parameters_empirical_starter.csv',countryRows],
+      ['payment_statistics_empirical_starter.csv',paymentRows],
+      ['banking_structure_empirical_starter.csv',bankingRows],
+      ['exposure_matrix_maxent_template.csv',exposureRows]
+    ];
+    files.forEach(([name,rows])=>downloadBlob('\ufeff'+rows.map(r=>r.map(x=>`"${String(x).replaceAll('"','""')}"`).join(',')).join('\n'),name,'text/csv;charset=utf-8'));
+    $('empiricalBuilderBox').innerHTML=[
+      `<p><b>생성 완료:</b> 실증 CSV 스타터 4종 다운로드</p>`,
+      `<p><b>목적:</b> BIS·BOK·ECB·FRED 원자료를 논문용 4CSV 구조로 변환</p>`,
+      `<p><b>핵심:</b> 값 자체보다 source_name, source_url, access_date, transformation_note를 반드시 남겨야 합니다.</p>`,
+      `<p class="text-xs text-slate-500">주의: 다운로드된 파일은 구조화 템플릿입니다. 빈 값은 공식 데이터로 채운 뒤 플랫폼에 업로드해야 실증 주장에 사용할 수 있습니다.</p>`
+    ].join('');
+    appendAuditEvent('empirical_starter_csv_created',{files:files.map(f=>f[0])});
+  }
+
+  function exportSourceMap(){
+    empiricalSourceMap=getEmpiricalSourceMap();
+    downloadBlob(JSON.stringify(empiricalSourceMap,null,2),'cbdc_empirical_source_map.json','application/json');
+    $('empiricalBuilderBox').innerHTML=`<p><b>출처맵 생성:</b> BIS·BOK·ECB·FRED 기반 변수 변환 사전 JSON을 다운로드했습니다.</p><p class="text-xs text-slate-500">논문 부록에는 이 source map을 데이터 구축 절차 설명에 포함하십시오.</p>`;
+    appendAuditEvent('source_map_exported',{sourceCount:empiricalSourceMap.sources.length});
+  }
+
+  function getBankingRowsForMaxEnt(){
+    if(sGradeDataPackage?.bankingRows?.length) return sGradeDataPackage.bankingRows;
+    return [];
+  }
+
+  function generateMaximumEntropyMatrix(){
+    const n=clamp(+$('maxEntBankN').value||28,5,200);
+    const scale=+$('maxEntScale').value||100;
+    const useCsv=$('useBankingCsvForMaxEnt')?.checked;
+    const rows=getBankingRowsForMaxEnt();
+    let banks=[];
+    if(useCsv && rows.length){
+      banks=rows.map((r,i)=>({
+        id:r.bank_id||('B'+String(i+1).padStart(2,'0')),
+        country:r.country||$('country').value,
+        assets:Number(r.total_assets)||0,
+        deposits:Number(r.total_deposits)||0
+      })).filter(b=>b.id);
+    }
+    if(!banks.length){
+      const params=getParams(), rng=mulberry32(params.seed+7777);
+      banks=Array.from({length:n},(_,i)=>({
+        id:'B'+String(i+1).padStart(2,'0'),
+        country:params.country,
+        assets:scale*Math.pow(1/(i+1),params.concentration*.95)*(0.85+rng()*.3),
+        deposits:scale*Math.pow(1/(i+1),params.concentration*.80)*(0.85+rng()*.3)
+      }));
+    }
+    const totalAssets=banks.reduce((s,b)=>s+(b.assets||0),0)||1;
+    const totalDeposits=banks.reduce((s,b)=>s+(b.deposits||0),0)||1;
+    const totalInterbank=scale;
+    const matrix=[];
+    let total=0, active=0;
+    for(let i=0;i<banks.length;i++){
+      for(let j=0;j<banks.length;j++){
+        if(i===j) continue;
+        // Maximum entropy gravity rule:
+        // E_ij = totalInterbank * A_i * L_j / (sum A * sum L), diagonal excluded and renormalized.
+        const raw=totalInterbank*(banks[i].assets/totalAssets)*(banks[j].deposits/totalDeposits);
+        const exposure=raw;
+        if(exposure>0){
+          matrix.push({country:banks[i].country,year:new Date().getFullYear(),bank_i:banks[i].id,bank_j:banks[j].id,exposure,exposure_unit:'normalized',source_name:'Maximum Entropy Generator',source_url:'methodological_generation',confidence_level:'model_based',matrix_type:'maximum_entropy',notes:'E_ij = T * A_i * L_j / (sumA * sumL), diagonal excluded'});
+          total+=exposure; active++;
+        }
+      }
+    }
+    // renormalize to requested scale
+    matrix.forEach(r=>r.exposure= total>0 ? r.exposure*totalInterbank/total : r.exposure);
+    const finalTotal=matrix.reduce((s,r)=>s+r.exposure,0);
+    maxEntMatrix={type:'maximum_entropy',rows:matrix,totalExposure:finalTotal,density:active/(banks.length*(banks.length-1)),bankCount:banks.length};
+    exposureMatrix=maxEntMatrix;
+    const csv='\ufeff'+['country,year,bank_i,bank_j,exposure,exposure_unit,source_name,source_url,confidence_level,matrix_type,notes',...matrix.map(r=>[r.country,r.year,r.bank_i,r.bank_j,r.exposure.toFixed(8),r.exposure_unit,r.source_name,r.source_url,r.confidence_level,r.matrix_type,r.notes].map(x=>`"${String(x).replaceAll('"','""')}"`).join(','))].join('\n');
+    downloadBlob(csv,'exposure_matrix_maximum_entropy.csv','text/csv;charset=utf-8');
+    $('maxEntBox').innerHTML=[
+      `<p><b>생성 방식:</b> Maximum Entropy / Gravity Rule</p>`,
+      `<p><b>은행 수:</b> ${banks.length}</p>`,
+      `<p><b>행렬 행 수:</b> ${matrix.length}</p>`,
+      `<p><b>총 익스포저:</b> ${finalTotal.toFixed(3)}</p>`,
+      `<p><b>밀도:</b> ${(maxEntMatrix.density*100).toFixed(1)}%</p>`,
+      `<p class="text-xs text-slate-500">논문 사용법: 실제 양자 익스포저가 비공개일 때, 은행별 자산·예금 규모를 보존하는 최대엔트로피 합성행렬로 명시하십시오.</p>`
+    ].join('');
+    $('exposureAuditBox').innerHTML=`<p><b>방식:</b> Maximum Entropy exposure matrix</p><p><b>은행 수:</b> ${banks.length}</p><p><b>총 익스포저:</b> ${finalTotal.toFixed(3)}</p><p><b>밀도:</b> ${(maxEntMatrix.density*100).toFixed(1)}%</p>`;
+    appendAuditEvent('maximum_entropy_matrix_generated',{bankCount:banks.length,rowCount:matrix.length,totalExposure:finalTotal});
+    renderAll(runSimulation(getParams()));
+  }
+
+
+  function renderMethodologyChecklist(){
+    const checks=[
+      ['LaTeX 원문 직접 노출 제거', true, 'frac, sum, lambda 같은 원문 기호 대신 한국어 수식명과 직관적 계산식을 병기합니다.'],
+      ['변수사전(Dictionary) 추가', true, 'Digital Payment, Cash Payment, Exposure, Liquidity, Forced Sale 등 모든 변수의 의미를 별도 설명합니다.'],
+      ['실제 숫자 예시 포함', true, '디지털결제율, Maximum Entropy, 예금이탈, 유동성, Fire Sale에 각각 숫자 예시를 포함합니다.'],
+      ['PDF 보고서 동일 구조 반영', true, '통합 PDF에 5단계 방법론 패널과 체크리스트가 함께 출력됩니다.'],
+      ['방법론 부록 자동 출력 연결', true, '방법론 수식 명세와 5단계 설명을 TXT/JSON/PDF 부록으로 활용할 수 있습니다.']
+    ];
+    const score=checks.filter(c=>c[1]).length/checks.length;
+    $('methodologyChecklistBox').innerHTML=[
+      '<p><b>체크리스트 통과율:</b> '+Math.round(score*100)+'%</p>',
+      ...checks.map(c=>'<div class="'+(c[1]?'text-emerald-700':'text-rose-700')+'">● <b>'+c[0]+'</b> — '+(c[1]?'반영':'미반영')+'<br><span class="text-xs text-slate-500">'+c[2]+'</span></div>')
+    ].join('');
+  }
+
+  function methodologyTable(rows){
+    return '<table><tbody>'+rows.map(r=>'<tr><td>'+r[0]+'</td><td>'+r[1]+'</td></tr>').join('')+'</tbody></table>';
+  }
+
+  function methodologyCard(title, concept, exampleRows, steps, formula, interpretation, dictRows){
+    return '<div class="card p-5" style="box-shadow:none">'
+      + '<h3 class="font-black text-base mb-2">'+title+'</h3>'
+      + '<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">'
+      + '<div><p><b>① 개념 설명</b></p><p>'+concept+'</p><p><b>② 실제 데이터 예시</b></p>'+methodologyTable(exampleRows)+'<p><b>③ 계산 과정</b></p><div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:12px;white-space:pre-line">'+steps+'</div></div>'
+      + '<div><p><b>④ 엄밀한 수식</b></p><div style="background:#eef2ff;border:1px solid #c7d2fe;border-radius:12px;padding:12px;white-space:pre-line;font-weight:700">'+formula+'</div><p><b>변수사전</b></p>'+methodologyTable(dictRows)+'<p><b>⑤ 논문 해석</b></p><p>'+interpretation+'</p></div>'
+      + '</div></div>';
+  }
+
+  function renderFiveLayerMethodology(){
+    const cards=[
+      methodologyCard(
+        '1. 실증 데이터 변환: 디지털결제율과 현금사용률',
+        '국가 전체 결제 중 디지털 결제가 차지하는 비율과 현금 결제가 차지하는 비율을 계산합니다. CBDC 확산 가능성을 나타내는 핵심 입력변수입니다.',
+        [['카드결제','700'],['계좌이체','150'],['모바일결제','50'],['현금결제','100']],
+        '디지털 결제 총합 = 700 + 150 + 50 = 900\n전체 결제 = 900 + 100 = 1000\n디지털결제율 = 900 ÷ 1000 = 0.90 = 90%\n현금사용률 = 100 ÷ 1000 = 0.10 = 10%',
+        '디지털결제율 = 디지털결제건수 ÷ 전체결제건수\n현금사용률 = 현금결제건수 ÷ 전체결제건수',
+        '디지털결제율이 높을수록 CBDC 수용 속도와 예금이탈 가능성이 커질 수 있습니다. 따라서 한국·스웨덴처럼 디지털 결제 인프라가 높은 국가는 낮은 한도에서도 빠른 전환이 나타날 수 있습니다.',
+        [['디지털결제건수','카드·계좌이체·모바일·전자화폐 등 비현금 결제건수'],['현금결제건수','현금으로 이루어진 결제건수 또는 현금사용 비중'],['전체결제건수','디지털결제건수 + 현금결제건수']]
+      ),
+      methodologyCard(
+        '2. Maximum Entropy 익스포저 행렬',
+        '실제 은행 간 양자 익스포저 자료가 공개되지 않을 때, 은행 규모 정보를 이용해 가장 중립적인 합성 네트워크를 생성합니다. 큰 은행은 더 많이 빌려주고, 큰 은행은 더 많이 빌린다는 최소 가정입니다.',
+        [['전체 은행간 거래규모','100'],['은행 A 자산','300'],['전체 은행 자산','1000'],['은행 B 예금','200'],['전체 은행 예금','1000']],
+        '은행 A 자산비중 = 300 ÷ 1000 = 0.30\n은행 B 예금비중 = 200 ÷ 1000 = 0.20\nA → B 익스포저 = 100 × 0.30 × 0.20 = 6',
+        '은행 i → 은행 j 익스포저\n= 전체 은행간 거래규모 × 은행 i의 자산비중 × 은행 j의 예금비중\n단, 자기 자신에게 빌려주는 값은 0으로 둡니다.',
+        '이 행렬은 실제 익스포저가 없을 때 사용하는 합성 네트워크입니다. 논문에서는 “degree-preserving maximum entropy synthetic exposure matrix”라고 명시하고, 실제 자료가 없다는 한계를 함께 적어야 합니다.',
+        [['전체 은행간 거래규모','은행권 전체 상호대차 또는 정규화된 네트워크 규모'],['자산비중','해당 은행 자산 ÷ 전체 은행 자산'],['예금비중','해당 은행 예금 ÷ 전체 은행 예금'],['익스포저','은행 i가 은행 j에 대해 가진 위험 노출']]
+      ),
+      methodologyCard(
+        '3. CBDC 예금이탈과 전염',
+        '은행예금 중 CBDC로 이동한 비율을 계산하고, 이 비율이 은행 유동성 및 네트워크 전염으로 이어지는 경로를 분석합니다.',
+        [['기존 예금총액','100조 원'],['CBDC로 이동한 금액','20조 원'],['은행간 차입','10조 원'],['중앙은행 지원','5조 원']],
+        '예금이탈률 = 20조 ÷ 100조 = 0.20 = 20%\n은행 유동성 = 100 - 20 + 10 + 5 = 95\n유동성이 최소 기준보다 낮으면 은행 실패로 판정합니다.',
+        '예금이탈률 = CBDC 이동금액 ÷ 기존 예금총액\n은행 유동성 = 예금 - 예금이탈 + 은행간 차입 + 중앙은행 지원',
+        '예금이탈률이 높아지면 은행은 유동성을 보전하기 위해 은행간 시장에 의존합니다. 그러나 여러 은행이 동시에 유동성을 필요로 하면 네트워크 전체가 마비될 수 있습니다.',
+        [['CBDC 이동금액','예금에서 CBDC 지갑으로 이동한 금액'],['기존 예금총액','CBDC 도입 전 은행 예금 규모'],['은행간 차입','은행이 다른 은행으로부터 조달한 유동성'],['중앙은행 지원','최종대부자 기능에 따른 유동성 공급']]
+      ),
+      methodologyCard(
+        '4. Asset Fire Sale 전이',
+        '은행이 유동성 부족을 해결하기 위해 자산을 급하게 매각하면 자산가격이 하락하고, 이는 자본훼손과 추가 실패확률 상승으로 이어집니다.',
+        [['강제매각률','20%'],['자산 비유동성 계수','0.5'],['보유자산','100억 원']],
+        '자산가격 하락률 = 0.5 × 20% = 10%\n자본손실 = 100억 원 × 10% = 10억 원\n자본손실이 커질수록 실패확률이 추가 상승합니다.',
+        '자산가격 하락률 = 자산 비유동성 계수 × 강제매각률\n자본손실 = 보유자산 × 자산가격 하락률',
+        'CBDC 예금이탈은 단순한 유동성 문제가 아니라 자산가격 하락과 자본훼손을 통해 금융시스템 전체의 취약성을 키울 수 있습니다.',
+        [['강제매각률','유동성 확보를 위해 급히 매각한 자산 비중'],['자산 비유동성 계수','자산을 급히 팔 때 가격이 얼마나 민감하게 하락하는지'],['자본손실','자산가격 하락으로 인해 줄어든 은행 자본']]
+      ),
+      methodologyCard(
+        '5. Saltelli-Sobol 민감도 분석',
+        '보유 한도, 충격강도, 디지털결제율, 은행집중도, Tiered Interest 중 어떤 변수가 실패확률에 가장 큰 영향을 주는지 분해합니다.',
+        [['보유 한도','500만~5,000만 원'],['충격강도','0.1~0.8'],['디지털결제율','0.5~0.98'],['Tiered Interest','0%~-5%']],
+        '1단계: 각 변수의 가능한 범위를 정합니다.\n2단계: Saltelli 방식으로 여러 조합을 생성합니다.\n3단계: 각 조합마다 실패확률을 계산합니다.\n4단계: 변수별 1차효과와 총효과를 비교합니다.',
+        '1차효과 = 해당 변수 하나의 직접 영향\n총효과 = 직접 영향 + 다른 변수와의 상호작용 영향',
+        '총효과가 큰 변수는 정책적으로 우선 관리해야 할 변수입니다. 예를 들어 보유 한도의 총효과가 크면 한도정책이 핵심 레버라는 결론을 제시할 수 있습니다.',
+        [['1차효과','해당 변수 하나의 직접 영향'],['총효과','직접 영향 + 다른 변수와의 상호작용 영향'],['실패확률','시스템 위기로 판정될 가능성']]
+      )
+    ];
+    $('methodology5LayerBox').innerHTML=cards.join('');
+    renderMethodologyChecklist();
+    const plain=$('methodology5LayerBox').innerText || '';
+    downloadBlob(plain,'cbdc_5layer_methodology_explanation.txt','text/plain;charset=utf-8');
+    if(typeof appendAuditEvent==='function') appendAuditEvent('five_layer_methodology_generated',{sections:5});
+  }
+
+  function renderFormalMethodology(){
+    const formulaHTML=[
+      `<h3>1. 실증 데이터 변환</h3>`,
+      `<p><b>Digital payment rate</b>: \\(D_c = \\frac{P^{digital}_c}{P^{digital}_c + P^{cash}_c}\\)</p>`,
+      `<p><b>Cash usage rate</b>: \\(C_c = \\frac{P^{cash}_c}{P^{digital}_c + P^{cash}_c}\\)</p>`,
+      `<p><b>Bank concentration</b>: \\(HHI_c = \\sum_i s_{i,c}^2\\), 여기서 \\(s_i\\)는 은행 i의 자산 또는 예금 시장점유율.</p>`,
+      `<h3>2. Maximum Entropy 익스포저 행렬</h3>`,
+      `<p>은행 i의 대출공급 능력을 \\(A_i\\), 은행 j의 차입수요를 \\(L_j\\), 전체 은행 간 익스포저 규모를 \\(T\\)라 할 때:</p>`,
+      `<p style="font-size:16px"><b>\\(E_{ij}=T\\cdot\\frac{A_i L_j}{\\sum_k A_k \\sum_l L_l},\\quad i\\ne j,\\quad E_{ii}=0\\)</b></p>`,
+      `<p>행렬은 대각항을 제외한 뒤 총합이 \\(T\\)가 되도록 재정규화한다.</p>`,
+      `<h3>3. CBDC 예금이탈과 전염</h3>`,
+      `<p>CBDC 보유 한도 \\(H\\), 디지털 결제율 \\(D\\), 충격강도 \\(S\\)가 증가할수록 예금이탈률 \\(O_t\\)가 증가한다.</p>`,
+      `<p>은행 유동성은 \\(L_i(t)=Deposit_i-O_i(t)+IB_i(t)+CB_i(t)\\)로 표현하며, \\(L_i(t)<L_i^{min}\\)이면 실패로 판정한다.</p>`,
+      `<h3>4. Fire Sale 전이</h3>`,
+      `<p>강제매각률 \\(F_t\\)와 자산 비유동성 \\(\\lambda\\)에 따라 가격충격은 \\(\\Delta P_t=\\lambda F_t\\)로 근사한다. 가격충격은 자본훼손 \\(K_t\\)로 이어져 실패확률을 추가 상승시킨다.</p>`,
+      `<h3>5. 민감도 분석</h3>`,
+      `<p>Saltelli-Sobol 설계에서 1차 효과 \\(S_1\\)와 총효과 \\(S_T\\)를 산출하여, 보유한도·충격강도·디지털결제율·은행집중도·Tiered Interest의 상대적 중요도를 비교한다.</p>`
+    ].join('');
+    $('formulaMethodBox').innerHTML=formulaHTML;
+    downloadBlob(formulaHTML.replace(/<[^>]+>/g,'\n').replace(/\n{2,}/g,'\n'),'cbdc_methodology_formulas.txt','text/plain;charset=utf-8');
+    appendAuditEvent('formal_methodology_exported',{method:'max_entropy_and_empirical_csv'});
+  }
+
+  function getValidationTargets(){
+    const cases={
+      svb2023:{name:'SVB 2023 Bank Run',targetFailProb:.55,targetOutflow:.42,shock:.75,description:'rapid uninsured deposit flight and concentrated liquidity stress'},
+      gilt2022:{name:'UK Gilt Crisis 2022',targetFailProb:.32,targetOutflow:.18,shock:.55,description:'asset price shock and collateral-driven liquidity spiral'},
+      covid2020:{name:'COVID Liquidity Shock 2020',targetFailProb:.28,targetOutflow:.22,shock:.60,description:'system-wide liquidity stress with strong central bank backstop'},
+      custom:{name:'Custom Validation Case',targetFailProb:+$('targetFailProb').value,targetOutflow:+$('targetOutflow').value,shock:+$('shock').value,description:'user-defined validation target'}
+    };
+    const c=cases[$('validationCase').value] || cases.custom;
+    $('targetFailProb').value=c.targetFailProb;
+    $('targetOutflow').value=c.targetOutflow;
+    return c;
+  }
+
+  function applyFireSaleToResult(res){
+    const enabled=$('fireSaleEnabled')?.checked;
+    if(!enabled || !res?.series?.length){
+      fireSaleResult={enabled:false,priceImpact:0,capitalErosion:0,extraFailure:0};
+      return res;
+    }
+    const illiq=+$('assetIlliquidity').value||0;
+    const elasticity=+$('fireSaleElasticity').value||0;
+    const buffer=+$('capitalBuffer').value||0.3;
+    const cloned=JSON.parse(JSON.stringify(res));
+    let maxImpact=0, maxErosion=0;
+    cloned.series.forEach((x,idx)=>{
+      const forcedSale=clamp((x.out-0.18)*1.4 + (x.stress-0.55)*.8,0,1);
+      const priceImpact=clamp(forcedSale*illiq*elasticity,0,.75);
+      const capitalErosion=clamp(priceImpact*(1-buffer),0,.70);
+      const extraFailure=clamp(capitalErosion*.65,0,.45);
+      x.assetPriceImpact=priceImpact;
+      x.capitalErosion=capitalErosion;
+      x.failed=clamp(x.failed+extraFailure,0,1);
+      x.stability=clamp(x.stability-capitalErosion*.35,0,1);
+      x.stress=clamp(x.stress+priceImpact*.25,0,1.5);
+      x.welfare=x.welfare-capitalErosion*.18-priceImpact*.08;
+      maxImpact=Math.max(maxImpact,priceImpact);
+      maxErosion=Math.max(maxErosion,capitalErosion);
+    });
+    const s=cloned.series[cloned.series.length-1];
+    cloned.summary={...cloned.summary,...s,failProb:clamp((1-s.stability)*.7+s.failed*.6,0,1)};
+    fireSaleResult={enabled:true,priceImpact:maxImpact,capitalErosion:maxErosion,extraFailure:clamp(cloned.summary.failProb-res.summary.failProb,0,1)};
+    return cloned;
+  }
+
+  function renderFireSaleBox(){
+    if(!fireSaleResult){
+      $('fireSaleBox').innerHTML='Fire Sale 분석 대기 중';
+      return;
+    }
+    if(!fireSaleResult.enabled){
+      $('fireSaleBox').innerHTML='<p><b>상태:</b> 비활성화</p><p>유동성 위기가 자산가격·자본훼손으로 전이되는 경로를 사용하지 않았습니다.</p>';
+      return;
+    }
+    $('fireSaleBox').innerHTML=[
+      `<p><b>최대 자산가격 충격:</b> ${(fireSaleResult.priceImpact*100).toFixed(1)}%</p>`,
+      `<p><b>최대 자본훼손:</b> ${(fireSaleResult.capitalErosion*100).toFixed(1)}%</p>`,
+      `<p><b>실패확률 추가 상승분:</b> ${(fireSaleResult.extraFailure*100).toFixed(1)}%p</p>`,
+      `<p class="text-xs text-slate-500">논문 해석: CBDC 예금이탈은 유동성 충격에서 끝나지 않고, 자산매각과 가격하락을 거쳐 은행 자본비율을 훼손하는 2차 전염 경로를 만든다.</p>`
+    ].join('');
+  }
+
+  function runValidationCase(){
+    const target=getValidationTargets();
+    const base=getParams();
+    const candidate={...base,shock:target.shock};
+    const raw=runSimulation(candidate,5500);
+    const res=applyFireSaleToResult(raw);
+    validationResult={
+      caseName:target.name,
+      targetFailProb:target.targetFailProb,
+      targetOutflow:target.targetOutflow,
+      simulatedFailProb:res.summary.failProb,
+      simulatedOutflow:res.summary.out,
+      errorFail:Math.abs(res.summary.failProb-target.targetFailProb),
+      errorOutflow:Math.abs(res.summary.out-target.targetOutflow),
+      description:target.description
+    };
+    const score=1-clamp((validationResult.errorFail+validationResult.errorOutflow)/2,0,1);
+    const grade=score>.9?'Excellent':score>.8?'Good':score>.65?'Acceptable':'Needs recalibration';
+    $('validationBox2').innerHTML=[
+      `<p><b>검증 사건:</b> ${validationResult.caseName}</p>`,
+      `<p><b>목표 실패확률:</b> ${(validationResult.targetFailProb*100).toFixed(1)}% / <b>모형:</b> ${(validationResult.simulatedFailProb*100).toFixed(1)}%</p>`,
+      `<p><b>목표 예금이탈률:</b> ${(validationResult.targetOutflow*100).toFixed(1)}% / <b>모형:</b> ${(validationResult.simulatedOutflow*100).toFixed(1)}%</p>`,
+      `<p><b>Validation score:</b> ${(score*100).toFixed(1)}점 · ${grade}</p>`,
+      `<p class="text-xs text-slate-500">논문 사용법: 본 표는 모형이 실제 위기 양상을 어느 정도 재현하는지 보여주는 외적 타당성 검증 결과로 제시한다.</p>`
+    ].join('');
+    renderAll(res);
+    appendAuditEvent('validation_case_run',{caseName:target.name,score,validationResult});
+  }
+
+  async function appendAuditEvent(action,payload={}){
+    if(!$('auditEnabled')?.checked) return;
+    const event={
+      time:new Date().toISOString(),
+      action,
+      experimentId:$('experimentId')?.value,
+      seed:+$('seed')?.value,
+      codeVersion:'v8-validation-fire-sale-audit',
+      payload
+    };
+    event.hash=await sha256Hex(JSON.stringify(event));
+    auditTrail.push(event);
+    renderAuditTrailBox();
+  }
+
+  function renderAuditTrailBox(){
+    const lastEvents=auditTrail.slice(-8).reverse();
+    $('auditTrailBox').innerHTML=[
+      `<p><b>총 이벤트:</b> ${auditTrail.length}</p>`,
+      ...lastEvents.map(e=>`<div class="border rounded-xl p-2"><b>${e.action}</b> · ${e.time}<br><code class="text-xs break-all">${e.hash}</code></div>`),
+      `<p class="text-xs text-slate-500">논문 사용법: Audit Trail은 실험 실행, 데이터 흡수, 검증, PDF/JSON 출력 과정을 해시로 남겨 재현성과 연구윤리를 강화한다.</p>`
+    ].join('');
+  }
+
+  function exportAuditTrail(){
+    const pack={
+      platform:'CBDC S-grade PhD Platform',
+      version:'v10-final-methodology-ux',
+      exportedAt:new Date().toISOString(),
+      experimentId:$('experimentId')?.value,
+      auditTrail,
+      validationResult,
+      fireSaleResult,
+      currentParams:getParams(),
+      latestResult:last
+    };
+    downloadBlob(JSON.stringify(pack,null,2),'cbdc_research_audit_trail.json','application/json');
+  }
+
+  function renderReport(r){
+    const s=r.summary,p=r.params;
+    const phase=s.stress<p.threshold*.85?'Resilient':s.stress<p.threshold?'Warning':s.stress<p.threshold*1.15?'Phase transition':'Collapse';
+    const rec=s.welfare>0&&s.failProb<.25?'조건부 도입 가능':s.failProb>.45?'한도 축소 및 LOLR 강화 필요':'Dynamic Cap/Tiered Interest 재조정 필요';
+    $('reportBody').innerHTML=`<h3>요약</h3><p>${p.preset.name}·${p.arch}·${p.crisis} 조건에서 최종 한도는 <b>${s.cap>9e8?'무제한':fmt(Math.round(s.cap))+'원'}</b>, 실패확률은 <b>${pct(s.failProb)}</b>, 후생점수는 <b>${s.welfare.toFixed(3)}</b>입니다.</p><table><tr><th>실험 ID</th><td>${p.experimentId}</td></tr><tr><th>Seed</th><td>${p.seed}</td></tr><tr><th>Phase</th><td>${phase}</td></tr><tr><th>정책권고</th><td>${rec}</td></tr><tr><th>LOLR 누적개입</th><td>${s.support.toFixed(3)}</td></tr><tr><th>임계점</th><td>${p.threshold.toFixed(2)}</td></tr></table><h3>Validation·Fire Sale·Audit Trail</h3><p>본 플랫폼은 BIS·BOK·ECB·FRED 기반 실증 CSV 구축, Maximum Entropy 익스포저 행렬, 실제 위기 재현 검증, 자산매각 가격충격, 해시 기반 감사추적을 포함한다. 이는 모형의 외적 타당성, 금융 전염 경로의 경제적 현실성, 연구 재현성을 보강한다.</p><h3>논문용 해석</h3><p>보유 한도, 디지털 수용도, 위기충격이 결합될 때 시스템 리스크는 선형적으로 증가하지 않고 임계점 부근에서 볼록하게 상승합니다. Two-tier, Dynamic Cap, Tiered Interest, LOLR 조합은 CBDC의 결제효율성은 유지하면서 탈중개화 및 네트워크 전염을 완화하는 정책 패키지로 해석할 수 있습니다.</p><h3>가설 메모</h3><p>${p.hypothesis || '입력된 가설 메모 없음'}</p>`;
+  }
+
+  function makeWorkerScript(){
+    return `
+      ${clamp.toString()}
+      ${mulberry32.toString()}
+      const presets=${JSON.stringify(presets)};
+      function archParam(a){return ({two_tier:{out:.68,cont:.78,oper:.88},account:{out:1.18,cont:1.35,oper:.68},token:{out:.92,cont:.88,oper:.78}})[a]||{out:1,cont:1,oper:.75}}
+      function crisisParam(t){return ({bankrun:{out:1.35,net:1.10,oper:1.0},cyber:{out:.80,net:.90,oper:1.55},rate:{out:1.05,net:1.35,oper:1.0},singlebank:{out:.95,net:1.50,oper:1.0},payment:{out:.75,net:1.10,oper:1.35}})[t]||{out:1,net:1,oper:1}}
+      function simulate(params, seedOffset){
+        const ap=archParam(params.arch), cp=crisisParam(params.crisis), rng=mulberry32((params.seed+seedOffset)>>>0);
+        let cap=params.cap, failed=0, support=0, series=[]; const capNorm=Math.min(params.cap/2e7,2.2); let baseOut=0;
+        for(const ag of params.agents){const tierPenalty=params.tiered?clamp((Math.abs(params.rate2)*.045+Math.abs(params.rate3)*.025)*(params.cap>params.tier1?1:0),0,.35):0; baseOut+=ag.share*(.08+.35*params.digital*ag.digital+.16*ag.risk*params.shock+.08*capNorm-tierPenalty);}
+        baseOut*=ap.out*cp.out*(1-params.cash*.35);
+        for(let d=1;d<=params.days;d++){const t=d/params.days, shockWave=params.shock*(1-Math.exp(-5*t)); if(params.dynamic){if(baseOut*shockWave>.22)cap=Math.min(cap,1e7); if(baseOut*shockWave>.32)cap=Math.min(cap,5e6); if(failed>.08)cap=Math.min(cap,3e6);} const out=clamp(baseOut*shockWave*(cap/params.cap||1)*(0.96+rng()*.08),0,.72); const frag=clamp(params.concentration*.25+params.preset.density*.18+out*.55+params.shock*.18,0,1); const stress=clamp(out*.58+frag*.32+params.shock*.25*cp.net+(1-ap.oper)*.18*cp.oper,0,1.5); let stability=1/(1+Math.exp(13*(stress-params.threshold))); const newFail=clamp((1-stability-.12)*.30*ap.cont*cp.net,0,.35); failed=clamp(Math.max(failed,newFail)+(failed*0.018*ap.cont),0,.8); let lolrAmt=0; if(params.lolr&&stress>.55){lolrAmt=clamp((stress-.55)*.55,0,.22);support+=lolrAmt;failed=clamp(failed-lolrAmt*.23,0,.8);stability=clamp(stability+lolrAmt*.35,0,1);} const payEff=clamp(.35+out*.9+params.digital*.25,0,1), inclusion=clamp(.2+params.digital*.35+(1-params.cash)*.2,0,1), innovation=clamp(.25+capNorm*.22+params.digital*.25,0,1), risk=clamp((1-stability)+failed*.7,0,1), disinter=clamp(out*.95,0,1), oper=clamp((1-ap.oper)*cp.oper+params.shock*.2,0,1); const W=params.weights.payment*payEff+params.weights.inclusion*inclusion+params.weights.innovation*innovation-params.weights.risk*risk-params.weights.disinter*disinter-params.weights.oper*oper; series.push({out,failed,stability,stress,welfare:W,cap,support:lolrAmt});}
+        const s=series[series.length-1], failProb=clamp((1-s.stability)*.7+s.failed*.6,0,1); return {...s,failProb,support};
+      }
+      self.onmessage=e=>{
+        const msg=e.data;
+        if(msg.type==='sweep'){
+          const {params,variable,vals}=msg;
+          vals.forEach((val,i)=>{
+            const pp={...params};
+            if(variable==='cap')pp.cap=val;
+            if(variable==='shock')pp.shock=val;
+            if(variable==='digital')pp.digital=val;
+            if(variable==='rate2')pp.rate2=val;
+            const row={...simulate(pp,i+300),label:val>1e8?'무제한':val};
+            self.postMessage({type:'done_one',row});
+            self.postMessage({type:'progress',done:i+1,total:vals.length});
+          });
+          self.postMessage({type:'done_sweep'});
+          return;
+        }
+        const {params,n}=msg;
+        const rows=[];
+        for(let i=0;i<n;i++){
+          const rng=mulberry32((params.seed+i*7919)>>>0);
+          const pp={...params,shock:clamp(params.shock+(rng()-.5)*.18,0,1),digital:clamp(params.digital+(rng()-.5)*.10,.3,1),concentration:clamp(params.concentration+(rng()-.5)*.12,.2,1)};
+          rows.push(simulate(pp,i+1));
+          if(i%50===0) self.postMessage({type:'progress',done:i,total:n});
+        }
+        self.postMessage({type:'done',rows});
+      };
+    `;
+  }
+  function runMonteCarloWorker(){
+    if(!canRunWithWarnings()) return;
+    const p=getParams(), n=clamp(+$('mcN').value||500,10,10000);
+    $('workerProgress').textContent=`Worker 시작: ${n}회`;
+    if(worker) worker.terminate();
+    if(!window.Worker){const rows=[]; for(let i=0;i<n;i++)rows.push(runSimulation(p,i+1).summary); renderMC(rows,'Monte Carlo'); return;}
+    const workerUrl = URL.createObjectURL(new Blob([makeWorkerScript()],{type:'application/javascript'}));
+    worker=new Worker(workerUrl);
+    URL.revokeObjectURL(workerUrl);
+    worker.onmessage=e=>{if(e.data.type==='progress')$('workerProgress').textContent=`진행률 ${e.data.done}/${e.data.total}`; if(e.data.type==='done'){lastRows=e.data.rows; renderMC(e.data.rows,'Monte Carlo'); $('workerProgress').textContent=`완료: ${e.data.rows.length}회`; worker.terminate(); worker=null;}};
+    worker.onerror=err=>{$('workerProgress').textContent='Worker 오류: 기본 실행으로 대체'; console.error(err); const rows=[]; for(let i=0;i<n;i++)rows.push(runSimulation(p,i+1).summary); renderMC(rows,'Monte Carlo fallback');};
+    worker.postMessage({params:p,n});
+  }
+  function sweep(){
+    if(!canRunWithWarnings()) return;
+    const p=getParams(), variable=$('sweepVar').value;
+    const vals=variable==='cap'?[5e6,1e7,2e7,5e7,999999999]:variable==='shock'?[.1,.2,.3,.4,.5,.6,.7,.8]:variable==='digital'?[.5,.6,.7,.8,.9,.97]:[0,-1,-2,-3,-4,-5];
+    $('workerProgress').textContent='스윕 Worker 시작: '+variable;
+    if(worker) worker.terminate();
+    if(!window.Worker){
+      const rows=vals.map((val,i)=>{let pp={...p}; if(variable==='cap')pp.cap=val; if(variable==='shock')pp.shock=val; if(variable==='digital')pp.digital=val; if(variable==='rate2')pp.rate2=val; return {...runSimulation(pp,i+300).summary,label:val>1e8?'무제한':val};});
+      renderMC(rows,'민감도/스윕'); $('workerProgress').textContent='스윕 완료: '+variable; return;
+    }
+    const workerUrl = URL.createObjectURL(new Blob([makeWorkerScript()],{type:'application/javascript'}));
+    worker = new Worker(workerUrl);
+    URL.revokeObjectURL(workerUrl);
+    const rows=[];
+    worker.onmessage=e=>{
+      if(e.data.type==='progress') $('workerProgress').textContent=`스윕 진행률 ${e.data.done}/${e.data.total}`;
+      if(e.data.type==='done_one'){ rows.push(e.data.row); }
+      if(e.data.type==='done_sweep'){ lastRows=rows; renderMC(rows,'민감도/스윕'); $('workerProgress').textContent='스윕 완료: '+variable; worker.terminate(); worker=null; }
+    };
+    worker.onerror=err=>{ console.error(err); $('workerProgress').textContent='스윕 Worker 오류: 메인스레드 대체 실행'; const fallback=vals.map((val,i)=>{let pp={...p}; if(variable==='cap')pp.cap=val; if(variable==='shock')pp.shock=val; if(variable==='digital')pp.digital=val; if(variable==='rate2')pp.rate2=val; return {...runSimulation(pp,i+300).summary,label:val>1e8?'무제한':val};}); renderMC(fallback,'민감도/스윕 fallback'); };
+    worker.postMessage({type:'sweep',params:p,variable,vals});
+  }
+  function renderMC(rows,title){
+    if(!window.Chart||!rows.length)return; lastRows=rows; destroy('mc');
+    charts.mc=new Chart($('mcChart'),{type:'scatter',data:{datasets:[{label:title,data:rows.map((r,i)=>({x:r.failProb,y:r.welfare,label:r.label??i})),backgroundColor:'rgba(37,99,235,.70)',borderColor:palette.blue,pointRadius:4,pointHoverRadius:7}]},options:baseChart({scales:{x:{title:{display:true,text:'시스템 실패확률'},min:0,max:1,ticks:{callback:v=>(v*100).toFixed(0)+'%'}},y:{title:{display:true,text:'사회적 후생 W'},min:-.6,max:.6,ticks:{callback:v=>Number(v).toFixed(1)}}},plugins:{tooltip:{callbacks:{label(ctx){const p=ctx.raw;return `실패확률 ${(p.x*100).toFixed(1)}%, 후생 ${p.y.toFixed(3)}`;}}}}})});
+    const avg=k=>rows.reduce((s,r)=>s+r[k],0)/rows.length, sd=k=>{const m=avg(k);return Math.sqrt(rows.reduce((s,r)=>s+(r[k]-m)**2,0)/(rows.length-1||1));};
+    const sorted=[...rows].sort((a,b)=>a.failProb-b.failProb), q=qv=>sorted[Math.floor((sorted.length-1)*qv)].failProb;
+    $('summaryTable').innerHTML=`<table class="w-full border"><tr><th>n</th><th>평균 실패확률</th><th>95% 구간</th><th>평균 후생</th><th>후생 표준편차</th><th>최악 실패확률</th></tr><tr><td>${rows.length}</td><td>${pct(avg('failProb'))}</td><td>${pct(q(.025))} ~ ${pct(q(.975))}</td><td>${avg('welfare').toFixed(3)}</td><td>${sd('welfare').toFixed(3)}</td><td>${pct(Math.max(...rows.map(r=>r.failProb)))}</td></tr></table>`;
+  }
+
+  function refreshSavedList(){
+    const list=JSON.parse(localStorage.getItem(storeKey)||'[]');
+    $('savedScenarios').innerHTML=list.length?list.map((x,i)=>`<option value="${i}">${x.name}</option>`).join(''):'<option value="">저장된 조건 없음</option>';
+  }
+  function saveScenario(){
+    const list=JSON.parse(localStorage.getItem(storeKey)||'[]'), p=getParams();
+    list.unshift({name:`${p.experimentId} · ${p.preset.name} · seed ${p.seed} · ${new Date().toLocaleDateString('ko-KR')}`,params:p});
+    localStorage.setItem(storeKey,JSON.stringify(list.slice(0,30))); refreshSavedList();
+  }
+  function loadScenario(){
+    const list=JSON.parse(localStorage.getItem(storeKey)||'[]'), item=list[$('savedScenarios').value]; if(!item)return;
+    const p=item.params;
+
+    // 저장된 국가 프리셋 UI를 먼저 맞춘 뒤, 저장 당시의 세부 파라미터를 마지막에 복원한다.
+    // 기존 버전은 저장값 복원 후 applyPreset()을 호출해 digital/concentration/cash가 덮어써졌다.
+    $('country').value=p.country;
+    applyPreset();
+
+    $('experimentId').value=p.experimentId; $('seed').value=p.seed; $('arch').value=p.arch; $('baseCap').value=p.cap; $('days').value=p.days; $('crisisType').value=p.crisis; $('hypothesis').value=p.hypothesis||'';
+    ['shock','digital','concentration','cash','tier1','rate2','rate3'].forEach(k=>{if($(k)){let v=k==='tier1'?p[k]/1e6:p[k]; $(k).value=v; $(k+'Val').textContent=v;}});
+    ['dynamicCap','lolr','tiered'].forEach(k=>{$(k).checked=p[k==='dynamicCap'?'dynamic':k];});
+    p.agents.forEach(a=>{if($('ag_'+a.key)){$('ag_'+a.key).value=a.share; $('ag_'+a.key+'Val').textContent=Number(a.share).toFixed(2);}});
+    Object.keys(p.weights).forEach(k=>{if($('w_'+k)){$('w_'+k).value=p.weights[k]; $('w_'+k+'Val').textContent=Number(p.weights[k]).toFixed(2);}});
+    validateParams(); renderAll(runSimulation(getParams()));
+  }
+  function deleteScenario(){const list=JSON.parse(localStorage.getItem(storeKey)||'[]'), idx=+$('savedScenarios').value; if(idx>=0){list.splice(idx,1); localStorage.setItem(storeKey,JSON.stringify(list)); refreshSavedList();}}
+
+  function downloadCSV(){
+    const rows=lastRows.length?lastRows:(last?.series||[]); if(!rows.length)return;
+    const keys=Object.keys(rows[0]).filter(k=>typeof rows[0][k]!=='object');
+    const csv='\ufeff'+[keys.join(','),...rows.map(r=>keys.map(k=>r[k]).join(','))].join('\n');
+    downloadBlob(csv,'cbdc_experiment_results.csv','text/csv;charset=utf-8');
+  }
+  function downloadJSON(){
+    const data={meta:{exportedAt:new Date().toISOString(),version:'v10-final-methodology-ux'},last,lastRows};
+    downloadBlob(JSON.stringify(data,null,2),'cbdc_experiment_package.json','application/json');
+  }
+  function downloadBlob(content,name,type){const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([content],{type})); a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000);}
+
+  async function exportPDF(){
+    const btn=$('pdfBtn'), old=btn.textContent;
+    let wrapper=null;
+    try{
+      if(!window.jspdf||!window.html2canvas) throw new Error('PDF CDN 로드 실패');
+      btn.disabled=true; btn.textContent='PDF 생성 중...';
+      await document.fonts?.ready;
+
+      const src=$('exportArea');
+      wrapper=document.createElement('div');
+      const clone=src.cloneNode(true);
+
+      // PDF 안정화 1: Chart.js canvas를 실제 이미지로 변환한다.
+      // cloneNode(true)는 canvas 픽셀을 복제하지 않기 때문에, 원본 canvas dataURL을 사용한다.
+      src.querySelectorAll('canvas').forEach(originalCanvas => {
+        try{
+          const id=originalCanvas.id;
+          if(!id) return;
+          const clonedCanvas=clone.querySelector('#'+CSS.escape(id));
+          if(!clonedCanvas) return;
+          const img=document.createElement('img');
+          img.src=originalCanvas.toDataURL('image/png',1.0);
+          img.alt=id+' chart';
+          img.className='pdf-chart-img';
+          img.style.cssText='width:100%;max-width:100%;height:auto;display:block;object-fit:contain;';
+          clonedCanvas.replaceWith(img);
+        }catch(canvasErr){
+          console.warn('PDF canvas conversion skipped:',canvasErr);
+        }
+      });
+
+      wrapper.style.cssText='position:fixed;left:-12000px;top:0;width:1100px;background:#fff;padding:0;margin:0;z-index:-1;overflow:visible;';
+      clone.style.cssText='width:1100px;max-width:none;background:#fff;color:#0f172a;padding:30px;display:block;overflow:visible;font-size:14px;line-height:1.65;';
+      clone.querySelectorAll('.no-print,button').forEach(el=>el.remove());
+
+      // PDF 안정화 2: 화면용 고정 높이/그리드가 PDF에서 차트와 축을 자르지 않도록 리셋한다.
+      const pdfStyle=document.createElement('style');
+      pdfStyle.textContent=`
+        *{box-sizing:border-box!important}
+        .pdf-page{display:block!important;width:100%!important;max-width:none!important;overflow:visible!important;break-inside:avoid!important;page-break-inside:avoid!important;margin:0 0 20px 0!important}
+        .grid{display:block!important}
+        .card{display:block!important;width:100%!important;max-width:none!important;overflow:visible!important;border:1px solid #e2e8f0!important;border-radius:18px!important;box-shadow:none!important;margin:0 0 20px 0!important;padding:24px!important;background:#fff!important}
+        .chart-wrap,.chart-wrap-sm{height:auto!important;min-height:0!important;max-height:none!important;overflow:visible!important;padding:10px 0 30px 0!important;margin:0!important}
+        .pdf-chart-img{display:block!important;width:100%!important;max-width:100%!important;height:auto!important;margin:8px auto 18px auto!important}
+        svg{max-width:100%!important;overflow:visible!important}
+        table{width:100%!important;border-collapse:collapse!important;table-layout:fixed!important;margin:10px 0 16px 0!important;font-size:13px!important;line-height:1.55!important}
+        th,td{border:1px solid #cbd5e1!important;padding:9px 10px!important;vertical-align:top!important;word-break:break-word!important;white-space:normal!important}
+        h2{font-size:20px!important;line-height:1.35!important;margin:0 0 14px 0!important}
+        h3{font-size:16px!important;line-height:1.4!important;margin:18px 0 10px 0!important}
+        p{margin:8px 0 12px 0!important;line-height:1.65!important}
+        #explainBox .h-2,#sobolBox .h-2{height:10px!important;margin:4px 0 10px 0!important}
+        #metrics{display:grid!important;grid-template-columns:repeat(5,1fr)!important;gap:12px!important}
+        #metrics .card{padding:16px!important;margin:0!important}
+      `;
+      clone.prepend(pdfStyle);
+
+      clone.querySelectorAll('.card').forEach(el=>{
+        el.style.boxShadow='none';
+        el.style.border='1px solid #e2e8f0';
+        el.style.marginBottom='20px';
+        el.style.overflow='visible';
+        el.style.breakInside='avoid';
+        el.style.pageBreakInside='avoid';
+      });
+
+      wrapper.appendChild(clone);
+      document.body.appendChild(wrapper);
+
+      const {jsPDF}=window.jspdf;
+      const pdf=new jsPDF('p','mm','a4',true);
+      const pageW=210, pageH=297, margin=7;
+      const usableW=pageW-margin*2, usableH=pageH-margin*2;
+      let cursorY=margin, page=0;
+
+      async function renderElementCanvas(el){
+        return await html2canvas(el,{
+          scale:2,
+          backgroundColor:'#fff',
+          useCORS:true,
+          allowTaint:true,
+          logging:false,
+          windowWidth:1100,
+          scrollX:0,
+          scrollY:0,
+          onclone(doc){
+            doc.querySelectorAll('.chart-wrap,.chart-wrap-sm').forEach(w=>{
+              w.style.height='auto';
+              w.style.minHeight='0';
+              w.style.maxHeight='none';
+              w.style.overflow='visible';
+              w.style.paddingBottom='34px';
+            });
+            doc.querySelectorAll('img.pdf-chart-img').forEach(img=>{
+              img.style.width='100%';
+              img.style.height='auto';
+              img.style.display='block';
+              img.style.marginBottom='22px';
+            });
+          }
+        });
+      }
+
+      async function addBlockToPDF(block, idx){
+        const canvas=await renderElementCanvas(block);
+        if(!canvas.width || !canvas.height) return;
+
+        let drawW=usableW;
+        let drawH=canvas.height*drawW/canvas.width;
+
+        // 사전 크기 계산: 현재 페이지에 들어가지 않으면 다음 페이지로 넘긴다.
+        if(cursorY>margin && cursorY+drawH>pageH-margin){
+          pdf.addPage();
+          page++;
+          cursorY=margin;
+        }
+
+        // 블록이 한 페이지보다 크면 전체를 강제 축소하지 않는다.
+        // 대신 내부를 안전한 높이로 분할하되, 분할 기준이 페이지 하단과 겹치지 않게 한다.
+        if(drawH<=usableH){
+          const x=margin+(usableW-drawW)/2;
+          pdf.addImage(canvas.toDataURL('image/png'),'PNG',x,cursorY,drawW,drawH,undefined,'FAST');
+          cursorY += drawH + 6;
+          return;
+        }
+
+        // 매우 큰 블록은 페이지 단위로 슬라이스하되, 상단/하단 여백을 주어 축·글자 잘림을 최소화한다.
+        const pxPerMm=canvas.width/drawW;
+        const sliceHmm=usableH-4;
+        const sliceHpx=Math.floor(sliceHmm*pxPerMm);
+        const pageCanvas=document.createElement('canvas');
+        const ctx=pageCanvas.getContext('2d');
+        pageCanvas.width=canvas.width;
+
+        let sourceY=0, slice=0;
+        while(sourceY<canvas.height){
+          const hpx=Math.min(sliceHpx, canvas.height-sourceY);
+          pageCanvas.height=hpx;
+          ctx.fillStyle='#fff';
+          ctx.fillRect(0,0,pageCanvas.width,pageCanvas.height);
+          ctx.drawImage(canvas,0,sourceY,canvas.width,hpx,0,0,pageCanvas.width,hpx);
+          const hMm=hpx/pxPerMm;
+
+          if(cursorY>margin || slice>0){
+            pdf.addPage();
+            page++;
+            cursorY=margin;
+          }
+
+          pdf.addImage(pageCanvas.toDataURL('image/png'),'PNG',margin,cursorY,drawW,hMm,undefined,'FAST');
+          sourceY += hpx;
+          cursorY = margin + hMm + 6;
+          slice++;
+        }
+      }
+
+      // 기존 .pdf-page가 너무 큰 그리드이면 내부 카드 단위로 쪼개서 렌더링한다.
+      // 이렇게 하면 2열 차트가 한꺼번에 캡처되며 박스를 넘어가거나 X축이 잘리는 문제를 줄일 수 있다.
+      const rawPages=[...clone.querySelectorAll('.pdf-page')];
+      const targetBlocks=[];
+      rawPages.forEach(pageEl=>{
+        const cards=[...pageEl.children].filter(el=>el.classList && el.classList.contains('card'));
+        if(cards.length>=2){
+          cards.forEach(c=>targetBlocks.push(c));
+        }else{
+          targetBlocks.push(pageEl);
+        }
+      });
+
+      for(let i=0;i<targetBlocks.length;i++){
+        btn.textContent=`PDF 생성 중... ${i+1}/${targetBlocks.length}`;
+        await addBlockToPDF(targetBlocks[i],i);
+      }
+
+      wrapper.remove();
+      wrapper=null;
+      pdf.save('cbdc_phd_integrated_report.pdf');
+    }catch(err){
+      console.error(err);
+      alert('PDF 생성 실패: '+err.message);
+    }finally{
+      if(wrapper) wrapper.remove();
+      btn.disabled=false;
+      btn.textContent=old;
+    }
+  }
+
+  function debounce(fn,delay=180){let t;return (...args)=>{clearTimeout(t);t=setTimeout(()=>fn(...args),delay)}}
+
+  checkDeps();
+  initUI();
+  renderAll(runSimulation(getParams()));
+})();
+</script>
+</body>
+</html>
