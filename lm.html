@@ -835,12 +835,12 @@
   <div class="header-left">
     <div class="logo-wrapper">🧹</div>
     <div class="brand-title">
-      <h1>ClearDoc Pro v2.1 <span style="font-size:11px; font-weight:bold; color:var(--neon-purple);">[CONTEXT-AWARE INPAINT]</span></h1>
+      <h1>ClearDoc Pro v2.3 HF <span style="font-size:11px; font-weight:bold; color:var(--neon-purple);">[HF IOPAINT REST]</span></h1>
       <p>PPTX 구조 파싱 기반 로스리스 워터마크 교체 및 로컬 AI 픽셀 인페인팅 정제</p>
     </div>
   </div>
   <div class="header-meta">
-    <span class="badge-premium">Lossless & HD Inpaint Fusion</span>
+    <span class="badge-premium">HuggingFace IOPaint REST · LaMa</span>
   </div>
 </header>
 
@@ -935,24 +935,27 @@
     <!-- Local AI Server Settings (Lama-Cleaner/IOPaint Setup) -->
     <div class="control-group" style="background: rgba(139, 92, 246, 0.03);">
       <div class="section-title" style="padding:0 0 10px 0; color: var(--neon-purple);">
-        <span>로컬 AI 인페인팅 엔진 서버 설정</span>
+        <span>HuggingFace IOPaint API 서버 설정</span>
       </div>
       <div class="field-group">
-        <label>AI 엔진 서비스 주소 (IOPaint)</label>
+        <label>AI 엔진 서비스 주소 (HuggingFace IOPaint REST)</label>
         <div style="display:flex; gap:6px;">
-          <input type="text" id="ai-server-url" class="field-input" value="http://localhost:8080" placeholder="http://localhost:8080">
+          <input type="text" id="ai-server-url" class="field-input" value="https://isaac1982-iopaint.hf.space" placeholder="https://isaac1982-iopaint.hf.space">
           <button class="toolbar-btn" style="flex-shrink:0; border-color:var(--neon-purple); color:var(--neon-purple);" onclick="testAiServerConnection()">체크</button>
         </div>
       </div>
 
       <!-- Command folding block for quick server initialization -->
       <details style="margin-top:10px; cursor:pointer;">
-        <summary style="font-size:10px; font-weight:600; color:var(--text-muted);">💻 로컬 AI 서버 구동 명령어 가이드</summary>
+        <summary style="font-size:10px; font-weight:600; color:var(--text-muted);">💻 로컬/대체 서버 구동 명령어 가이드</summary>
         <div class="cmd-block" id="cmd-inst"># 1. 라이브러리 패키지 설치
 pip install iopaint
 
 # 2. 로컬 LaMa 모델 엔진 실행 (8080 포트)
-iopaint start --model=lama --device=cpu --port=8080</div>
+iopaint start --model=lama --device=cpu --port=8080
+
+# HuggingFace 기본값
+# https://isaac1982-iopaint.hf.space</div>
       </details>
     </div>
 
@@ -987,8 +990,7 @@ iopaint start --model=lama --device=cpu --port=8080</div>
         <label style="font-size: 8.5px;">추론 알고리즘 모델 (Model)</label>
         <select id="ai-model" class="field-input" style="background-color: var(--surface);">
           <option value="lama" selected>LaMa (그라디언트 및 질감 복원 최적화)</option>
-          <option value="mat">MAT (외곽선 및 기하학적 구조물 최적화)</option>
-          <option value="stable_diffusion">Diffusion (복잡한 일러스트/디테일 지능 상상)</option>
+          <option value="cv2">CV2 (빠른 기본 복원)</option>
         </select>
       </div>
     </div>
@@ -1070,7 +1072,7 @@ iopaint start --model=lama --device=cpu --port=8080</div>
     <!-- PRIMARY EXPORT ACTION BAR -->
     <div class="action-container">
       <button class="btn-gradient" id="btn-ai-inpaint" onclick="runLocalAiInpaintProcess(false)" style="background: linear-gradient(135deg, var(--neon-purple), #6d28d9); box-shadow: 0 4px 15px rgba(139,92,246,0.25);">
-        ✨ 로컬 AI 픽셀 인페인팅 복원
+        ✨ HF AI 픽셀 인페인팅 복원
       </button>
       <button class="btn-outline" id="btn-ai-inpaint-all" onclick="runLocalAiInpaintProcess(true)" style="color:#a78bfa; border-color:rgba(139,92,246,0.35);">
         ✨ 전체 슬라이드 AI 인페인팅 일괄 복원
@@ -2105,30 +2107,33 @@ async function testAiServerConnection() {
   log(`AI 서버 연결 시도: ${serverUrl}`, 'system');
   const candidates = [
     `${serverUrl}/api/v1/server-config`,
+    `${serverUrl}/`,
     `${serverUrl}/api/v1/model`,
-    `${serverUrl}/api/v1/models`,
-    `${serverUrl}/`
+    `${serverUrl}/api/v1/models`
   ];
   for (const url of candidates) {
     try {
       const res = await fetch(url, { method: 'GET', mode: 'cors' });
       if (res.ok || [200, 204, 404].includes(res.status)) {
         log(`AI 서버 연결 확인 성공: ${url} (HTTP ${res.status})`, 'success');
-        toast('로컬 AI 인페인팅 엔진 연결 성공', 'success');
+        toast('HuggingFace IOPaint API 연결 성공', 'success');
         return true;
       }
     } catch (e) {
       // Try next endpoint. IOPaint/Lama-Cleaner builds expose different paths.
     }
   }
-  log('AI 서버 연결 실패: 서버 미실행, 포트 오류, 또는 CORS 차단 가능성이 있습니다.', 'error');
-  log('권장 실행: iopaint start --model=lama --device=cpu --port=8080 --host=127.0.0.1', 'warn');
-  toast('로컬 AI 서버에 접근할 수 없습니다.', 'error');
+  log('AI 서버 연결 실패: 서버 미실행, 주소 오류, 또는 CORS 차단 가능성이 있습니다.', 'error');
+  log('기본 HF 서버: https://isaac1982-iopaint.hf.space · 대체: https://isaac1982-iopaint-lama.hf.space', 'warn');
+  toast('HuggingFace/IOPaint API 서버에 접근할 수 없습니다.', 'error');
   return false;
 }
 
 function normalizeServerUrl(url) {
-  url = (url || 'http://localhost:8080').trim();
+  url = (url || 'https://isaac1982-iopaint.hf.space').trim();
+  if (url === 'ISAAC1982/IOPaint') url = 'https://isaac1982-iopaint.hf.space';
+  if (url === 'ISAAC1982/IOPaint_LaMa') url = 'https://isaac1982-iopaint-lama.hf.space';
+  if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
   return url.replace(/\/+$/, '');
 }
 
@@ -2284,7 +2289,7 @@ async function callLocalInpaintServer(serverUrl, originalBlob, maskBlob, opts) {
       lastError = e;
     }
   }
-  throw lastError || new Error('지원되는 IOPaint 인페인팅 엔드포인트를 찾지 못했습니다.');
+  throw lastError || new Error('지원되는 HuggingFace/IOPaint 인페인팅 엔드포인트를 찾지 못했습니다. /api/v1/server-config 연결 여부를 확인하세요.');
 }
 
 function selectionIntersectsPicture(pic, sel) {
@@ -2729,7 +2734,7 @@ window.addEventListener('resize', () => {
   if (state.slides.length) renderPreview();
 });
 
-log('ClearDoc Pro v2.1 AI 인페인팅 엔진 탑재 성공. 처리를 진행할 PPTX 파일을 로드하여 주십시오.', 'system');
+log('ClearDoc Pro v2.3 HF AI 인페인팅 엔진 탑재 성공. 처리를 진행할 PPTX 파일을 로드하여 주십시오.', 'system');
 </script>
 </body>
 </html>
