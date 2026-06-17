@@ -6,6 +6,8 @@
 <title>ClearDoc Pro - Premium Watermark Remover & AI Inpainter</title>
 <!-- JSZip 라이브러리: PPTX 분석 및 재생성을 위한 핵심 모듈 -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
   /* ── 폰트 및 디자인 토큰 정의 ── */
   @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
@@ -835,8 +837,8 @@
   <div class="header-left">
     <div class="logo-wrapper">🧹</div>
     <div class="brand-title">
-      <h1>ClearDoc Pro v2.3 HF <span style="font-size:11px; font-weight:bold; color:var(--neon-purple);">[HF IOPAINT REST]</span></h1>
-      <p>PPTX 구조 파싱 기반 로스리스 워터마크 교체 및 로컬 AI 픽셀 인페인팅 정제</p>
+      <h1>ClearDoc Pro v2.6 PDF FIX <span style="font-size:11px; font-weight:bold; color:var(--neon-purple);">[HF IOPAINT REST]</span></h1>
+      <p>PPTX/PDF 실제 미리보기 기반 로스리스 워터마크 교체 및 HuggingFace AI 픽셀 인페인팅 정제</p>
     </div>
   </div>
   <div class="header-meta">
@@ -855,11 +857,11 @@
       <div id="dropzone" class="dropzone-v2" onclick="document.getElementById('file-input').click()"
            ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
         <div class="icon">📂</div>
-        <h3>PPTX 파일 업로드</h3>
+        <h3>PPTX / PDF 파일 업로드</h3>
         <p>드래그하거나 영역을 클릭해 주세요</p>
       </div>
       <div id="file-info" style="display:none"></div>
-      <input type="file" id="file-input" accept=".pptx" onchange="onFileSelect(event)" style="display:none">
+      <input type="file" id="file-input" accept=".pptx,.pdf,application/pdf" onchange="onFileSelect(event)" style="display:none">
     </div>
 
     <div class="section-title">
@@ -911,7 +913,7 @@
           <div style="text-align:center; color: var(--text-muted); font-size: 12px; padding: 40px;">
             <div style="font-size: 40px; margin-bottom: 12px; opacity:0.3;">🖥</div>
             <h4>실시간 대시보드 미리보기 가동 준비 완료</h4>
-            <p style="font-size:11px; color: var(--text-dim); margin-top: 4px;">PPTX 슬라이드를 불러오면 상세 구조가 화면에 매핑됩니다.</p>
+            <p style="font-size:11px; color: var(--text-dim); margin-top: 4px;">PPTX/PDF 파일을 불러오면 실제 미리보기가 화면에 매핑됩니다.</p>
           </div>
         </div>
       </div>
@@ -1114,10 +1116,17 @@ const state = {
   dragStart: null,
   preview: null,
   replacementImage: null,
+  fileType: '',
+  pdfDoc: null,
+  pdfPages: [],
 };
 
 const REL_NS = 'http://schemas.openxmlformats.org/package/2006/relationships';
 const OFFICE_REL_NS = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
+
+if (window.pdfjsLib) {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
 
 // ── UI Utils: Terminal logger ──
 function log(msg, level = 'info') {
@@ -1314,13 +1323,18 @@ function onFileSelect(e) {
 }
 
 async function loadFile(file) {
-  if (!file.name.toLowerCase().endsWith('.pptx')) {
-    toast('.pptx 규격 파일만 처리가 가능합니다.', 'error');
+  const lowerName = file.name.toLowerCase();
+  if (lowerName.endsWith('.pdf') || file.type === 'application/pdf') {
+    return loadPdfFile(file);
+  }
+  if (!lowerName.endsWith('.pptx')) {
+    toast('.pptx 또는 .pdf 파일만 처리가 가능합니다.', 'error');
     return;
   }
   resetState();
+  state.fileType = 'pptx';
   state.fileName = file.name;
-  log(`파일 적재 중: ${file.name}`, 'system');
+  log(`PPTX 파일 적재 중: ${file.name}`, 'system');
 
   try {
     const buf = await file.arrayBuffer();
@@ -1353,6 +1367,7 @@ async function loadFile(file) {
 
     log(`슬라이드 구조 해석 완료: ${state.slides.length}장 감지`, 'success');
     showFileInfo(file);
+    updateFileModeUi();
     
     await autoDetectWatermarksSilently();
 
@@ -1397,11 +1412,260 @@ function showFileInfo(file) {
       <div style="font-size: 22px;">📊</div>
       <div class="loaded-file-meta">
         <div class="loaded-file-name" title="${escHtml(file.name)}">${escHtml(file.name)}</div>
-        <div class="loaded-file-size">${(file.size/1024).toFixed(1)} KB · ${state.slides.length} Slides</div>
+        <div class="loaded-file-size">${(file.size/1024).toFixed(1)} KB · ${state.slides.length} ${state.fileType === 'pdf' ? 'Pages' : 'Slides'}</div>
       </div>
       <button class="loaded-file-remove" onclick="resetAll()">✕</button>
     </div>
   `;
+}
+
+
+function updateFileModeUi() {
+  const browserTitle = document.querySelector('.left-column .section-title:nth-of-type(2) span');
+  if (browserTitle) browserTitle.textContent = state.fileType === 'pdf' ? '페이지 브라우저' : '슬라이드 브라우저';
+
+  const applyBtn = document.getElementById('btn-apply');
+  if (applyBtn) applyBtn.innerHTML = state.fileType === 'pdf'
+    ? '💾 최종 정제 PDF 다운로드'
+    : '💾 최종 정제 PPTX 다운로드';
+
+  const aiBtn = document.getElementById('btn-ai-inpaint');
+  if (aiBtn) aiBtn.innerHTML = state.fileType === 'pdf'
+    ? '✨ HF AI PDF 픽셀 인페인팅 복원'
+    : '✨ HF AI 픽셀 인페인팅 복원';
+
+  const allBtn = document.getElementById('btn-ai-inpaint-all');
+  if (allBtn) allBtn.innerHTML = state.fileType === 'pdf'
+    ? '✨ 전체 PDF 페이지 AI 인페인팅 일괄 복원'
+    : '✨ 전체 슬라이드 AI 인페인팅 일괄 복원';
+
+  const areaCurrent = document.getElementById('btn-v16-current');
+  if (areaCurrent) areaCurrent.innerHTML = state.fileType === 'pdf'
+    ? '✅ 선택 위치 단일 페이지 적용'
+    : '✅ 선택 위치 단일 슬라이드 가리기 적용';
+
+  const areaAll = document.getElementById('btn-v16-all');
+  if (areaAll) areaAll.innerHTML = state.fileType === 'pdf'
+    ? '🧩 전체 PDF 페이지 동일 영역 적용'
+    : '🧩 전체 슬라이드 일괄 지우기 적용';
+}
+
+
+// ── PDF loading / raster page engine ──
+async function loadPdfFile(file) {
+  resetState();
+  state.fileType = 'pdf';
+  state.fileName = file.name;
+  log(`PDF 파일 적재 중: ${file.name}`, 'system');
+
+  try {
+    if (!window.pdfjsLib) throw new Error('PDF.js 라이브러리를 불러오지 못했습니다.');
+    const buf = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+    state.pdfDoc = pdf;
+    state.pdfPages = [];
+    state.slides = [];
+
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      let viewport = page.getViewport({ scale: 2 });
+      const maxDim = Math.max(viewport.width, viewport.height);
+      if (maxDim > 2400) viewport = page.getViewport({ scale: 2 * 2400 / maxDim });
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(viewport.width);
+      canvas.height = Math.round(viewport.height);
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      await page.render({ canvasContext: ctx, viewport }).promise;
+      const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png', 0.98));
+      const dataUrl = await blobToDataUrl(blob);
+      state.pdfPages.push({ width: canvas.width, height: canvas.height, blob, dataUrl, dirty: false });
+      state.slides.push({ pdfPage: true, targetCount: 0 });
+      log(`[PDF] ${i}/${pdf.numPages} 페이지 래스터 미리보기 생성 완료`, 'success');
+    }
+
+    if (!state.pdfPages.length) throw new Error('PDF 페이지를 읽지 못했습니다.');
+    updateActivePageDimensions();
+    showFileInfo(file);
+    updateFileModeUi();
+    state.activeIdx = 0;
+    renderSlideList();
+    await renderPreview();
+    updateNav();
+    document.getElementById('btn-apply').disabled = false;
+    log(`PDF ${state.pdfPages.length}페이지 인식 완료. 드래그 영역 선택 후 AI 인페인팅 또는 영역 적용을 사용할 수 있습니다.`, 'system');
+    toast('PDF 업로드 및 미리보기 생성 완료', 'success');
+  } catch (err) {
+    log(`PDF 적재 분석 에러: ${err.message}`, 'error');
+    toast(err.message, 'error');
+  }
+}
+
+function updateActivePageDimensions() {
+  if (state.fileType === 'pdf' && state.pdfPages[state.activeIdx]) {
+    state.slideWidth = state.pdfPages[state.activeIdx].width;
+    state.slideHeight = state.pdfPages[state.activeIdx].height;
+  }
+}
+
+function renderPdfPreviewInto(body) {
+  const page = state.pdfPages[state.activeIdx];
+  if (!page) return false;
+  updateActivePageDimensions();
+  const container = document.getElementById('preview-body-container');
+  const bodyRect = container.getBoundingClientRect();
+  const maxW = Math.max(bodyRect.width - 48, 320);
+  const maxH = Math.max(bodyRect.height - 48, 220);
+  const ratio = Math.min(maxW / page.width, maxH / page.height);
+  const vw = Math.round(page.width * ratio);
+  const vh = Math.round(page.height * ratio);
+  document.getElementById('zoom-value').textContent = `${Math.round(ratio * 100)}%`;
+  const statusStr = page.dirty ? '정제 완료' : '원본 PDF 래스터';
+  body.innerHTML = `
+    <div id="slide-canvas-wrap" class="selectable" onpointerdown="onPreviewPointerDown(event)" style="width:${vw}px; height:${vh}px; background:#ffffff; position:relative;">
+      <svg id="slide-svg" width="${vw}" height="${vh}" viewBox="0 0 ${vw} ${vh}" xmlns="http://www.w3.org/2000/svg">
+        <rect width="${vw}" height="${vh}" fill="#ffffff"/>
+        <image x="0" y="0" width="${vw}" height="${vh}" href="${page.dataUrl}" preserveAspectRatio="none"/>
+      </svg>
+      <div id="selection-box" class="selection-box"></div>
+      <div id="selection-chip" class="selection-chip" style="display:none"></div>
+      <div style="position:absolute; top:12px; left:12px; background:rgba(9,10,15,0.85); color:#b7ff55; border:1px solid rgba(183,255,85,0.3); font:10px var(--font-mono); padding:6px 10px; border-radius:8px; pointer-events:none; box-shadow:0 4px 12px rgba(0,0,0,0.4); display:flex; align-items:center; gap:6px;">
+        <span style="width:6px; height:6px; border-radius:50%; background:#b7ff55; box-shadow:0 0 6px #b7ff55;"></span>
+        <span>PDF PREVIEW · ${statusStr}</span>
+      </div>
+    </div>`;
+  state.preview = { ratio, vw, vh };
+  renderSelectionOverlay();
+  return true;
+}
+
+function generatePdfMaskBlob(page, sel, dilationPx = 16) {
+  const canvas = document.createElement('canvas');
+  canvas.width = page.width;
+  canvas.height = page.height;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#000000';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  const x = Math.round(sel.xMin * canvas.width);
+  const y = Math.round(sel.yMin * canvas.height);
+  const w = Math.round((sel.xMax - sel.xMin) * canvas.width);
+  const h = Math.round((sel.yMax - sel.yMin) * canvas.height);
+  ctx.fillStyle = '#ffffff';
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  ctx.fillRect(x, y, w, h);
+  if (dilationPx > 0) {
+    ctx.lineWidth = dilationPx * 2;
+    ctx.strokeRect(x, y, w, h);
+  }
+  return new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+}
+
+async function runPdfAiInpaintProcess(allPages = false) {
+  const sel = state.selection || getSelectionFromInputs();
+  if (!sel) {
+    toast('PDF에서 지울 영역을 먼저 드래그해 주세요.', 'error');
+    return;
+  }
+  const serverUrl = normalizeServerUrl(document.getElementById('ai-server-url').value.trim());
+  document.getElementById('ai-server-url').value = serverUrl;
+  const opts = getAiInpaintOptions();
+  const indices = allPages ? state.pdfPages.map((_, i) => i) : [state.activeIdx];
+  let ok = 0;
+  log(`[PDF AI] ${allPages ? '전체 페이지' : '현재 페이지'} HuggingFace IOPaint 인페인팅 시작`, 'system');
+
+  for (const idx of indices) {
+    const page = state.pdfPages[idx];
+    try {
+      const maskBlob = await generatePdfMaskBlob(page, sel, opts.dilation);
+      const returnedBlob = await callLocalInpaintServer(serverUrl, page.blob, maskBlob, opts);
+      page.blob = returnedBlob;
+      page.dataUrl = await blobToDataUrl(returnedBlob);
+      page.dirty = true;
+      ok++;
+      log(`[PDF AI][Page ${idx + 1}] HD Crop 인페인팅 완료`, 'success');
+    } catch (err) {
+      log(`[PDF AI][Page ${idx + 1}] 복원 실패: ${err.message}`, 'error');
+    }
+  }
+
+  if (ok) {
+    state.isCleaned = true;
+    state.cleanedBlob = null;
+    state.cleanedFileName = state.fileName.replace(/\.pdf$/i, allPages ? '_AI_Inpainted_AllPages.pdf' : '_AI_Inpainted.pdf');
+    document.getElementById('btn-apply').disabled = false;
+    document.getElementById('stat-val-done').textContent = '완료';
+    renderSlideList();
+    await renderPreview();
+    toast(`PDF ${ok}페이지 AI 인페인팅 완료`, 'success');
+  } else {
+    toast('PDF 인페인팅 처리 결과가 없습니다.', 'info');
+  }
+}
+
+async function applyPdfDragArea(allPages = false) {
+  const sel = state.selection || getSelectionFromInputs();
+  if (!sel) {
+    toast('PDF에서 처리할 영역을 먼저 드래그해 주세요.', 'error');
+    return;
+  }
+  const indices = allPages ? state.pdfPages.map((_, i) => i) : [state.activeIdx];
+  const replacement = state.replacementImage ? await loadImageElement(state.replacementImage.dataUrl) : null;
+  for (const idx of indices) {
+    const page = state.pdfPages[idx];
+    const img = await loadImageElement(page.dataUrl);
+    const canvas = document.createElement('canvas');
+    canvas.width = page.width;
+    canvas.height = page.height;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    const x = Math.round(sel.xMin * canvas.width);
+    const y = Math.round(sel.yMin * canvas.height);
+    const w = Math.round((sel.xMax - sel.xMin) * canvas.width);
+    const h = Math.round((sel.yMax - sel.yMin) * canvas.height);
+    if (replacement) {
+      ctx.drawImage(replacement, x, y, w, h);
+    } else {
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(x, y, w, h);
+    }
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png', 0.98));
+    page.blob = blob;
+    page.dataUrl = await blobToDataUrl(blob);
+    page.dirty = true;
+    log(`[PDF][Page ${idx + 1}] 선택 영역 ${replacement ? '대체 이미지 삽입' : '화이트 제거'} 적용`, 'success');
+  }
+  state.isCleaned = true;
+  state.cleanedBlob = null;
+  state.cleanedFileName = state.fileName.replace(/\.pdf$/i, allPages ? '_Edited_AllPages.pdf' : '_Edited.pdf');
+  document.getElementById('btn-apply').disabled = false;
+  renderSlideList();
+  await renderPreview();
+  toast('PDF 영역 처리 완료', 'success');
+}
+
+async function downloadCleanedPdf() {
+  if (!state.pdfPages.length) {
+    toast('PDF 페이지가 없습니다.', 'error');
+    return;
+  }
+  if (!window.jspdf || !window.jspdf.jsPDF) {
+    toast('jsPDF 라이브러리를 불러오지 못했습니다.', 'error');
+    return;
+  }
+  const { jsPDF } = window.jspdf;
+  const first = state.pdfPages[0];
+  const orientation = first.width >= first.height ? 'l' : 'p';
+  const pdf = new jsPDF({ orientation, unit: 'pt', format: [first.width, first.height], compress: true });
+  state.pdfPages.forEach((page, idx) => {
+    if (idx > 0) pdf.addPage([page.width, page.height], page.width >= page.height ? 'l' : 'p');
+    const fmt = page.dataUrl.startsWith('data:image/jpeg') ? 'JPEG' : 'PNG';
+    pdf.addImage(page.dataUrl, fmt, 0, 0, page.width, page.height, undefined, 'FAST');
+  });
+  const outName = state.cleanedFileName || state.fileName.replace(/\.pdf$/i, '_ClearDoc_Cleaned.pdf');
+  pdf.save(outName);
+  log(`PDF 다운로드 완료: ${outName}`, 'success');
+  toast('PDF 정제 파일 다운로드 완료', 'success');
 }
 
 // ── Silent Pre-scan for Left List ──
@@ -1447,11 +1711,18 @@ function renderSlideList() {
       ? `<span class="slide-status-badge alert">⚠️ 워터마크 ${slide.targetCount}</span>`
       : `<span class="slide-status-badge">안전</span>`;
 
+    const itemTitle = state.fileType === 'pdf'
+      ? `Page ${idx + 1} Preview`
+      : `Slide ${idx + 1} Structure`;
+    const itemDesc = state.fileType === 'pdf'
+      ? `PDF Page Raster · ${state.pdfPages[idx]?.width || 0}×${state.pdfPages[idx]?.height || 0}px`
+      : `XML Nodes: ${findAll(slide.xmlDoc, 'sp').length + findAll(slide.xmlDoc, 'pic').length}개 감지`;
+
     card.innerHTML = `
       <div class="slide-index-badge">${idx + 1}</div>
       <div class="slide-card-details">
-        <div class="slide-card-title">Slide ${idx + 1} Structure</div>
-        <div class="slide-card-desc">XML Nodes: ${findAll(slide.xmlDoc, 'sp').length + findAll(slide.xmlDoc, 'pic').length}개 감지</div>
+        <div class="slide-card-title">${itemTitle}</div>
+        <div class="slide-card-desc">${itemDesc}</div>
       </div>
       <div>${badge}</div>
     `;
@@ -1462,8 +1733,10 @@ function renderSlideList() {
 
 async function jumpToSlide(idx) {
   state.activeIdx = idx;
+  updateActivePageDimensions();
   renderSlideList();
   await renderPreview();
+  updateNav();
 }
 
 // ── Interactive Coordinates Brush ──
@@ -2032,8 +2305,11 @@ async function rasterEditLargePictures(slide, si, sel) {
 
 // ── V16 Main Executor (Fallback / Area cover mask) ──
 async function applyDragAreaV16(allSlides = false) {
+  if (state.fileType === 'pdf') {
+    return applyPdfDragArea(allSlides);
+  }
   if (!state.zip || !state.slides.length) {
-    toast('동작 전 PPTX 업로드를 먼저 수행해 주십시오.', 'error');
+    toast('동작 전 PPTX/PDF 업로드를 먼저 수행해 주십시오.', 'error');
     return;
   }
   const sel = state.selection || getSelectionFromInputs();
@@ -2124,10 +2400,7 @@ async function testAiServerConnection() {
     }
   }
   log('AI 서버 연결 실패: 서버 미실행, 포트 오류, 또는 CORS 차단 가능성이 있습니다.', 'error');
-  log(`권장 실행: iopaint start --model=lama --device=cpu --port=8080
-
-# HuggingFace 기본값
-# https://isaac1982-iopaint.hf.space`, 'warn');
+  log('권장 실행: iopaint start --model=lama --device=cpu --port=8080 / HuggingFace 기본값: https://isaac1982-iopaint.hf.space', 'warn');
   toast('HuggingFace/IOPaint API 서버에 접근할 수 없습니다.', 'error');
   return false;
 }
@@ -2330,8 +2603,11 @@ function getAiInpaintOptions() {
 }
 
 async function runLocalAiInpaintProcess(allSlides = false) {
+  if (state.fileType === 'pdf') {
+    return runPdfAiInpaintProcess(allSlides);
+  }
   if (!state.zip || !state.slides.length) {
-    toast('프로젝트 PPTX를 먼저 불러오세요.', 'error');
+    toast('프로젝트 PPTX/PDF를 먼저 불러오세요.', 'error');
     return;
   }
   const sel = state.selection || getSelectionFromInputs();
@@ -2429,8 +2705,20 @@ async function runLocalAiInpaintProcess(allSlides = false) {
 }
 
 async function scanSelectedAreaOnly() {
+  if (state.fileType === 'pdf') {
+    const sel = state.selection || getSelectionFromInputs();
+    if (!sel) { toast('PDF 영역 좌표를 먼저 드래그해 주세요.', 'error'); return; }
+    state.selection = sel;
+    setCoordInputsFromSelection(sel);
+    state.targets = [{ slideIdx: state.activeIdx, element: null, type: 'image', label: 'PDF 래스터 선택 영역' }];
+    state.scanned = true;
+    renderTargetChecklist();
+    await renderPreview();
+    log('PDF 선택 영역 감지 완료: AI 인페인팅 또는 영역 적용 가능', 'warn');
+    return;
+  }
   if (!state.zip || !state.slides.length) {
-    toast('PPTX 프로젝트 파일이 마운트되어 있지 않습니다.', 'error');
+    toast('PPTX/PDF 프로젝트 파일이 마운트되어 있지 않습니다.', 'error');
     return;
   }
   const sel = state.selection || getSelectionFromInputs();
@@ -2528,6 +2816,9 @@ function saveBlob(blob, fileName) {
 }
 
 async function downloadCleanedPptx() {
+  if (state.fileType === 'pdf') {
+    return downloadCleanedPdf();
+  }
   if (!state.zip) {
     toast('업로드된 파일이 없습니다.', 'error');
     return;
@@ -2564,9 +2855,18 @@ async function renderPreview() {
       <div style="text-align:center; color: var(--text-muted); font-size: 12px; padding: 40px;">
         <div style="font-size: 40px; margin-bottom: 12px; opacity:0.3;">🖥</div>
         <h4>실시간 대시보드 미리보기 가동 준비 완료</h4>
-        <p style="font-size:11px; color: var(--text-dim); margin-top: 4px;">PPTX 슬라이드를 불러오면 상세 구조가 화면에 매핑됩니다.</p>
+        <p style="font-size:11px; color: var(--text-dim); margin-top: 4px;">PPTX/PDF 파일을 불러오면 실제 미리보기가 화면에 매핑됩니다.</p>
       </div>
     `;
+    return;
+  }
+
+  // PDF 모드에서는 PPTX XML 렌더러를 타지 않고 PDF.js로 만든 실제 페이지 래스터를 표시한다.
+  // 이전 버전의 흰 화면/PPTX PREVIEW 오표시 문제는 이 분기 누락이 원인이었다.
+  if (state.fileType === 'pdf') {
+    updateActivePageDimensions();
+    renderPdfPreviewInto(body);
+    updateNav();
     return;
   }
 
@@ -2662,6 +2962,7 @@ function zoomFit() {
 async function prevSlide() {
   if (state.activeIdx > 0) {
     state.activeIdx--;
+    updateActivePageDimensions();
     renderSlideList();
     await renderPreview();
   }
@@ -2670,6 +2971,7 @@ async function prevSlide() {
 async function nextSlide() {
   if (state.activeIdx < state.slides.length - 1) {
     state.activeIdx++;
+    updateActivePageDimensions();
     renderSlideList();
     await renderPreview();
   }
@@ -2699,6 +3001,9 @@ function resetState() {
   state.selection = null;
   state.dragStart = null;
   state.preview = null;
+  state.fileType = '';
+  state.pdfDoc = null;
+  state.pdfPages = [];
 }
 
 function resetAll() {
@@ -2724,7 +3029,7 @@ function resetAll() {
     <div style="text-align:center; color: var(--text-muted); font-size: 12px; padding: 40px;">
       <div style="font-size: 40px; margin-bottom: 12px; opacity:0.3;">🖥</div>
       <h4>실시간 대시보드 미리보기 가동 준비 완료</h4>
-      <p style="font-size:11px; color: var(--text-dim); margin-top: 4px;">PPTX 슬라이드를 불러오면 상세 구조가 화면에 매핑됩니다.</p>
+      <p style="font-size:11px; color: var(--text-dim); margin-top: 4px;">PPTX/PDF 파일을 불러오면 실제 미리보기가 화면에 매핑됩니다.</p>
     </div>
   `;
   document.getElementById('target-checklist').innerHTML = `
@@ -2733,6 +3038,7 @@ function resetAll() {
     </div>
   `;
   document.getElementById('log-panel').innerHTML = '';
+  updateFileModeUi();
   log('프로젝트 가동 범위 초기화 성공', 'info');
 }
 
@@ -2744,7 +3050,7 @@ window.addEventListener('resize', () => {
   if (state.slides.length) renderPreview();
 });
 
-log('ClearDoc Pro v2.3 HF AI 인페인팅 엔진 탑재 성공. 처리를 진행할 PPTX 파일을 로드하여 주십시오.', 'system');
+log('ClearDoc Pro v2.6 PDF FIX AI 인페인팅 엔진 탑재 성공. 처리를 진행할 PPTX 파일을 로드하여 주십시오.', 'system');
 </script>
 </body>
 </html>
