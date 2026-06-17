@@ -840,7 +840,7 @@
     </div>
   </div>
   <div class="header-meta">
-    <span class="badge-premium">HuggingFace IOPaint REST · LaMa</span>
+    <span class="badge-premium">HuggingFace IOPaint REST JSON · LaMa</span>
   </div>
 </header>
 
@@ -2123,8 +2123,11 @@ async function testAiServerConnection() {
       // Try next endpoint. IOPaint/Lama-Cleaner builds expose different paths.
     }
   }
-  log('AI 서버 연결 실패: 서버 미실행, 주소 오류, 또는 CORS 차단 가능성이 있습니다.', 'error');
-  log('기본 HF 서버: https://isaac1982-iopaint.hf.space · 대체: https://isaac1982-iopaint-lama.hf.space', 'warn');
+  log('AI 서버 연결 실패: 서버 미실행, 포트 오류, 또는 CORS 차단 가능성이 있습니다.', 'error');
+  log(`권장 실행: iopaint start --model=lama --device=cpu --port=8080
+
+# HuggingFace 기본값
+# https://isaac1982-iopaint.hf.space`, 'warn');
   toast('HuggingFace/IOPaint API 서버에 접근할 수 없습니다.', 'error');
   return false;
 }
@@ -2225,71 +2228,78 @@ async function decodeInpaintResponse(res) {
   return await res.blob();
 }
 
-function buildInpaintFormData(originalBlob, maskBlob, opts) {
-  const formData = new FormData();
-  formData.append('image', originalBlob, 'image.png');
-  formData.append('mask', maskBlob, 'mask.png');
+async function blobToPureBase64(blob) {
+  const dataUrl = await blobToDataUrl(blob);
+  return dataUrl.split(',')[1] || '';
+}
 
-  // IOPaint/Lama-Cleaner compatible names
-  formData.append('model', opts.model);
-  formData.append('hd_strategy', opts.hdStrategy);
-  formData.append('hd_strategy_crop_margin', String(opts.cropMargin));
-  formData.append('hd_strategy_crop_trigger_size', String(opts.cropTriggerSize));
-  formData.append('hd_strategy_resize_limit', String(opts.resizeLimit));
-  formData.append('mask_dilation', String(opts.dilation));
-  formData.append('mask_blur', String(opts.maskBlur));
-
-  // Stable Diffusion / MAT optional knobs. Ignored by LaMa when unsupported.
-  formData.append('sd_steps', String(opts.sdSteps));
-  formData.append('sd_strength', String(opts.sdStrength));
-  formData.append('prompt', opts.prompt || '');
-  formData.append('negative_prompt', opts.negativePrompt || '');
-
-  // Some builds expect a config JSON field.
-  formData.append('config', JSON.stringify({
-    model: opts.model,
+async function buildIopaintJsonPayload(originalBlob, maskBlob, opts) {
+  // IOPaint REST API는 multipart/form-data가 아니라 JSON Body를 받는다.
+  // 공식 InpaintRequest 스키마: image, mask는 base64 문자열이며 POST /api/v1/inpaint만 유효하다.
+  const imageB64 = await blobToPureBase64(originalBlob);
+  const maskB64 = await blobToPureBase64(maskBlob);
+  return {
+    image: imageB64,
+    mask: maskB64,
+    ldm_steps: 20,
+    ldm_sampler: 'plms',
     hd_strategy: opts.hdStrategy,
     hd_strategy_crop_margin: opts.cropMargin,
     hd_strategy_crop_trigger_size: opts.cropTriggerSize,
     hd_strategy_resize_limit: opts.resizeLimit,
-    mask_dilation: opts.dilation,
-    mask_blur: opts.maskBlur,
+    prompt: opts.prompt || '',
+    negative_prompt: opts.negativePrompt || '',
     sd_steps: opts.sdSteps,
     sd_strength: opts.sdStrength,
-    prompt: opts.prompt || '',
-    negative_prompt: opts.negativePrompt || ''
-  }));
-  return formData;
+    sd_mask_blur: opts.maskBlur,
+    sd_guidance_scale: 7.5,
+    sd_sampler: 'UniPC',
+    sd_seed: -1,
+    sd_match_histograms: true,
+    sd_keep_unmasked_area: true,
+    cv2_flag: 'INPAINT_NS',
+    cv2_radius: Math.max(4, Math.round(opts.dilation / 4)),
+    use_croper: false,
+    use_extender: false,
+    enable_controlnet: false,
+    enable_brushnet: false,
+    enable_powerpaint_v2: false
+  };
+}
+
+async function readErrorTextSafely(res) {
+  try {
+    const text = await res.text();
+    return text ? text.slice(0, 500) : '';
+  } catch (e) {
+    return '';
+  }
 }
 
 async function callLocalInpaintServer(serverUrl, originalBlob, maskBlob, opts) {
-  const endpoints = [
-    `${serverUrl}/api/v1/inpaint`,
-    `${serverUrl}/inpaint`,
-    `${serverUrl}/api/inpaint`
-  ];
-  let lastError = null;
+  const endpoint = `${serverUrl}/api/v1/inpaint`;
+  const payload = await buildIopaintJsonPayload(originalBlob, maskBlob, opts);
 
-  for (const endpoint of endpoints) {
-    try {
-      const formData = buildInpaintFormData(originalBlob, maskBlob, opts);
-      const res = await fetch(endpoint, { method: 'POST', body: formData, mode: 'cors' });
-      if (!res.ok) {
-        lastError = new Error(`${endpoint} HTTP ${res.status}`);
-        continue;
-      }
-      const blob = await decodeInpaintResponse(res);
-      if (!blob || blob.size < 32) {
-        lastError = new Error(`${endpoint} 응답 이미지가 비어 있습니다.`);
-        continue;
-      }
-      log(`[AI Ultra-Context] 인페인팅 API 성공: ${endpoint}`, 'success');
-      return blob;
-    } catch (e) {
-      lastError = e;
-    }
+  // HuggingFace IOPaint_LaMa는 /api/v1/server-config가 살아있는 FastAPI IOPaint 서버다.
+  // /api/inpaint, /inpaint는 이 서버에서 유효하지 않아 HTTP 405를 만들므로 호출하지 않는다.
+  const res = await fetch(endpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+    mode: 'cors'
+  });
+
+  if (!res.ok) {
+    const detail = await readErrorTextSafely(res);
+    throw new Error(`${endpoint} HTTP ${res.status}${detail ? ' - ' + detail : ''}`);
   }
-  throw lastError || new Error('지원되는 HuggingFace/IOPaint 인페인팅 엔드포인트를 찾지 못했습니다. /api/v1/server-config 연결 여부를 확인하세요.');
+
+  const blob = await decodeInpaintResponse(res);
+  if (!blob || blob.size < 32) {
+    throw new Error(`${endpoint} 응답 이미지가 비어 있습니다.`);
+  }
+  log(`[AI Ultra-Context] HuggingFace IOPaint API 성공: ${endpoint}`, 'success');
+  return blob;
 }
 
 function selectionIntersectsPicture(pic, sel) {
