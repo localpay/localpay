@@ -168,9 +168,9 @@
     // 3. MAIN COMPONENT
     // ==========================================
     function App() {
-      const [contractType, setContractType] = useState('sw');
+      const [contractType, setContractType] = useState('goods');
       const [governingLaw, setGoverningLaw] = useState('national');
-      const [estimatedPrice, setEstimatedPrice] = useState(180000000);
+      const [estimatedPrice, setEstimatedPrice] = useState(100000000);
       const [isUrgent, setIsUrgent] = useState(false);
       const [isSingleSource, setIsSingleSource] = useState(false);
       const [hasPatent, setHasPatent] = useState(false);
@@ -644,7 +644,7 @@
         if (policyStates.heavyDisabled) {
           companies.push("중증장애인 생산품 인증 시설");
           contractMethods.push("중증장애인생산품 우선구매 특별법에 의거 금액 한도 없는 수의계약 수용 가능");
-          credits.push("중증장애인생산품 법정 의무구매 비율(총 구매액의 1% 이상) 우선 인정");
+          credits.push("중증장애인생산품 법정 의무구매 비율(총 구매액의 1.1% 이상) 우선 인정");
         }
         if (policyStates.disabled) {
           companies.push("장애인기업 활동지원법에 따른 장애인기업");
