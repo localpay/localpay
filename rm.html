@@ -1,0 +1,3289 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ClearDoc Pro - Premium Watermark Remover & AI Inpainter</title>
+<!-- JSZip 라이브러리: PPTX 분석 및 재생성을 위한 핵심 모듈 -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<style>
+  /* ── 폰트 및 디자인 토큰 정의 ── */
+  @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+
+  *, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  :root {
+    --bg: #090a0f;
+    --surface: #111318;
+    --surface-card: #181b22;
+    --surface-hover: #222630;
+    --border: #242933;
+    --border-glow: #3b82f6;
+    
+    /* 액센트 네온 컬러 */
+    --accent: #436cfb;
+    --accent-dim: rgba(67, 108, 251, 0.12);
+    --accent-hover: #5d83ff;
+    --neon-purple: #8b5cf6;
+    --neon-purple-dim: rgba(139, 92, 246, 0.15);
+    --success: #10b981;
+    --success-dim: rgba(16, 185, 129, 0.12);
+    --danger: #f43f5e;
+    --danger-dim: rgba(244, 63, 94, 0.12);
+    
+    /* 타이포그래피 */
+    --text: #f3f4f6;
+    --text-muted: #9ca3af;
+    --text-dim: #4b5563;
+    --font-main: 'Plus Jakarta Sans', -apple-system, sans-serif;
+    --font-mono: 'Fira Code', 'JetBrains Mono', monospace;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-main);
+    min-height: 100vh;
+    display: grid;
+    grid-template-rows: auto 1fr;
+    overflow: hidden;
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: var(--surface);
+    padding: 14px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    z-index: 10;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+  }
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .logo-wrapper {
+    width: 38px;
+    height: 38px;
+    background: linear-gradient(135deg, var(--accent), var(--neon-purple));
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    box-shadow: 0 0 15px rgba(67, 108, 251, 0.4);
+  }
+
+  .brand-title h1 {
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    background: linear-gradient(to right, #ffffff, #d1d5db);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .brand-title p {
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  .header-meta {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .badge-premium {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: #ffffff;
+    background: linear-gradient(90deg, var(--accent), var(--neon-purple));
+    border: none;
+    padding: 4px 12px;
+    border-radius: 8px;
+    font-weight: 600;
+    box-shadow: 0 0 10px rgba(139,92,246,0.3);
+  }
+
+  /* ── MAIN LAYOUT (3 columns) ── */
+  main {
+    display: grid;
+    grid-template-columns: 310px 1fr 370px;
+    height: calc(100vh - 67px);
+    overflow: hidden;
+  }
+
+  /* ── LEFT COLUMN ── */
+  .left-column {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .section-title {
+    padding: 16px 20px 8px 20px;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  /* Drag & Drop uploader card */
+  .uploader-card {
+    padding: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .dropzone-v2 {
+    border: 1.5px dashed var(--border);
+    border-radius: 12px;
+    padding: 24px 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    background: rgba(24, 27, 34, 0.4);
+  }
+
+  .dropzone-v2:hover {
+    border-color: var(--accent);
+    background: var(--accent-dim);
+    box-shadow: 0 0 15px rgba(67, 108, 251, 0.1);
+  }
+
+  .dropzone-v2.drag-over {
+    border-color: var(--neon-purple);
+    background: var(--neon-purple-dim);
+  }
+
+  .dropzone-v2 .icon {
+    font-size: 32px;
+    margin-bottom: 8px;
+  }
+
+  .dropzone-v2 h3 {
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 2px;
+  }
+
+  .dropzone-v2 p {
+    font-size: 10px;
+    color: var(--text-muted);
+  }
+
+  /* Loaded file metadata block */
+  .loaded-file-block {
+    background: var(--surface-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    position: relative;
+  }
+
+  .loaded-file-meta {
+    flex: 1;
+    overflow: hidden;
+  }
+
+  .loaded-file-name {
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .loaded-file-size {
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+
+  .loaded-file-remove {
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    cursor: pointer;
+    font-size: 14px;
+    padding: 4px;
+    border-radius: 6px;
+    transition: all 0.15s;
+  }
+
+  .loaded-file-remove:hover {
+    color: var(--danger);
+    background: var(--danger-dim);
+  }
+
+  /* Visual Slide List */
+  .slide-nav-wrapper {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .slide-card {
+    background: var(--surface-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    user-select: none;
+  }
+
+  .slide-card:hover {
+    border-color: var(--text-dim);
+    background: var(--surface-hover);
+  }
+
+  .slide-card.active {
+    border-color: var(--accent);
+    background: var(--accent-dim);
+    box-shadow: inset 0 0 10px rgba(67,108,251,0.08);
+  }
+
+  .slide-index-badge {
+    width: 24px;
+    height: 24px;
+    background: var(--border);
+    border-radius: 6px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+  }
+
+  .slide-card.active .slide-index-badge {
+    background: var(--accent);
+    color: #ffffff;
+  }
+
+  .slide-card-details {
+    flex: 1;
+    overflow: hidden;
+  }
+
+  .slide-card-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .slide-card-desc {
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-top: 1px;
+  }
+
+  .slide-status-badge {
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 6px;
+    background: var(--success-dim);
+    color: var(--success);
+    font-weight: 600;
+    border: 1px solid rgba(16, 185, 129, 0.2);
+  }
+
+  .slide-status-badge.alert {
+    background: var(--danger-dim);
+    color: var(--danger);
+    border: 1px solid rgba(244, 63, 94, 0.2);
+  }
+
+  /* Left-bottom summary stats */
+  .summary-stats-box {
+    background: var(--surface-card);
+    border-top: 1px solid var(--border);
+    padding: 16px;
+  }
+
+  .stat-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .stat-card {
+    background: rgba(9, 10, 15, 0.4);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px;
+    text-align: center;
+  }
+
+  .stat-card .val {
+    font-family: var(--font-mono);
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--accent);
+  }
+
+  .stat-card.alert .val {
+    color: var(--danger);
+  }
+
+  .stat-card .lbl {
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+
+  /* ── CENTER WORKSPACE ── */
+  .center-workspace {
+    background: #090a0d;
+    display: grid;
+    grid-template-rows: 1fr 160px;
+    overflow: hidden;
+  }
+
+  .canvas-container {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+    padding: 16px;
+  }
+
+  /* Workspace Header Toolbar */
+  .workspace-toolbar {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 8px 16px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .toolbar-left, .toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .toolbar-btn {
+    background: var(--surface-card);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    border-radius: 6px;
+    cursor: pointer;
+    padding: 6px 12px;
+    font-size: 11px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.15s;
+  }
+
+  .toolbar-btn:hover:not(:disabled) {
+    color: var(--text);
+    border-color: var(--text-muted);
+    background: var(--surface-hover);
+  }
+
+  .toolbar-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+
+  .slide-index-viewer {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    font-weight: 600;
+    background: rgba(0,0,0,0.3);
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+  }
+
+  /* Viewer Canvas Wrapping */
+  .canvas-viewport {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: auto;
+    background: #06070a;
+    border-radius: 12px;
+    border: 1px dashed var(--border);
+    position: relative;
+  }
+
+  #slide-canvas-wrap {
+    position: relative;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+    background: #ffffff;
+    transition: transform 0.15s;
+  }
+
+  #slide-canvas-wrap.selectable {
+    cursor: crosshair;
+  }
+
+  /* UNIX-style Terminal Console Log at center bottom */
+  .terminal-panel {
+    background: #090a0f;
+    border-top: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .terminal-header {
+    background: var(--surface);
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .terminal-title {
+    font-size: 10px;
+    font-weight: 700;
+    font-family: var(--font-mono);
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .terminal-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent);
+  }
+
+  .terminal-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px 16px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    line-height: 1.6;
+    background: #07080c;
+  }
+
+  .log-line {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 2px;
+  }
+
+  .log-time {
+    color: var(--text-dim);
+    flex-shrink: 0;
+    user-select: none;
+  }
+
+  .log-msg.info { color: #8892b0; }
+  .log-msg.success { color: var(--success); }
+  .log-msg.warn { color: #e5c07b; }
+  .log-msg.error { color: var(--danger); font-weight: 500; }
+  .log-msg.system { color: var(--accent); }
+
+  /* ── RIGHT COLUMN ── */
+  .right-column {
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+
+  .control-group {
+    padding: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* Styled coordinate fields */
+  .coord-grid-v2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .field-group label {
+    font-size: 9px;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+  }
+
+  .field-input {
+    width: 100%;
+    background: var(--surface-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 11px;
+    font-family: var(--font-mono);
+    color: var(--text);
+    outline: none;
+    transition: all 0.15s;
+  }
+
+  .field-input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 8px rgba(67, 108, 251, 0.25);
+  }
+
+  /* Custom Clean Toggles */
+  .toggle-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 0;
+  }
+
+  .toggle-item label {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text);
+    cursor: pointer;
+  }
+
+  /* Toggle checkbox switch graphic */
+  input[type="checkbox"].switch {
+    appearance: none;
+    width: 32px;
+    height: 16px;
+    background: var(--border);
+    border-radius: 20px;
+    position: relative;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  input[type="checkbox"].switch::after {
+    content: '';
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    background: #ffffff;
+    border-radius: 50%;
+    top: 2px;
+    left: 2px;
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  input[type="checkbox"].switch:checked {
+    background: var(--accent);
+  }
+
+  input[type="checkbox"].switch:checked::after {
+    transform: translateX(16px);
+  }
+
+  /* Target Checklist table area */
+  .checklist-box {
+    max-height: 120px;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface-card);
+    margin-top: 8px;
+  }
+
+  .checklist-item {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 10px;
+    transition: background 0.1s;
+  }
+
+  .checklist-item:last-child {
+    border-bottom: none;
+  }
+
+  .checklist-item:hover {
+    background: var(--surface-hover);
+  }
+
+  .checklist-item .type-lbl {
+    padding: 1px 4px;
+    border-radius: 4px;
+    font-size: 8px;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  .checklist-item .type-lbl.image {
+    background: rgba(139, 92, 246, 0.15);
+    color: #a78bfa;
+  }
+
+  .checklist-item .type-lbl.text {
+    background: rgba(59, 130, 246, 0.15);
+    color: #93c5fd;
+  }
+
+  .checklist-item .desc-lbl {
+    flex: 1;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    color: var(--text-muted);
+  }
+
+  /* Terminal Code Block style for commands */
+  .cmd-block {
+    background: #07080c;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px;
+    margin-top: 8px;
+    font-family: var(--font-mono);
+    font-size: 9.5px;
+    color: #a6accd;
+    overflow-x: auto;
+    white-space: pre;
+    line-height: 1.4;
+  }
+
+  /* Primary action buttons container (Bottom Fixed on right panel) */
+  .action-container {
+    padding: 16px;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    margin-top: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .btn-gradient {
+    width: 100%;
+    background: linear-gradient(135deg, var(--accent), var(--neon-purple));
+    color: #ffffff;
+    border: none;
+    border-radius: 10px;
+    padding: 12px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    box-shadow: 0 4px 15px rgba(139,92,246,0.25);
+  }
+
+  .btn-gradient:hover:not(:disabled) {
+    opacity: 0.95;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(139,92,246,0.35);
+  }
+
+  .btn-gradient:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+
+  .btn-outline {
+    width: 100%;
+    background: var(--surface-card);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+
+  .btn-outline:hover:not(:disabled) {
+    background: var(--surface-hover);
+    border-color: var(--text-muted);
+  }
+
+  .btn-outline:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+
+  /* ── Overlays and Drag Box Style ── */
+  .selection-box {
+    position: absolute;
+    border: 2px dashed #b7ff55;
+    background: rgba(183, 255, 85, 0.12);
+    box-shadow: 0 0 0 9999px rgba(0,0,0,0.15), 0 0 16px rgba(183,255,85,0.4);
+    pointer-events: none;
+    z-index: 5;
+    display: none;
+  }
+
+  .selection-chip {
+    position: absolute;
+    right: 8px;
+    bottom: 8px;
+    z-index: 6;
+    background: rgba(9, 10, 15, 0.9);
+    color: #b7ff55;
+    border: 1px solid rgba(183, 255, 85, 0.3);
+    font: 10px var(--font-mono);
+    padding: 4px 8px;
+    border-radius: 6px;
+    pointer-events: none;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
+
+  /* Toast Notification */
+  #toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--surface-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 18px;
+    font-size: 12px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    transform: translateY(80px);
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    z-index: 999;
+    max-width: 320px;
+  }
+
+  #toast.show {
+    transform: translateY(0);
+    opacity: 1;
+  }
+
+  #toast.success { border-color: var(--success); }
+  #toast.error { border-color: var(--danger); }
+
+  /* ── Scrollbars Custom styling ── */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 10px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--text-dim);
+  }
+
+
+  /* ── Bootstrap Mobile Responsive Patch v2.7 ── */
+  html, body { width: 100%; max-width: 100%; }
+  body { overflow-x: hidden; }
+  button, input, select { touch-action: manipulation; }
+  .mobile-toolbar { display: none; }
+  .mobile-only { display: none !important; }
+
+  @media (max-width: 1199.98px) {
+    main {
+      grid-template-columns: 280px minmax(0, 1fr);
+    }
+    .right-column {
+      position: fixed;
+      right: 0;
+      top: 67px;
+      bottom: 0;
+      width: min(92vw, 390px);
+      transform: translateX(105%);
+      transition: transform .25s ease;
+      z-index: 1050;
+      box-shadow: -20px 0 50px rgba(0,0,0,.55);
+    }
+    .right-column.mobile-open { transform: translateX(0); }
+    body.mobile-panel-open::before {
+      content: '';
+      position: fixed;
+      inset: 67px 0 0 0;
+      background: rgba(0,0,0,.55);
+      z-index: 1040;
+    }
+    .mobile-toolbar {
+      display: flex;
+      gap: 8px;
+      padding: 10px 12px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 5;
+    }
+  }
+
+  @media (max-width: 767.98px) {
+    body {
+      display: block;
+      min-height: 100dvh;
+      overflow-y: auto;
+    }
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 1030;
+      padding: 10px 12px;
+      align-items: flex-start;
+      gap: 8px;
+    }
+    .logo-wrapper { width: 34px; height: 34px; border-radius: 10px; }
+    .brand-title h1 { font-size: 13px; line-height: 1.25; }
+    .brand-title p { font-size: 10px; line-height: 1.35; }
+    .header-meta { display: none; }
+    main {
+      display: flex;
+      flex-direction: column;
+      height: auto;
+      min-height: calc(100dvh - 55px);
+      overflow: visible;
+    }
+    .left-column {
+      width: 100%;
+      border-right: none;
+      border-bottom: 1px solid var(--border);
+      max-height: none;
+      overflow: visible;
+    }
+    .uploader-card { padding: 12px; }
+    .dropzone-v2 { padding: 18px 12px; }
+    .slide-nav-wrapper {
+      flex: none;
+      max-height: 190px;
+      overflow-x: auto;
+      overflow-y: hidden;
+      flex-direction: row;
+      padding: 10px 12px;
+      scroll-snap-type: x mandatory;
+    }
+    .slide-card {
+      min-width: 230px;
+      scroll-snap-align: start;
+    }
+    .summary-stats-box { display: none; }
+    .center-workspace {
+      display: flex;
+      flex-direction: column;
+      min-height: 70dvh;
+      overflow: visible;
+    }
+    .canvas-container { padding: 10px; min-height: 54dvh; }
+    .workspace-toolbar {
+      padding: 8px;
+      margin-bottom: 10px;
+      gap: 8px;
+      align-items: stretch;
+      flex-wrap: wrap;
+    }
+    .toolbar-left, .toolbar-right {
+      width: 100%;
+      justify-content: space-between;
+    }
+    .toolbar-btn { padding: 7px 9px; font-size: 10px; }
+    .slide-index-viewer { font-size: 10px; }
+    .canvas-viewport {
+      min-height: 48dvh;
+      align-items: flex-start;
+      padding: 10px;
+    }
+    #preview-body { min-width: 100%; }
+    #slide-canvas-wrap {
+      max-width: none;
+      box-shadow: 0 8px 28px rgba(0,0,0,.65);
+    }
+    .terminal-panel {
+      height: 180px;
+      flex: none;
+    }
+    .right-column {
+      top: 55px;
+      width: min(94vw, 380px);
+      max-width: 94vw;
+    }
+    body.mobile-panel-open::before { inset: 55px 0 0 0; }
+    .control-group { padding: 12px; }
+    .action-container {
+      position: sticky;
+      bottom: 0;
+      z-index: 2;
+      padding: 12px;
+    }
+    .btn-gradient, .btn-outline { min-height: 42px; }
+    .coord-grid-v2 { grid-template-columns: 1fr 1fr; }
+    .field-input { min-height: 36px; font-size: 12px; }
+    .mobile-only { display: flex !important; }
+  }
+
+  @media (max-width: 420px) {
+    .slide-card { min-width: 205px; }
+    .toolbar-left { gap: 6px; }
+    .toolbar-btn { padding: 7px 8px; }
+    .coord-grid-v2 { gap: 6px; }
+    .brand-title h1 span { display: none; }
+  }
+
+</style>
+</head>
+<body>
+
+<!-- HEADER HEADER -->
+<header>
+  <div class="header-left">
+    <div class="logo-wrapper">🧹</div>
+    <div class="brand-title">
+      <h1>ClearDoc Pro v2.6 PDF FIX <span style="font-size:11px; font-weight:bold; color:var(--neon-purple);">[HF IOPAINT REST]</span></h1>
+      <p>PPTX/PDF 실제 미리보기 기반 로스리스 워터마크 교체 및 HuggingFace AI 픽셀 인페인팅 정제</p>
+    </div>
+  </div>
+  <div class="header-meta">
+    <span class="badge-premium">HuggingFace IOPaint REST JSON · LaMa</span>
+  </div>
+</header>
+
+<!-- MAIN CONTAINER -->
+<main>
+  <div class="mobile-toolbar mobile-only">
+    <button type="button" class="btn btn-sm btn-primary flex-fill" onclick="toggleMobilePanel(true)">⚙ 설정/실행</button>
+    <button type="button" class="btn btn-sm btn-outline-light flex-fill" onclick="scrollToPreviewMobile()">🖥 미리보기</button>
+    <button type="button" class="btn btn-sm btn-success flex-fill" onclick="downloadCleanedPptx()">💾 다운로드</button>
+  </div>
+
+  <!-- LEFT COLUMN: FILE & SLIDES -->
+  <div class="left-column">
+    <div class="section-title">
+      <span>프로젝트 파일</span>
+    </div>
+    <div class="uploader-card">
+      <div id="dropzone" class="dropzone-v2" onclick="document.getElementById('file-input').click()"
+           ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
+        <div class="icon">📂</div>
+        <h3>PPTX / PDF 파일 업로드</h3>
+        <p>드래그하거나 영역을 클릭해 주세요</p>
+      </div>
+      <div id="file-info" style="display:none"></div>
+      <input type="file" id="file-input" accept=".pptx,.pdf,application/pdf" onchange="onFileSelect(event)" style="display:none">
+    </div>
+
+    <div class="section-title">
+      <span>슬라이드 브라우저</span>
+      <span id="slide-count-indicator" style="color:var(--text-muted); font-family:var(--font-mono);">0 / 0</span>
+    </div>
+    
+    <!-- Dynamic Slide List Container -->
+    <div class="slide-nav-wrapper" id="slide-nav-list">
+      <div style="text-align: center; color: var(--text-dim); font-size: 11px; margin-top: 40px;">
+        파일을 불러오면 전체 슬라이드 리스트가 여기에 나타납니다.
+      </div>
+    </div>
+
+    <!-- Stats summary bottom -->
+    <div class="summary-stats-box">
+      <div class="stat-grid">
+        <div class="stat-card" id="stat-card-total">
+          <div class="val" id="stat-val-total">0</div>
+          <div class="lbl">감지된 워터마크</div>
+        </div>
+        <div class="stat-card" id="stat-card-done">
+          <div class="val" id="stat-val-done" style="color:var(--success);">N/A</div>
+          <div class="lbl">정제 완료 여부</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CENTER COLUMN: WORKSPACE WORKSPACE -->
+  <div class="center-workspace">
+    <div class="canvas-container">
+      <!-- Toolbar -->
+      <div class="workspace-toolbar">
+        <div class="toolbar-left">
+          <button class="toolbar-btn" id="btn-prev" onclick="prevSlide()" disabled>◀ 이전</button>
+          <span class="slide-index-viewer" id="slide-indicator">— / —</span>
+          <button class="toolbar-btn" id="btn-next" onclick="nextSlide()" disabled>다음 ▶</button>
+        </div>
+        <div class="toolbar-right">
+          <button class="toolbar-btn" onclick="zoomFit()">🔍 맞춤 배율</button>
+          <span class="slide-index-viewer" id="zoom-value" style="font-size:10px;">100%</span>
+        </div>
+      </div>
+
+      <!-- Main Canvas Viewport -->
+      <div class="canvas-viewport" id="preview-body-container">
+        <div class="preview-body" id="preview-body" style="width: 100%; display: flex; align-items: center; justify-content: center;">
+          <div style="text-align:center; color: var(--text-muted); font-size: 12px; padding: 40px;">
+            <div style="font-size: 40px; margin-bottom: 12px; opacity:0.3;">🖥</div>
+            <h4>실시간 대시보드 미리보기 가동 준비 완료</h4>
+            <p style="font-size:11px; color: var(--text-dim); margin-top: 4px;">PPTX/PDF 파일을 불러오면 실제 미리보기가 화면에 매핑됩니다.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TERMINAL LOGGER -->
+    <div class="terminal-panel">
+      <div class="terminal-header">
+        <div class="terminal-title">
+          <span class="terminal-dot"></span>
+          <span>SYSTEM APPLICATION TERM CONSOLE</span>
+        </div>
+        <span style="font-size:9px; color: var(--text-dim); font-family:var(--font-mono);">v2.8_SECURE_ENDPOINT</span>
+      </div>
+      <div class="terminal-body" id="log-panel"></div>
+    </div>
+  </div>
+
+  <!-- RIGHT COLUMN: CONTROL PANEL -->
+  <div class="right-column">
+    <div class="mobile-toolbar mobile-only" style="position:sticky;top:0;">
+      <button type="button" class="btn btn-sm btn-outline-light w-100" onclick="toggleMobilePanel(false)">닫기 ✕</button>
+    </div>
+
+    <!-- Secure AI Engine Status: endpoint is hidden from user interface -->
+    <div class="control-group" style="background: rgba(139, 92, 246, 0.03);">
+      <div class="section-title" style="padding:0 0 10px 0; color: var(--neon-purple);">
+        <span>AI 인페인팅 엔진 상태</span>
+      </div>
+      <input type="hidden" id="ai-server-url" value="https://isaac1982-iopaint.hf.space">
+      <div class="d-flex align-items-center justify-content-between gap-2 p-3 rounded-3" style="background:var(--surface-card); border:1px solid var(--border);">
+        <div>
+          <div style="font-size:12px; font-weight:700; color:var(--text);">HuggingFace IOPaint</div>
+          <div id="ai-server-safe-status" style="font-size:10px; color:var(--text-muted); margin-top:3px;">엔드포인트 비공개 · LaMa 엔진 사용</div>
+        </div>
+        <button class="toolbar-btn" style="flex-shrink:0; border-color:var(--neon-purple); color:var(--neon-purple);" onclick="testAiServerConnection()">연결 확인</button>
+      </div>
+      <div style="margin-top:8px; font-size:10px; color:var(--text-dim); line-height:1.45;">
+        보안상 API 서버 주소는 화면에 표시하지 않습니다. 연결 상태만 확인할 수 있습니다.
+      </div>
+    </div>
+
+    <!-- AI Ultra-Context-Aware Refinements -->
+    <div class="control-group" style="border-bottom: 1px solid var(--border); background: rgba(59, 130, 246, 0.02);">
+      <div class="section-title" style="padding:0 0 10px 0; color: var(--accent-hover);">
+        <span>맥락 추론 보정 필터 (Ultra-Inpaint)</span>
+      </div>
+      
+      <div class="field-group" style="margin-bottom: 8px;">
+        <label style="font-size: 8.5px;">마스크 외곽 확장 반경 (Mask Dilation px)</label>
+        <input type="number" id="ai-mask-dilation" class="field-input" value="16" min="0" max="64">
+        <span style="font-size: 8px; color: var(--text-muted);">안티앨리어싱 및 외곽 번짐 픽셀 복구용 오프셋</span>
+      </div>
+
+      <div class="field-group" style="margin-bottom: 8.5px;">
+        <label style="font-size: 8.5px;">HD 보존 복원 전략 (HD Strategy)</label>
+        <select id="ai-hd-strategy" class="field-input" style="background-color: var(--surface);">
+          <option value="Crop" selected>Crop (크롭 복원 - 그라데이션/패턴 강력 추천)</option>
+          <option value="Resize">Resize (전체 크기 강제 비례 축소 복원)</option>
+          <option value="Original">Original (고해상도 무편집 캔버스 복원)</option>
+        </select>
+      </div>
+
+      <div class="field-group" style="margin-bottom: 8px;">
+        <label style="font-size: 8.5px;">HD 크롭 영역 여백 가이드 (HD Crop Margin)</label>
+        <input type="number" id="ai-crop-margin" class="field-input" value="256" min="64" max="1024">
+        <span style="font-size: 8px; color: var(--text-muted);">주변 배경 맥락(패턴/그라디언트)을 참고하는 크롭 마진 크기</span>
+      </div>
+
+      <div class="field-group">
+        <label style="font-size: 8.5px;">추론 알고리즘 모델 (Model)</label>
+        <select id="ai-model" class="field-input" style="background-color: var(--surface);">
+          <option value="lama" selected>LaMa (그라디언트 및 질감 복원 최적화)</option>
+          <option value="cv2">CV2 (빠른 기본 복원)</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Action Engine Options -->
+    <div class="control-group">
+      <div class="section-title" style="padding:0 0 10px 0;"><span>탐색 감지 설정</span></div>
+      <div class="toggle-item">
+        <label for="tgl-text">텍스트 박스 검사</label>
+        <input type="checkbox" class="switch" id="tgl-text" checked>
+      </div>
+      <div class="toggle-item">
+        <label for="tgl-img">이미지 리소스 검사</label>
+        <input type="checkbox" class="switch" id="tgl-img" checked>
+      </div>
+      <div class="toggle-item">
+        <label for="tgl-shape">공백 투명 도형 검사</label>
+        <input type="checkbox" class="switch" id="tgl-shape">
+      </div>
+    </div>
+
+    <!-- Coordinate Box Filters -->
+    <div class="control-group">
+      <div class="section-title" style="padding:0 0 10px 0;"><span>드래그 선택 정밀 필터</span></div>
+      <div class="coord-grid-v2">
+        <div class="field-group">
+          <label>X 시작 (좌 %)</label>
+          <input type="number" id="cx-min" class="field-input" placeholder="0" min="0" max="100">
+        </div>
+        <div class="field-group">
+          <label>X 종료 (우 %)</label>
+          <input type="number" id="cx-max" class="field-input" placeholder="100" min="0" max="100">
+        </div>
+        <div class="field-group" style="margin-top:6px;">
+          <label>Y 시작 (상 %)</label>
+          <input type="number" id="cy-min" class="field-input" placeholder="0" min="0" max="100">
+        </div>
+        <div class="field-group" style="margin-top:6px;">
+          <label>Y 종료 (하 %)</label>
+          <input type="number" id="cy-max" class="field-input" placeholder="100" min="0" max="100">
+        </div>
+      </div>
+    </div>
+
+    <!-- Replacement Image Selector -->
+    <div class="control-group">
+      <div class="section-title" style="padding:0 0 10px 0;"><span>대체 미디어 주입기 (v16)</span></div>
+      <input type="file" id="replacement-input" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml" style="display:none" onchange="onReplacementImageSelect(event)">
+      <button class="btn-outline" style="width:100%; border-style: dashed; border-color: var(--accent);" type="button" onclick="document.getElementById('replacement-input').click()">
+        🖼 대체 이미지 업로드
+      </button>
+      <div id="replacement-info" class="slide-card-desc" style="margin-top: 8px; padding: 8px; background: rgba(0,0,0,0.2); border-radius:6px; font-size:10px;">
+        설정된 영역을 제거한 뒤 고해상도 자체 이미지를 무손실 레이어로 PPTX 구조 내에 바로 삽입할 수 있습니다.
+      </div>
+      
+      <div class="toggle-item" style="margin-top:8px;">
+        <label for="tgl-raster-edit" style="font-size:10px; color: var(--text-muted);">배경 이미지 픽셀 교체</label>
+        <input type="checkbox" class="switch" id="tgl-raster-edit" checked>
+      </div>
+      <div class="toggle-item">
+        <label for="tgl-insert-overlay" style="font-size:10px; color: var(--text-muted);">선택 위치에 오브젝트 덮어쓰기</label>
+        <input type="checkbox" class="switch" id="tgl-insert-overlay" checked>
+      </div>
+    </div>
+
+    <!-- Detected checklist target summary -->
+    <div class="control-group" style="flex:1;">
+      <div class="section-title" style="padding:0 0 6px 0;">
+        <span>실시간 타깃 일치 분석</span>
+        <span id="target-count" class="slide-status-badge">0건</span>
+      </div>
+      <div class="checklist-box" id="target-checklist">
+        <div style="padding: 20px; font-size: 11px; text-align:center; color: var(--text-dim);">
+          감지된 워터마크 대상 목록이 여기에 자동 나열됩니다.
+        </div>
+      </div>
+    </div>
+
+    <!-- PRIMARY EXPORT ACTION BAR -->
+    <div class="action-container">
+      <button class="btn-gradient" id="btn-ai-inpaint" onclick="runLocalAiInpaintProcess(false)" style="background: linear-gradient(135deg, var(--neon-purple), #6d28d9); box-shadow: 0 4px 15px rgba(139,92,246,0.25);">
+        ✨ HF AI 픽셀 인페인팅 복원
+      </button>
+      <button class="btn-outline" id="btn-ai-inpaint-all" onclick="runLocalAiInpaintProcess(true)" style="color:#a78bfa; border-color:rgba(139,92,246,0.35);">
+        ✨ 전체 슬라이드 AI 인페인팅 일괄 복원
+      </button>
+      <button class="btn-outline" id="btn-v16-current" onclick="applyDragAreaV16(false)">
+        ✅ 선택 위치 단일 슬라이드 가리기 적용
+      </button>
+      <button class="btn-outline" id="btn-v16-all" onclick="applyDragAreaV16(true)" style="color: #f59e0b; border-color: rgba(245,158,11,0.2);">
+        🧩 전체 슬라이드 일괄 지우기 적용
+      </button>
+      <button class="btn-outline" id="btn-area-scan" onclick="scanSelectedAreaOnly()" disabled style="margin-top:4px;">
+        🎯 선택 영역 감지/표시
+      </button>
+      <button class="btn-gradient" id="btn-apply" onclick="downloadCleanedPptx()" disabled style="background: linear-gradient(135deg, #10b981, #059669); box-shadow: 0 4px 15px rgba(16,185,129,0.25);">
+        💾 최종 정제 파일 다운로드
+      </button>
+    </div>
+  </div>
+</main>
+
+<div id="toast"></div>
+
+<script>
+// ── Core Application State ──
+const state = {
+  zip: null,
+  fileName: '',
+  slideWidth: 9144000,
+  slideHeight: 5143500,
+  slides: [],
+  targets: [],
+  activeIdx: 0,
+  scanned: false,
+  mediaCache: {},
+  cleanedBlob: null,
+  cleanedFileName: '',
+  isCleaned: false,
+  selection: null,
+  dragStart: null,
+  preview: null,
+  replacementImage: null,
+  fileType: '',
+  pdfDoc: null,
+  pdfPages: [],
+};
+
+const REL_NS = 'http://schemas.openxmlformats.org/package/2006/relationships';
+const OFFICE_REL_NS = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
+
+if (window.pdfjsLib) {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
+
+// ── UI Utils: Terminal logger ──
+function log(msg, level = 'info') {
+  const panel = document.getElementById('log-panel');
+  if (!panel) return;
+  const now = new Date().toTimeString().slice(0, 8);
+  const el = document.createElement('div');
+  el.className = 'log-line';
+  el.innerHTML = `<span class="log-time">[${now}]</span><span class="log-msg ${level}">${escHtml(msg)}</span>`;
+  panel.appendChild(el);
+  panel.scrollTop = panel.scrollHeight;
+}
+
+function toast(msg, type = 'info') {
+  const el = document.getElementById('toast');
+  if (!el) return;
+  el.className = `show ${type}`;
+  el.innerHTML = `<span>${type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️'}</span> ${escHtml(msg)}`;
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+// ── XML Parsing helpers ──
+function findAll(docOrEl, localName) {
+  const results = [];
+  const walk = (node) => {
+    if (!node) return;
+    if (node.nodeType === 1) {
+      const name = (node.localName || node.nodeName || '').split(':').pop().toLowerCase();
+      if (name === localName.toLowerCase()) results.push(node);
+    }
+    if (node.childNodes) Array.from(node.childNodes).forEach(walk);
+  };
+  walk(docOrEl);
+  return results;
+}
+
+// Case insensitive zip file tracker
+function zipFileCaseInsensitive(zip, path) {
+  if (!zip || !path) return null;
+  const direct = zip.file(path);
+  if (direct) return direct;
+  const found = Object.keys(zip.files).find(k => k.toLowerCase() === path.toLowerCase());
+  return found ? zip.file(found) : null;
+}
+
+function getZipText(zip, path) {
+  const f = zipFileCaseInsensitive(zip, path);
+  if (f) return f.async('string');
+  throw new Error(`파일 누락: ${path}`);
+}
+
+function parseXml(str) {
+  const doc = new DOMParser().parseFromString(str, 'application/xml');
+  if (doc.getElementsByTagName('parsererror').length) throw new Error('XML 파서 파싱 에러 발생');
+  return doc;
+}
+
+function serializeXml(doc) {
+  return new XMLSerializer().serializeToString(doc);
+}
+
+function getOff(shape) {
+  const off = findAll(shape, 'off')[0];
+  const ext = findAll(shape, 'ext')[0];
+  if (!off || !ext) return null;
+  return {
+    x: parseInt(off.getAttribute('x'), 10) || 0,
+    y: parseInt(off.getAttribute('y'), 10) || 0,
+    cx: parseInt(ext.getAttribute('cx'), 10) || 0,
+    cy: parseInt(ext.getAttribute('cy'), 10) || 0,
+  };
+}
+
+function getText(shape) {
+  return findAll(shape, 't').map(n => n.textContent).join('').trim();
+}
+
+function getRelId(el) {
+  return el.getAttribute('r:embed') ||
+         el.getAttribute('r:link') ||
+         el.getAttributeNS(OFFICE_REL_NS, 'embed') ||
+         el.getAttributeNS(OFFICE_REL_NS, 'link') ||
+         el.getAttribute('embed') || '';
+}
+
+function relPath(ownerPath) {
+  const parts = ownerPath.split('/');
+  const name = parts.pop();
+  return `${parts.join('/')}/_rels/${name}.rels`;
+}
+
+function normalizePath(base, target) {
+  if (!target) return '';
+  if (/^https?:/i.test(target) || target.startsWith('/')) return target.replace(/^\//, '');
+  const parts = base.split('/').filter(Boolean);
+  const segs = target.split('/');
+  for (const s of segs) {
+    if (!s || s === '.') continue;
+    if (s === '..') parts.pop();
+    else parts.push(s);
+  }
+  return parts.join('/');
+}
+
+function mediaMime(path) {
+  const p = (path || '').toLowerCase();
+  if (p.endsWith('.jpg') || p.endsWith('.jpeg')) return 'image/jpeg';
+  if (p.endsWith('.gif')) return 'image/gif';
+  if (p.endsWith('.webp')) return 'image/webp';
+  if (p.endsWith('.svg')) return 'image/svg+xml';
+  return 'image/png';
+}
+
+async function mediaDataUrl(path) {
+  if (!path || /^https?:/i.test(path)) return '';
+  if (state.mediaCache[path]) return state.mediaCache[path];
+  const f = zipFileCaseInsensitive(state.zip, path);
+  if (!f) return '';
+  const b64 = await f.async('base64');
+  const url = `data:${mediaMime(path)};base64,${b64}`;
+  state.mediaCache[path] = url;
+  return url;
+}
+
+// ── Watermark Detection Rules ──
+function isBottomRightSmall(box, W = state.slideWidth, H = state.slideHeight) {
+  if (!box) return false;
+  const right = (box.x + box.cx) / W;
+  const bottom = (box.y + box.cy) / H;
+  const centerX = (box.x + box.cx / 2) / W;
+  const centerY = (box.y + box.cy / 2) / H;
+  const width = box.cx / W;
+  const height = box.cy / H;
+  const area = width * height;
+  
+  const anchored = (right >= 0.90 && bottom >= 0.90) || (centerX >= 0.80 && centerY >= 0.80);
+  const small = width <= 0.28 && height <= 0.20 && area <= 0.045;
+  return anchored && small;
+}
+
+function elementDescriptor(el) {
+  const cNvPr = findAll(el, 'cNvPr')[0];
+  return [
+    cNvPr?.getAttribute('name') || '',
+    cNvPr?.getAttribute('descr') || '',
+    cNvPr?.getAttribute('title') || '',
+    getText(el) || ''
+  ].join(' ').toLowerCase();
+}
+
+function isNotebookLmMedia(mediaPath, descriptor = '') {
+  const hay = `${mediaPath || ''} ${descriptor || ''}`.toLowerCase();
+  return hay.includes('lm.png') ||
+         hay.includes('notebooklm') ||
+         hay.includes('notebook lm') ||
+         hay.includes('watermark') ||
+         hay.includes('image_3f36f9') ||
+         /(^|[/_-])lm\.(png|jpg|jpeg|webp|svg)$/i.test(mediaPath || '');
+}
+
+function shouldRemoveNotebookTarget(el, mediaPath = '') {
+  const box = getOff(el);
+  const desc = elementDescriptor(el);
+  const named = isNotebookLmMedia(mediaPath, desc);
+  const bottom = isBottomRightSmall(box);
+  const isPic = (el.localName || '').toLowerCase() === 'pic';
+  
+  if (named) return { remove: true, reason: '관계 키명 매치 (NotebookLM/lm.png)' };
+  if (isPic && bottom) return { remove: true, reason: '우측 하단 앵커 좌표 기하 매치' };
+  return { remove: false, reason: '' };
+}
+
+// ── UI Events / File loading ──
+function onDragOver(e) {
+  e.preventDefault();
+  document.getElementById('dropzone').classList.add('drag-over');
+}
+
+function onDragLeave(e) {
+  document.getElementById('dropzone').classList.remove('drag-over');
+}
+
+function onDrop(e) {
+  e.preventDefault();
+  document.getElementById('dropzone').classList.remove('drag-over');
+  const f = e.dataTransfer.files[0];
+  if (f) loadFile(f);
+}
+
+function onFileSelect(e) {
+  const f = e.target.files[0];
+  if (f) loadFile(f);
+}
+
+async function loadFile(file) {
+  const lowerName = file.name.toLowerCase();
+  if (lowerName.endsWith('.pdf') || file.type === 'application/pdf') {
+    return loadPdfFile(file);
+  }
+  if (!lowerName.endsWith('.pptx')) {
+    toast('.pptx 또는 .pdf 파일만 처리가 가능합니다.', 'error');
+    return;
+  }
+  resetState();
+  state.fileType = 'pptx';
+  state.fileName = file.name;
+  log(`PPTX 파일 적재 중: ${file.name}`, 'system');
+
+  try {
+    const buf = await file.arrayBuffer();
+    state.zip = await JSZip.loadAsync(buf);
+
+    if (!zipFileCaseInsensitive(state.zip, '[Content_Types].xml') || !zipFileCaseInsensitive(state.zip, 'ppt/presentation.xml')) {
+      throw new Error('PPTX 압축 패키지 내 명세 구조가 올바르지 않습니다.');
+    }
+
+    try {
+      const presXml = parseXml(await getZipText(state.zip, 'ppt/presentation.xml'));
+      const sldSz = findAll(presXml, 'sldSz')[0];
+      if (sldSz) {
+        state.slideWidth = parseInt(sldSz.getAttribute('cx'), 10) || state.slideWidth;
+        state.slideHeight = parseInt(sldSz.getAttribute('cy'), 10) || state.slideHeight;
+      }
+    } catch(e) {
+      log('슬라이드 가상 사이즈 파싱 실패, 표준 규격(16:9)을 차용합니다.', 'warn');
+    }
+
+    const slideFiles = Object.keys(state.zip.files)
+      .filter(n => /^ppt\/slides\/slide\d+\.xml$/i.test(n))
+      .sort((a, b) => parseInt((a.match(/slide(\d+)\.xml$/i)||[0,0])[1], 10) - parseInt((b.match(/slide(\d+)\.xml$/i)||[0,0])[1], 10));
+
+    for (const path of slideFiles) {
+      const xmlDoc = parseXml(await getZipText(state.zip, path));
+      const rels = await loadRels(state.zip, path);
+      state.slides.push({ path, xmlDoc, rels });
+    }
+
+    log(`슬라이드 구조 해석 완료: ${state.slides.length}장 감지`, 'success');
+    showFileInfo(file);
+    updateFileModeUi();
+    
+    await autoDetectWatermarksSilently();
+
+    state.activeIdx = 0;
+    renderSlideList();
+    await renderPreview();
+    updateNav();
+  } catch(err) {
+    log(`적재 분석 에러: ${err.message}`, 'error');
+    toast(err.message, 'error');
+  }
+}
+
+async function loadRels(zip, ownerPath) {
+  const rp = relPath(ownerPath);
+  const result = {};
+  if (!zipFileCaseInsensitive(zip, rp)) return result;
+  try {
+    const doc = parseXml(await getZipText(zip, rp));
+    const base = ownerPath.split('/').slice(0, -1).join('/');
+    findAll(doc, 'Relationship').forEach(rel => {
+      const id = rel.getAttribute('Id') || '';
+      const target = rel.getAttribute('Target') || '';
+      const type = rel.getAttribute('Type') || '';
+      const targetMode = rel.getAttribute('TargetMode') || '';
+      const resolved = targetMode.toLowerCase() === 'external' ? target : normalizePath(base, target);
+      if (id) result[id] = { id, target, type, resolved, node: rel, relDoc: doc, relPath: rp };
+    });
+  } catch(e) {
+    log(`종속성 관계 매핑 로드 실패: ${rp}`, 'warn');
+  }
+  return result;
+}
+
+function showFileInfo(file) {
+  const dz = document.getElementById('dropzone');
+  const fi = document.getElementById('file-info');
+  dz.style.display = 'none';
+  fi.style.display = 'block';
+  fi.innerHTML = `
+    <div class="loaded-file-block">
+      <div style="font-size: 22px;">📊</div>
+      <div class="loaded-file-meta">
+        <div class="loaded-file-name" title="${escHtml(file.name)}">${escHtml(file.name)}</div>
+        <div class="loaded-file-size">${(file.size/1024).toFixed(1)} KB · ${state.slides.length} ${state.fileType === 'pdf' ? 'Pages' : 'Slides'}</div>
+      </div>
+      <button class="loaded-file-remove" onclick="resetAll()">✕</button>
+    </div>
+  `;
+}
+
+
+function updateFileModeUi() {
+  const browserTitle = document.querySelector('.left-column .section-title:nth-of-type(2) span');
+  if (browserTitle) browserTitle.textContent = state.fileType === 'pdf' ? '페이지 브라우저' : '슬라이드 브라우저';
+
+  const applyBtn = document.getElementById('btn-apply');
+  if (applyBtn) applyBtn.innerHTML = state.fileType === 'pdf'
+    ? '💾 최종 정제 PDF 다운로드'
+    : '💾 최종 정제 PPTX 다운로드';
+
+  const aiBtn = document.getElementById('btn-ai-inpaint');
+  if (aiBtn) aiBtn.innerHTML = state.fileType === 'pdf'
+    ? '✨ HF AI PDF 픽셀 인페인팅 복원'
+    : '✨ HF AI 픽셀 인페인팅 복원';
+
+  const allBtn = document.getElementById('btn-ai-inpaint-all');
+  if (allBtn) allBtn.innerHTML = state.fileType === 'pdf'
+    ? '✨ 전체 PDF 페이지 AI 인페인팅 일괄 복원'
+    : '✨ 전체 슬라이드 AI 인페인팅 일괄 복원';
+
+  const areaCurrent = document.getElementById('btn-v16-current');
+  if (areaCurrent) areaCurrent.innerHTML = state.fileType === 'pdf'
+    ? '✅ 선택 위치 단일 페이지 적용'
+    : '✅ 선택 위치 단일 슬라이드 가리기 적용';
+
+  const areaAll = document.getElementById('btn-v16-all');
+  if (areaAll) areaAll.innerHTML = state.fileType === 'pdf'
+    ? '🧩 전체 PDF 페이지 동일 영역 적용'
+    : '🧩 전체 슬라이드 일괄 지우기 적용';
+}
+
+
+// ── PDF loading / raster page engine ──
+async function loadPdfFile(file) {
+  resetState();
+  state.fileType = 'pdf';
+  state.fileName = file.name;
+  log(`PDF 파일 적재 중: ${file.name}`, 'system');
+
+  try {
+    if (!window.pdfjsLib) throw new Error('PDF.js 라이브러리를 불러오지 못했습니다.');
+    const buf = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+    state.pdfDoc = pdf;
+    state.pdfPages = [];
+    state.slides = [];
+
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      let viewport = page.getViewport({ scale: 2 });
+      const maxDim = Math.max(viewport.width, viewport.height);
+      if (maxDim > 2400) viewport = page.getViewport({ scale: 2 * 2400 / maxDim });
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(viewport.width);
+      canvas.height = Math.round(viewport.height);
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      await page.render({ canvasContext: ctx, viewport }).promise;
+      const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png', 0.98));
+      const dataUrl = await blobToDataUrl(blob);
+      state.pdfPages.push({ width: canvas.width, height: canvas.height, blob, dataUrl, dirty: false });
+      state.slides.push({ pdfPage: true, targetCount: 0 });
+      log(`[PDF] ${i}/${pdf.numPages} 페이지 래스터 미리보기 생성 완료`, 'success');
+    }
+
+    if (!state.pdfPages.length) throw new Error('PDF 페이지를 읽지 못했습니다.');
+    updateActivePageDimensions();
+    showFileInfo(file);
+    updateFileModeUi();
+    state.activeIdx = 0;
+    renderSlideList();
+    await renderPreview();
+    updateNav();
+    document.getElementById('btn-apply').disabled = false;
+    log(`PDF ${state.pdfPages.length}페이지 인식 완료. 드래그 영역 선택 후 AI 인페인팅 또는 영역 적용을 사용할 수 있습니다.`, 'system');
+    toast('PDF 업로드 및 미리보기 생성 완료', 'success');
+  } catch (err) {
+    log(`PDF 적재 분석 에러: ${err.message}`, 'error');
+    toast(err.message, 'error');
+  }
+}
+
+function updateActivePageDimensions() {
+  if (state.fileType === 'pdf' && state.pdfPages[state.activeIdx]) {
+    state.slideWidth = state.pdfPages[state.activeIdx].width;
+    state.slideHeight = state.pdfPages[state.activeIdx].height;
+  }
+}
+
+function renderPdfPreviewInto(body) {
+  const page = state.pdfPages[state.activeIdx];
+  if (!page) return false;
+  updateActivePageDimensions();
+  const container = document.getElementById('preview-body-container');
+  const bodyRect = container.getBoundingClientRect();
+  const maxW = Math.max(bodyRect.width - 48, 320);
+  const maxH = Math.max(bodyRect.height - 48, 220);
+  const ratio = Math.min(maxW / page.width, maxH / page.height);
+  const vw = Math.round(page.width * ratio);
+  const vh = Math.round(page.height * ratio);
+  document.getElementById('zoom-value').textContent = `${Math.round(ratio * 100)}%`;
+  const statusStr = page.dirty ? '정제 완료' : '원본 PDF 래스터';
+  body.innerHTML = `
+    <div id="slide-canvas-wrap" class="selectable" onpointerdown="onPreviewPointerDown(event)" style="width:${vw}px; height:${vh}px; background:#ffffff; position:relative;">
+      <svg id="slide-svg" width="${vw}" height="${vh}" viewBox="0 0 ${vw} ${vh}" xmlns="http://www.w3.org/2000/svg">
+        <rect width="${vw}" height="${vh}" fill="#ffffff"/>
+        <image x="0" y="0" width="${vw}" height="${vh}" href="${page.dataUrl}" preserveAspectRatio="none"/>
+      </svg>
+      <div id="selection-box" class="selection-box"></div>
+      <div id="selection-chip" class="selection-chip" style="display:none"></div>
+      <div style="position:absolute; top:12px; left:12px; background:rgba(9,10,15,0.85); color:#b7ff55; border:1px solid rgba(183,255,85,0.3); font:10px var(--font-mono); padding:6px 10px; border-radius:8px; pointer-events:none; box-shadow:0 4px 12px rgba(0,0,0,0.4); display:flex; align-items:center; gap:6px;">
+        <span style="width:6px; height:6px; border-radius:50%; background:#b7ff55; box-shadow:0 0 6px #b7ff55;"></span>
+        <span>PDF PREVIEW · ${statusStr}</span>
+      </div>
+    </div>`;
+  state.preview = { ratio, vw, vh };
+  renderSelectionOverlay();
+  return true;
+}
+
+function generatePdfMaskBlob(page, sel, dilationPx = 16) {
+  const canvas = document.createElement('canvas');
+  canvas.width = page.width;
+  canvas.height = page.height;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#000000';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  const x = Math.round(sel.xMin * canvas.width);
+  const y = Math.round(sel.yMin * canvas.height);
+  const w = Math.round((sel.xMax - sel.xMin) * canvas.width);
+  const h = Math.round((sel.yMax - sel.yMin) * canvas.height);
+  ctx.fillStyle = '#ffffff';
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  ctx.fillRect(x, y, w, h);
+  if (dilationPx > 0) {
+    ctx.lineWidth = dilationPx * 2;
+    ctx.strokeRect(x, y, w, h);
+  }
+  return new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+}
+
+async function runPdfAiInpaintProcess(allPages = false) {
+  const sel = state.selection || getSelectionFromInputs();
+  if (!sel) {
+    toast('PDF에서 지울 영역을 먼저 드래그해 주세요.', 'error');
+    return;
+  }
+  const serverUrl = normalizeServerUrl(document.getElementById('ai-server-url').value.trim());
+  document.getElementById('ai-server-url').value = serverUrl;
+  const opts = getAiInpaintOptions();
+  const indices = allPages ? state.pdfPages.map((_, i) => i) : [state.activeIdx];
+  let ok = 0;
+  log(`[PDF AI] ${allPages ? '전체 페이지' : '현재 페이지'} HuggingFace IOPaint 인페인팅 시작`, 'system');
+
+  for (const idx of indices) {
+    const page = state.pdfPages[idx];
+    try {
+      const maskBlob = await generatePdfMaskBlob(page, sel, opts.dilation);
+      const returnedBlob = await callLocalInpaintServer(serverUrl, page.blob, maskBlob, opts);
+      page.blob = returnedBlob;
+      page.dataUrl = await blobToDataUrl(returnedBlob);
+      page.dirty = true;
+      ok++;
+      log(`[PDF AI][Page ${idx + 1}] HD Crop 인페인팅 완료`, 'success');
+    } catch (err) {
+      log(`[PDF AI][Page ${idx + 1}] 복원 실패: ${err.message}`, 'error');
+    }
+  }
+
+  if (ok) {
+    state.isCleaned = true;
+    state.cleanedBlob = null;
+    state.cleanedFileName = state.fileName.replace(/\.pdf$/i, allPages ? '_AI_Inpainted_AllPages.pdf' : '_AI_Inpainted.pdf');
+    document.getElementById('btn-apply').disabled = false;
+    document.getElementById('stat-val-done').textContent = '완료';
+    renderSlideList();
+    await renderPreview();
+    toast(`PDF ${ok}페이지 AI 인페인팅 완료`, 'success');
+  } else {
+    toast('PDF 인페인팅 처리 결과가 없습니다.', 'info');
+  }
+}
+
+async function applyPdfDragArea(allPages = false) {
+  const sel = state.selection || getSelectionFromInputs();
+  if (!sel) {
+    toast('PDF에서 처리할 영역을 먼저 드래그해 주세요.', 'error');
+    return;
+  }
+  const indices = allPages ? state.pdfPages.map((_, i) => i) : [state.activeIdx];
+  const replacement = state.replacementImage ? await loadImageElement(state.replacementImage.dataUrl) : null;
+  for (const idx of indices) {
+    const page = state.pdfPages[idx];
+    const img = await loadImageElement(page.dataUrl);
+    const canvas = document.createElement('canvas');
+    canvas.width = page.width;
+    canvas.height = page.height;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    const x = Math.round(sel.xMin * canvas.width);
+    const y = Math.round(sel.yMin * canvas.height);
+    const w = Math.round((sel.xMax - sel.xMin) * canvas.width);
+    const h = Math.round((sel.yMax - sel.yMin) * canvas.height);
+    if (replacement) {
+      ctx.drawImage(replacement, x, y, w, h);
+    } else {
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(x, y, w, h);
+    }
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png', 0.98));
+    page.blob = blob;
+    page.dataUrl = await blobToDataUrl(blob);
+    page.dirty = true;
+    log(`[PDF][Page ${idx + 1}] 선택 영역 ${replacement ? '대체 이미지 삽입' : '화이트 제거'} 적용`, 'success');
+  }
+  state.isCleaned = true;
+  state.cleanedBlob = null;
+  state.cleanedFileName = state.fileName.replace(/\.pdf$/i, allPages ? '_Edited_AllPages.pdf' : '_Edited.pdf');
+  document.getElementById('btn-apply').disabled = false;
+  renderSlideList();
+  await renderPreview();
+  toast('PDF 영역 처리 완료', 'success');
+}
+
+async function downloadCleanedPdf() {
+  if (!state.pdfPages.length) {
+    toast('PDF 페이지가 없습니다.', 'error');
+    return;
+  }
+  if (!window.jspdf || !window.jspdf.jsPDF) {
+    toast('jsPDF 라이브러리를 불러오지 못했습니다.', 'error');
+    return;
+  }
+  const { jsPDF } = window.jspdf;
+  const first = state.pdfPages[0];
+  const orientation = first.width >= first.height ? 'l' : 'p';
+  const pdf = new jsPDF({ orientation, unit: 'pt', format: [first.width, first.height], compress: true });
+  state.pdfPages.forEach((page, idx) => {
+    if (idx > 0) pdf.addPage([page.width, page.height], page.width >= page.height ? 'l' : 'p');
+    const fmt = page.dataUrl.startsWith('data:image/jpeg') ? 'JPEG' : 'PNG';
+    pdf.addImage(page.dataUrl, fmt, 0, 0, page.width, page.height, undefined, 'FAST');
+  });
+  const outName = state.cleanedFileName || state.fileName.replace(/\.pdf$/i, '_ClearDoc_Cleaned.pdf');
+  pdf.save(outName);
+  log(`PDF 다운로드 완료: ${outName}`, 'success');
+  toast('PDF 정제 파일 다운로드 완료', 'success');
+}
+
+// ── Silent Pre-scan for Left List ──
+async function autoDetectWatermarksSilently() {
+  for (let si = 0; si < state.slides.length; si++) {
+    const slide = state.slides[si];
+    slide.rels = await loadRels(state.zip, slide.path);
+    const rels = slide.rels;
+    let count = 0;
+
+    findAll(slide.xmlDoc, 'pic').forEach(pic => {
+      const blip = findAll(pic, 'blip')[0];
+      const rid = blip ? getRelId(blip) : '';
+      const rel = rid ? rels[rid] : null;
+      const media = rel?.resolved || '';
+      if (shouldRemoveNotebookTarget(pic, media).remove) count++;
+    });
+
+    findAll(slide.xmlDoc, 'sp').forEach(sp => {
+      const text = getText(sp).toLowerCase();
+      if (text.includes('notebooklm') && isBottomRightSmall(getOff(sp))) count++;
+    });
+
+    slide.targetCount = count;
+  }
+  
+  const total = state.slides.reduce((sum, s) => sum + (s.targetCount || 0), 0);
+  document.getElementById('stat-val-total').textContent = total;
+  document.getElementById('stat-val-done').textContent = state.isCleaned ? '완료' : '대기';
+}
+
+function renderSlideList() {
+  const container = document.getElementById('slide-nav-list');
+  container.innerHTML = '';
+  document.getElementById('slide-count-indicator').textContent = `${state.activeIdx + 1} / ${state.slides.length}`;
+
+  state.slides.forEach((slide, idx) => {
+    const card = document.createElement('div');
+    card.className = `slide-card ${idx === state.activeIdx ? 'active' : ''}`;
+    card.onclick = () => jumpToSlide(idx);
+
+    const badge = slide.targetCount > 0 
+      ? `<span class="slide-status-badge alert">⚠️ 워터마크 ${slide.targetCount}</span>`
+      : `<span class="slide-status-badge">안전</span>`;
+
+    const itemTitle = state.fileType === 'pdf'
+      ? `Page ${idx + 1} Preview`
+      : `Slide ${idx + 1} Structure`;
+    const itemDesc = state.fileType === 'pdf'
+      ? `PDF Page Raster · ${state.pdfPages[idx]?.width || 0}×${state.pdfPages[idx]?.height || 0}px`
+      : `XML Nodes: ${findAll(slide.xmlDoc, 'sp').length + findAll(slide.xmlDoc, 'pic').length}개 감지`;
+
+    card.innerHTML = `
+      <div class="slide-index-badge">${idx + 1}</div>
+      <div class="slide-card-details">
+        <div class="slide-card-title">${itemTitle}</div>
+        <div class="slide-card-desc">${itemDesc}</div>
+      </div>
+      <div>${badge}</div>
+    `;
+    container.appendChild(card);
+  });
+  updateNav();
+}
+
+async function jumpToSlide(idx) {
+  state.activeIdx = idx;
+  updateActivePageDimensions();
+  renderSlideList();
+  await renderPreview();
+  updateNav();
+}
+
+// ── Interactive Coordinates Brush ──
+function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+function pct(n) { return Math.round(n * 10) / 10; }
+
+function setCoordInputsFromSelection(sel) {
+  document.getElementById('cx-min').value = pct(sel.xMin * 100);
+  document.getElementById('cx-max').value = pct(sel.xMax * 100);
+  document.getElementById('cy-min').value = pct(sel.yMin * 100);
+  document.getElementById('cy-max').value = pct(sel.yMax * 100);
+}
+
+function getSelectionFromInputs() {
+  const xMin = parseFloat(document.getElementById('cx-min').value);
+  const xMax = parseFloat(document.getElementById('cx-max').value);
+  const yMin = parseFloat(document.getElementById('cy-min').value);
+  const yMax = parseFloat(document.getElementById('cy-max').value);
+  if ([xMin, xMax, yMin, yMax].some(v => Number.isNaN(v))) return null;
+  return {
+    xMin: clamp(Math.min(xMin, xMax) / 100, 0, 1),
+    xMax: clamp(Math.max(xMin, xMax) / 100, 0, 1),
+    yMin: clamp(Math.min(yMin, yMax) / 100, 0, 1),
+    yMax: clamp(Math.max(yMin, yMax) / 100, 0, 1),
+  };
+}
+
+function eventToSlidePct(e) {
+  const wrap = document.getElementById('slide-canvas-wrap');
+  if (!wrap) return null;
+  const r = wrap.getBoundingClientRect();
+  const x = clamp((e.clientX - r.left) / r.width, 0, 1);
+  const y = clamp((e.clientY - r.top) / r.height, 0, 1);
+  return { x, y };
+}
+
+function renderSelectionOverlay() {
+  const box = document.getElementById('selection-box');
+  const chip = document.getElementById('selection-chip');
+  const sel = state.selection || getSelectionFromInputs();
+  if (!box || !chip || !sel) {
+    if (box) box.style.display = 'none';
+    if (chip) chip.style.display = 'none';
+    return;
+  }
+  const left = sel.xMin * 100;
+  const top = sel.yMin * 100;
+  const width = Math.max((sel.xMax - sel.xMin) * 100, 0.6);
+  const height = Math.max((sel.yMax - sel.yMin) * 100, 0.6);
+  box.style.cssText = `display:block; left:${left}%; top:${top}%; width:${width}%; height:${height}%;`;
+  chip.style.display = 'block';
+  chip.textContent = `구역: [X] ${pct(sel.xMin*100)}-${pct(sel.xMax*100)}% / [Y] ${pct(sel.yMin*100)}-${pct(sel.yMax*100)}%`;
+}
+
+function onPreviewPointerDown(e) {
+  if (!state.slides.length) return;
+  e.preventDefault();
+  const pt = eventToSlidePct(e);
+  if (!pt) return;
+  state.dragStart = pt;
+  state.selection = { xMin: pt.x, xMax: pt.x, yMin: pt.y, yMax: pt.y };
+  renderSelectionOverlay();
+  window.addEventListener('pointermove', onPreviewPointerMove);
+  window.addEventListener('pointerup', onPreviewPointerUp, { once: true });
+}
+
+function onPreviewPointerMove(e) {
+  if (!state.dragStart) return;
+  const pt = eventToSlidePct(e);
+  if (!pt) return;
+  state.selection = {
+    xMin: Math.min(state.dragStart.x, pt.x),
+    xMax: Math.max(state.dragStart.x, pt.x),
+    yMin: Math.min(state.dragStart.y, pt.y),
+    yMax: Math.max(state.dragStart.y, pt.y),
+  };
+  renderSelectionOverlay();
+}
+
+async function onPreviewPointerUp(e) {
+  window.removeEventListener('pointermove', onPreviewPointerMove);
+  if (!state.dragStart) return;
+  const pt = eventToSlidePct(e) || state.dragStart;
+  const dx = Math.abs(pt.x - state.dragStart.x);
+  const dy = Math.abs(pt.y - state.dragStart.y);
+  if (dx < 0.01 && dy < 0.01) {
+    const padX = 0.03, padY = 0.035;
+    state.selection = {
+      xMin: clamp(pt.x - padX, 0, 1),
+      xMax: clamp(pt.x + padX, 0, 1),
+      yMin: clamp(pt.y - padY, 0, 1),
+      yMax: clamp(pt.y + padY, 0, 1),
+    };
+  } else {
+    state.selection = {
+      xMin: Math.min(state.dragStart.x, pt.x),
+      xMax: Math.max(state.dragStart.x, pt.x),
+      yMin: Math.min(state.dragStart.y, pt.y),
+      yMax: Math.max(state.dragStart.y, pt.y),
+    };
+  }
+  state.dragStart = null;
+  setCoordInputsFromSelection(state.selection);
+  document.getElementById('btn-area-scan').disabled = false;
+  log(`구역 미세지정: X ${pct(state.selection.xMin*100)}~${pct(state.selection.xMax*100)}%, Y ${pct(state.selection.yMin*100)}~${pct(state.selection.yMax*100)}%`, 'system');
+  await scanSelectedAreaOnly();
+}
+
+function selectionHitMetrics(el, sel) {
+  const box = getOff(el);
+  if (!box || !sel) return null;
+
+  const ex1 = clamp(box.x / state.slideWidth, 0, 1);
+  const ey1 = clamp(box.y / state.slideHeight, 0, 1);
+  const ex2 = clamp((box.x + box.cx) / state.slideWidth, 0, 1);
+  const ey2 = clamp((box.y + box.cy) / state.slideHeight, 0, 1);
+  const sx1 = clamp(sel.xMin, 0, 1);
+  const sy1 = clamp(sel.yMin, 0, 1);
+  const sx2 = clamp(sel.xMax, 0, 1);
+  const sy2 = clamp(sel.yMax, 0, 1);
+
+  const ix1 = Math.max(ex1, sx1);
+  const iy1 = Math.max(ey1, sy1);
+  const ix2 = Math.min(ex2, sx2);
+  const iy2 = Math.min(ey2, sy2);
+  const iw = Math.max(0, ix2 - ix1);
+  const ih = Math.max(0, iy2 - iy1);
+  const interArea = iw * ih;
+  const elemArea = Math.max((ex2 - ex1) * (ey2 - ey1), 0.000001);
+  const selArea = Math.max((sx2 - sx1) * (sy2 - sy1), 0.000001);
+  const elemCx = (ex1 + ex2) / 2;
+  const elemCy = (ey1 + ey2) / 2;
+  const selCx = (sx1 + sx2) / 2;
+  const selCy = (sy1 + sy2) / 2;
+
+  return {
+    intersects: interArea > 0,
+    elementCoverage: interArea / elemArea,
+    selectionCoverage: interArea / selArea,
+    elementArea: elemArea,
+    selectionArea: selArea,
+    elementCenterInside: elemCx >= sx1 && elemCx <= sx2 && elemCy >= sy1 && elemCy <= sy2,
+    selectionCenterInside: selCx >= ex1 && selCx <= ex2 && selCy >= ey1 && selCy <= ey2,
+    isLargeElement: elemArea >= 0.18 || (ex2 - ex1) >= 0.65 || (ey2 - ey1) >= 0.65
+  };
+}
+
+function elementIntersectsSelection(el, sel) {
+  const m = selectionHitMetrics(el, sel);
+  if (!m || !m.intersects) return false;
+  if (m.isLargeElement) {
+    return m.elementCoverage >= 0.55 || (m.elementCenterInside && m.elementCoverage >= 0.35);
+  }
+  return m.elementCoverage >= 0.25 || (m.elementCenterInside && m.elementCoverage >= 0.12);
+}
+
+function targetPrecisionLabel(el, sel) {
+  const m = selectionHitMetrics(el, sel);
+  if (!m) return '';
+  return `매치 ${Math.round(m.elementCoverage * 100)}%`;
+}
+
+function isClearDocAreaEraser(sp) {
+  const cNvPr = findAll(sp, 'cNvPr')[0];
+  const name = (cNvPr && (cNvPr.getAttribute('name') || cNvPr.getAttribute('descr') || '') || '').toLowerCase();
+  return name.includes('cleardoc-area-eraser') || name.includes('cleardoc selection eraser');
+}
+
+function getShapeTree(xmlDoc) {
+  return findAll(xmlDoc, 'spTree')[0] || null;
+}
+
+function nextShapeId(xmlDoc) {
+  let maxId = 1000;
+  findAll(xmlDoc, 'cNvPr').forEach(n => {
+    const id = parseInt(n.getAttribute('id') || '0', 10);
+    if (!Number.isNaN(id)) maxId = Math.max(maxId, id);
+  });
+  return maxId + 1;
+}
+
+function selectionToEmuBox(sel) {
+  const x1 = clamp(Math.min(sel.xMin, sel.xMax), 0, 1);
+  const x2 = clamp(Math.max(sel.xMin, sel.xMax), 0, 1);
+  const y1 = clamp(Math.min(sel.yMin, sel.yMax), 0, 1);
+  const y2 = clamp(Math.max(sel.yMin, sel.yMax), 0, 1);
+  return {
+    x: Math.round(x1 * state.slideWidth),
+    y: Math.round(y1 * state.slideHeight),
+    cx: Math.max(1, Math.round((x2 - x1) * state.slideWidth)),
+    cy: Math.max(1, Math.round((y2 - y1) * state.slideHeight)),
+  };
+}
+
+function createAreaEraserShapeXml(xmlDoc, sel, label = 'manual') {
+  const box = selectionToEmuBox(sel);
+  const id = nextShapeId(xmlDoc);
+  const xml = `
+<p:sp xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+  <p:nvSpPr>
+    <p:cNvPr id="${id}" name="ClearDoc-Area-Eraser-${label}" descr="ClearDoc selection eraser"/>
+    <p:cNvSpPr/>
+    <p:nvPr/>
+  </p:nvSpPr>
+  <p:spPr>
+    <a:xfrm>
+      <a:off x="${box.x}" y="${box.y}"/>
+      <a:ext cx="${box.cx}" cy="${box.cy}"/>
+    </a:xfrm>
+    <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>
+    <a:solidFill><a:srgbClr val="FFFFFF"/></a:solidFill>
+    <a:ln><a:noFill/></a:ln>
+  </p:spPr>
+  <p:style>
+    <a:lnRef idx="0"><a:schemeClr val="accent1"/></a:lnRef>
+    <a:fillRef idx="0"><a:schemeClr val="accent1"/></a:fillRef>
+    <a:effectRef idx="0"><a:schemeClr val="accent1"/></a:effectRef>
+    <a:fontRef idx="minor"><a:schemeClr val="tx1"/></a:fontRef>
+  </p:style>
+  <p:txBody><a:bodyPr/><a:lstStyle/><a:p/></p:txBody>
+</p:sp>`;
+  return parseXml(xml).documentElement;
+}
+
+async function addSelectionEraserMaskToSlide(slideIdx, sel) {
+  const slide = state.slides[slideIdx];
+  if (!slide || !slide.xmlDoc || !sel) return false;
+  const tree = getShapeTree(slide.xmlDoc);
+  if (!tree) throw new Error('슬라이드 최상위 spTree 구조를 확보하지 못했습니다.');
+  const mask = createAreaEraserShapeXml(slide.xmlDoc, sel, `slide-${slideIdx + 1}`);
+  tree.appendChild(slide.xmlDoc.importNode(mask, true));
+  state.zip.file(slide.path, serializeXml(slide.xmlDoc));
+  const b = selectionToEmuBox(sel);
+  log(`[슬라이드 ${slideIdx + 1}] 마스크 정적 오버레이 완료: x=${b.x}, y=${b.y}`, 'success');
+  return true;
+}
+
+async function collectSelectionTargets(selection, onlyActiveSlide = true) {
+  const targets = [];
+  const start = onlyActiveSlide ? state.activeIdx : 0;
+  const end = onlyActiveSlide ? state.activeIdx + 1 : state.slides.length;
+  const removeText = document.getElementById('tgl-text').checked;
+  const removeImg = document.getElementById('tgl-img').checked;
+  const removeShape = document.getElementById('tgl-shape').checked;
+
+  for (let si = start; si < end; si++) {
+    const slide = state.slides[si];
+    slide.rels = await loadRels(state.zip, slide.path);
+    if (removeImg) {
+      findAll(slide.xmlDoc, 'pic').forEach(pic => {
+        if (!elementIntersectsSelection(pic, selection)) return;
+        const blip = findAll(pic, 'blip')[0];
+        const rid = blip ? getRelId(blip) : '';
+        const rel = rid ? slide.rels[rid] : null;
+        const media = rel?.resolved || '';
+        targets.push({ slideIdx: si, element: pic, type: 'image', label: `구역 이미지 ${media.split('/').pop() || ''}`, rid, mediaPath: media });
+      });
+    }
+    findAll(slide.xmlDoc, 'sp').forEach(sp => {
+      if (!elementIntersectsSelection(sp, selection)) return;
+      const text = getText(sp);
+      if (text && removeText) {
+        targets.push({ slideIdx: si, element: sp, type: 'text', label: `구역 텍스트: ${text.slice(0, 20)}`, rid: null, mediaPath: null });
+      } else if (!text && removeShape) {
+        targets.push({ slideIdx: si, element: sp, type: 'shape', label: `구역 빈 도형`, rid: null, mediaPath: null });
+      }
+    });
+  }
+  const seen = new WeakSet();
+  return targets.filter(t => t.element && !seen.has(t.element) && (seen.add(t.element) || true));
+}
+
+// ── Replacement Layer (v16 Control) ──
+async function onReplacementImageSelect(e) {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+  if (!/^image\//i.test(file.type)) {
+    toast('정상적인 이미지 규격만 투입 가능합니다.', 'error');
+    return;
+  }
+  const arrayBuffer = await file.arrayBuffer();
+  const dataUrl = await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+  const ext = imageExtFromFile(file);
+  state.replacementImage = {
+    file,
+    name: file.name,
+    type: file.type || mediaMime(file.name),
+    ext,
+    arrayBuffer,
+    dataUrl
+  };
+  const info = document.getElementById('replacement-info');
+  if (info) {
+    info.innerHTML = `대체 타깃 준비: <b>${escHtml(file.name)}</b> (${(file.size/1024).toFixed(1)} KB)<br>삭제 지점 교체 동기화 대기 중`;
+  }
+  log(`대체 교체 리소스 로드: ${file.name}`, 'success');
+  toast('교체용 미디어 로드 성공', 'success');
+}
+
+function imageExtFromFile(file) {
+  const nameExt = (file.name.split('.').pop() || '').toLowerCase();
+  if (['png','jpg','jpeg','webp','gif','svg'].includes(nameExt)) return nameExt === 'jpeg' ? 'jpg' : nameExt;
+  const t = (file.type || '').toLowerCase();
+  if (t.includes('jpeg')) return 'jpg';
+  if (t.includes('webp')) return 'webp';
+  if (t.includes('gif')) return 'gif';
+  if (t.includes('svg')) return 'svg';
+  return 'png';
+}
+
+function imageContentTypeFromExt(ext) {
+  ext = (ext || 'png').toLowerCase();
+  if (ext === 'jpg' || ext === 'jpeg') return 'image/jpeg';
+  if (ext === 'webp') return 'image/webp';
+  if (ext === 'gif') return 'image/gif';
+  if (ext === 'svg') return 'image/svg+xml';
+  return 'image/png';
+}
+
+function isLargeProtectedPicture(pic) {
+  const box = getOff(pic);
+  if (!box) return false;
+  const w = box.cx / state.slideWidth;
+  const h = box.cy / state.slideHeight;
+  const area = w * h;
+  return area >= 0.18 || w >= 0.65 || h >= 0.65;
+}
+
+function robustSelectionHit(el, sel, opts = {}) {
+  const m = selectionHitMetrics(el, sel);
+  if (!m || !m.intersects) return false;
+  if (opts.force) return true;
+  if (opts.text) return m.elementCoverage >= 0.03 || m.elementCenterInside || m.selectionCenterInside;
+  if (opts.logo) return !m.isLargeElement && (m.elementCoverage >= 0.03 || m.elementCenterInside || m.selectionCenterInside);
+  return elementIntersectsSelection(el, sel);
+}
+
+function deleteTextXmlNodesInSelection(slide, si, sel) {
+  let count = 0;
+  findAll(slide.xmlDoc, 'sp').forEach(sp => {
+    if (!robustSelectionHit(sp, sel, { text: true })) return;
+    const textNodes = findAll(sp, 't').filter(n => (n.textContent || '').trim());
+    if (!textNodes.length) return;
+
+    textNodes.forEach(t => {
+      while (t.firstChild) t.removeChild(t.firstChild);
+      t.textContent = '';
+    });
+
+    findAll(sp, 'fld').forEach(f => f.textContent = '');
+    count += textNodes.length;
+  });
+  if (count) {
+    state.zip.file(slide.path, serializeXml(slide.xmlDoc));
+    log(`[Slide ${si + 1}] 텍스트 노드 구조 파괴: ${count} 텍스트 유닛 소거`, 'success');
+  }
+  return count;
+}
+
+async function removeSmallPicturesAndCleanup(slide, si, sel) {
+  let nodeCount = 0;
+  const removeRids = new Set();
+  const mediaToMaybeRemove = [];
+  findAll(slide.xmlDoc, 'pic').forEach(pic => {
+    if (!robustSelectionHit(pic, sel, { logo: true })) return;
+    if (isLargeProtectedPicture(pic)) return;
+    const blip = findAll(pic, 'blip')[0];
+    const rid = blip ? getRelId(blip) : '';
+    const rel = rid ? slide.rels[rid] : null;
+    const media = rel?.resolved || '';
+    if (pic.parentNode) {
+      pic.parentNode.removeChild(pic);
+      nodeCount++;
+      if (rid) removeRids.add(rid);
+      if (media) mediaToMaybeRemove.push(media);
+    }
+  });
+  const relCount = await cleanupRemovedPictureRels(slide, removeRids);
+  if (nodeCount) {
+    state.zip.file(slide.path, serializeXml(slide.xmlDoc));
+    log(`[Slide ${si + 1}] 기하 정밀 탐색 서브 타깃 무손실 제거: ${nodeCount} Pic`, 'success');
+  }
+  return { nodeCount, relCount, mediaToMaybeRemove };
+}
+
+async function cleanupRemovedPictureRels(slide, removeRids) {
+  if (!removeRids || !removeRids.size) return 0;
+  const rp = relPath(slide.path);
+  if (!zipFileCaseInsensitive(state.zip, rp)) return 0;
+  const relDoc = parseXml(await getZipText(state.zip, rp));
+  let relCount = 0;
+  findAll(relDoc, 'Relationship').forEach(rel => {
+    if (removeRids.has(rel.getAttribute('Id'))) {
+      rel.parentNode.removeChild(rel);
+      relCount++;
+    }
+  });
+  if (relCount) state.zip.file(rp, serializeXml(relDoc));
+  return relCount;
+}
+
+function getOrCreateRelDoc(ownerPath) {
+  const xml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="${REL_NS}"></Relationships>`;
+  return parseXml(xml);
+}
+
+function nextRidFromRelDoc(relDoc) {
+  let max = 0;
+  findAll(relDoc, 'Relationship').forEach(r => {
+    const m = String(r.getAttribute('Id') || '').match(/rId(\d+)/i);
+    if (m) max = Math.max(max, parseInt(m[1], 10));
+  });
+  return `rId${max + 1}`;
+}
+
+async function ensureContentTypeDefault(ext, contentType) {
+  const path = '[Content_Types].xml';
+  const doc = parseXml(await getZipText(state.zip, path));
+  const exists = findAll(doc, 'Default').some(d => (d.getAttribute('Extension') || '').toLowerCase() === ext.toLowerCase());
+  if (!exists) {
+    const node = doc.createElementNS('http://schemas.openxmlformats.org/package/2006/content-types', 'Default');
+    node.setAttribute('Extension', ext);
+    node.setAttribute('ContentType', contentType);
+    doc.documentElement.appendChild(node);
+    state.zip.file(path, serializeXml(doc));
+  }
+}
+
+async function addReplacementImageToZip() {
+  if (!state.replacementImage) return null;
+  const ext = state.replacementImage.ext || 'png';
+  const contentType = imageContentTypeFromExt(ext);
+  await ensureContentTypeDefault(ext, contentType);
+  const safeBase = `cleardoc_replace_${Date.now()}_${Math.random().toString(36).slice(2,8)}.${ext}`;
+  const mediaPath = `ppt/media/${safeBase}`;
+  state.zip.file(mediaPath, state.replacementImage.arrayBuffer, { binary: true });
+  state.mediaCache[mediaPath] = state.replacementImage.dataUrl;
+  return { mediaPath, fileName: safeBase, ext, contentType };
+}
+
+function createPicElementXml(xmlDoc, box, rid, name = 'ClearDoc Replacement Image') {
+  const id = nextShapeId(xmlDoc);
+  const xml = `
+<p:pic xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="${OFFICE_REL_NS}">
+  <p:nvPicPr>
+    <p:cNvPr id="${id}" name="${name}"/>
+    <p:cNvPicPr>
+      <a:picLocks noChangeAspect="1"/>
+    </p:cNvPicPr>
+    <p:nvPr/>
+  </p:nvPicPr>
+  <p:blipFill>
+    <a:blip r:embed="${rid}"/>
+    <a:stretch><a:fillRect/></a:stretch>
+  </p:blipFill>
+  <p:spPr>
+    <a:xfrm>
+      <a:off x="${box.x}" y="${box.y}"/>
+      <a:ext cx="${box.cx}" cy="${box.cy}"/>
+    </a:xfrm>
+    <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>
+  </p:spPr>
+</p:pic>`;
+  return parseXml(xml).documentElement;
+}
+
+async function insertReplacementPicture(slide, si, sel, mediaInfo) {
+  if (!mediaInfo) return false;
+  const rp = relPath(slide.path);
+  let relDoc = zipFileCaseInsensitive(state.zip, rp) ? parseXml(await getZipText(state.zip, rp)) : getOrCreateRelDoc(slide.path);
+  const rid = nextRidFromRelDoc(relDoc);
+  const rel = relDoc.createElementNS(REL_NS, 'Relationship');
+  rel.setAttribute('Id', rid);
+  rel.setAttribute('Type', 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/image');
+  rel.setAttribute('Target', `../media/${mediaInfo.fileName}`);
+  relDoc.documentElement.appendChild(rel);
+  state.zip.file(rp, serializeXml(relDoc));
+
+  const tree = getShapeTree(slide.xmlDoc);
+  if (!tree) throw new Error(`도형 부모 트리를 검출해내지 못해 추가 삽입 불가`);
+  const box = selectionToEmuBox(sel);
+  const pic = createPicElementXml(slide.xmlDoc, box, rid);
+  tree.appendChild(slide.xmlDoc.importNode(pic, true));
+  state.zip.file(slide.path, serializeXml(slide.xmlDoc));
+  log(`[Slide ${si + 1}] 대체 타깃 레이어 동적 주입 완료`, 'success');
+  return true;
+}
+
+function loadImageElement(src) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+}
+
+async function rasterEditLargePictures(slide, si, sel) {
+  if (!state.replacementImage) return 0;
+  const enabled = document.getElementById('tgl-raster-edit');
+  if (enabled && !enabled.checked) return 0;
+
+  let count = 0;
+  const replacementImg = await loadImageElement(state.replacementImage.dataUrl);
+  for (const pic of findAll(slide.xmlDoc, 'pic')) {
+    const box = getOff(pic);
+    if (!box || !isLargeProtectedPicture(pic)) continue;
+    const m = selectionHitMetrics(pic, sel);
+    if (!m || !m.intersects) continue;
+
+    const blip = findAll(pic, 'blip')[0];
+    const rid = blip ? getRelId(blip) : '';
+    const rel = rid ? slide.rels[rid] : null;
+    const mediaPath = rel?.resolved || '';
+    if (!mediaPath || /^https?:/i.test(mediaPath)) continue;
+    const dataUrl = await mediaDataUrl(mediaPath);
+    if (!dataUrl) continue;
+
+    try {
+      const img = await loadImageElement(dataUrl);
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth || img.width;
+      canvas.height = img.naturalHeight || img.height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+      const picX1 = box.x / state.slideWidth;
+      const picY1 = box.y / state.slideHeight;
+      const picX2 = (box.x + box.cx) / state.slideWidth;
+      const picY2 = (box.y + box.cy) / state.slideHeight;
+
+      const ix1 = Math.max(sel.xMin, picX1);
+      const iy1 = Math.max(sel.yMin, picY1);
+      const ix2 = Math.min(sel.xMax, picX2);
+      const iy2 = Math.min(sel.yMax, picY2);
+      if (ix2 <= ix1 || iy2 <= iy1) continue;
+
+      const rx = (ix1 - picX1) / (picX2 - picX1) * canvas.width;
+      const ry = (iy1 - picY1) / (picY2 - picY1) * canvas.height;
+      const rw = (ix2 - ix1) / (picX2 - picX1) * canvas.width;
+      const rh = (iy2 - iy1) / (picY2 - picY1) * canvas.height;
+
+      ctx.clearRect(rx, ry, rw, rh);
+      ctx.drawImage(replacementImg, rx, ry, rw, rh);
+
+      const mime = mediaMime(mediaPath);
+      const blob = await new Promise(resolve => canvas.toBlob(resolve, mime.includes('jpeg') ? 'image/jpeg' : 'image/png', 0.95));
+      if (!blob) continue;
+      const buf = await blob.arrayBuffer();
+      state.zip.file(mediaPath, buf, { binary: true });
+      state.mediaCache[mediaPath] = URL.createObjectURL(blob);
+      count++;
+      log(`[Slide ${si + 1}] 백그라운드 미디어 픽셀 지우기/교체 성공`, 'success');
+    } catch(err) {
+      log(`[Slide ${si + 1}] 백그라운드 래스터 연산 처리 에러: ${err.message}`, 'warn');
+    }
+  }
+  return count;
+}
+
+// ── V16 Main Executor (Fallback / Area cover mask) ──
+async function applyDragAreaV16(allSlides = false) {
+  if (state.fileType === 'pdf') {
+    return applyPdfDragArea(allSlides);
+  }
+  if (!state.zip || !state.slides.length) {
+    toast('동작 전 PPTX/PDF 업로드를 먼저 수행해 주십시오.', 'error');
+    return;
+  }
+  const sel = state.selection || getSelectionFromInputs();
+  if (!sel) {
+    toast('지우고자 하거나 대체할 영역을 캔버스상에 드래그 지정하십시오.', 'error');
+    return;
+  }
+
+  state.selection = sel;
+  setCoordInputsFromSelection(sel);
+  state.cleanedBlob = null;
+  state.isCleaned = false;
+  state.targets = [];
+  state.scanned = false;
+
+  const indices = allSlides ? state.slides.map((_, i) => i) : [state.activeIdx];
+  const insertOverlay = document.getElementById('tgl-insert-overlay');
+  let textCount = 0, logoCount = 0, rasterCount = 0, insertCount = 0;
+
+  log(allSlides ? '전수 슬라이드 일괄 구역 일치 정제 가동...' : '현재 활성 슬라이드 구역 부분 정제 가동...', 'system');
+
+  let mediaInfo = null;
+  if (state.replacementImage && (!insertOverlay || insertOverlay.checked)) {
+    mediaInfo = await addReplacementImageToZip();
+  }
+
+  for (const si of indices) {
+    const slide = state.slides[si];
+    slide.rels = await loadRels(state.zip, slide.path);
+
+    textCount += deleteTextXmlNodesInSelection(slide, si, sel);
+
+    const rm = await removeSmallPicturesAndCleanup(slide, si, sel);
+    logoCount += rm.nodeCount;
+
+    if (state.replacementImage) {
+      rasterCount += await rasterEditLargePictures(slide, si, sel);
+      if (!insertOverlay || insertOverlay.checked) {
+        await insertReplacementPicture(slide, si, sel, mediaInfo);
+        insertCount++;
+      }
+    } else {
+      await addSelectionEraserMaskToSlide(si, sel);
+    }
+
+    state.zip.file(slide.path, serializeXml(slide.xmlDoc));
+  }
+
+  await reloadSlideXmlFromZip();
+  await autoDetectWatermarksSilently();
+
+  state.isCleaned = true;
+  state.cleanedFileName = state.fileName.replace(/\.pptx$/i, '') + '_ClearDoc_v2.0_Cleaned.pptx';
+  await buildCleanedBlobIfNeeded('cleaned');
+  
+  document.getElementById('btn-apply').disabled = false;
+  document.getElementById('stat-val-done').textContent = '완료';
+
+  log(`정제 트랜잭션 정상 기록: 텍스트 노드 ${textCount}개 소거 / 독립 이미지 ${logoCount}개 제거 / 배경 픽셀 변환 ${rasterCount}장`, 'success');
+  toast('정밀 정제 및 교체 바인딩 성공', 'success');
+  
+  renderSlideList();
+  await renderPreview();
+}
+
+// ── NEW FEATURE: Local AI Inpainting Server Connection & Processing ──
+
+async function testAiServerConnection() {
+  const serverUrl = normalizeServerUrl(document.getElementById('ai-server-url').value.trim());
+  document.getElementById('ai-server-url').value = serverUrl;
+  log('AI 서버 연결 상태 확인 중...', 'system');
+  const candidates = [
+    `${serverUrl}/api/v1/server-config`,
+    `${serverUrl}/`,
+    `${serverUrl}/api/v1/model`,
+    `${serverUrl}/api/v1/models`
+  ];
+  for (const url of candidates) {
+    try {
+      const res = await fetch(url, { method: 'GET', mode: 'cors' });
+      if (res.ok || [200, 204, 404].includes(res.status)) {
+        log(`AI 서버 연결 확인 성공 (HTTP ${res.status})`, 'success');
+        const safeStatus = document.getElementById('ai-server-safe-status');
+        if (safeStatus) safeStatus.textContent = '연결됨 · LaMa 엔진 활성';
+        toast('HuggingFace IOPaint API 연결 성공', 'success');
+        return true;
+      }
+    } catch (e) {
+      // Try next endpoint. IOPaint/Lama-Cleaner builds expose different paths.
+    }
+  }
+  log('AI 서버 연결 실패: 서버 상태 또는 CORS 정책을 확인해야 합니다.', 'error');
+  const safeStatus = document.getElementById('ai-server-safe-status');
+  if (safeStatus) safeStatus.textContent = '연결 실패 · 관리자 확인 필요';
+  log('관리자 설정이 필요할 수 있습니다.', 'warn');
+  toast('HuggingFace/IOPaint API 서버에 접근할 수 없습니다.', 'error');
+  return false;
+}
+
+function normalizeServerUrl(url) {
+  url = (url || 'https://isaac1982-iopaint.hf.space').trim();
+  if (url === 'ISAAC1982/IOPaint') url = 'https://isaac1982-iopaint.hf.space';
+  if (url === 'ISAAC1982/IOPaint_LaMa') url = 'https://isaac1982-iopaint-lama.hf.space';
+  if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+  return url.replace(/\/+$/, '');
+}
+
+/**
+ * AI 인페인팅용 마스크 합성 함수 (초고도화 맥락 추론 페더링 내장)
+ * @param {HTMLImageElement} imageElement 원본 이미지 엘리먼트
+ * @param {Object} sel 선택 구역 객체
+ * @param {Object} picBox 이미지 배치 좌표
+ * @param {number} dilationPx 외곽 팽창 두께 (안티앨리어싱 보정용)
+ */
+async function generateInpaintMask(imageElement, sel, picBox, dilationPx = 16) {
+  const canvas = document.createElement('canvas');
+  const w = imageElement.naturalWidth || imageElement.width;
+  const h = imageElement.naturalHeight || imageElement.height;
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d');
+
+  // 1. 전체 영역 검정색(#000000) 채우기 (정적 보존 영역)
+  ctx.fillStyle = '#000000';
+  ctx.fillRect(0, 0, w, h);
+
+  // 2. 슬라이드 비율 기준 좌표 매핑
+  const picX1 = picBox.x / state.slideWidth;
+  const picY1 = picBox.y / state.slideHeight;
+  const picX2 = (picBox.x + picBox.cx) / state.slideWidth;
+  const picY2 = (picBox.y + picBox.cy) / state.slideHeight;
+
+  const ix1 = Math.max(sel.xMin, picX1);
+  const iy1 = Math.max(sel.yMin, picY1);
+  const ix2 = Math.min(sel.xMax, picX2);
+  const iy2 = Math.min(sel.yMax, picY2);
+
+  if (ix2 > ix1 && iy2 > iy1) {
+    const rx = (ix1 - picX1) / (picX2 - picX1) * w;
+    const ry = (iy1 - picY1) / (picY2 - picY1) * h;
+    const rw = (ix2 - ix1) / (picX2 - picX1) * w;
+    const rh = (iy2 - iy1) / (picY2 - picY1) * h;
+
+    // 3. 지우개 마스크 드로잉 (외곽 확장 Dilation 연산 처리)
+    ctx.fillStyle = '#ffffff';
+    ctx.strokeStyle = '#ffffff';
+    
+    if (dilationPx > 0) {
+      // 마스크 경계를 인위적으로 넓히고(Stroke) 둥글게 보정하여 잔상 완벽 격리
+      ctx.lineWidth = dilationPx * 2;
+      ctx.lineJoin = 'round';
+      ctx.lineCap = 'round';
+      ctx.fillRect(rx, ry, rw, rh);
+      ctx.strokeRect(rx, ry, rw, rh);
+    } else {
+      ctx.fillRect(rx, ry, rw, rh);
+    }
+  }
+
+  return new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+}
+
+
+function dataUrlToBlob(dataUrl) {
+  const [meta, b64] = dataUrl.split(',');
+  const mime = (meta.match(/data:(.*?);/) || [,'application/octet-stream'])[1];
+  const bin = atob(b64);
+  const len = bin.length;
+  const arr = new Uint8Array(len);
+  for (let i = 0; i < len; i++) arr[i] = bin.charCodeAt(i);
+  return new Blob([arr], { type: mime });
+}
+
+function blobToDataUrl(blob) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result);
+    r.onerror = reject;
+    r.readAsDataURL(blob);
+  });
+}
+
+async function decodeInpaintResponse(res) {
+  const ct = (res.headers.get('content-type') || '').toLowerCase();
+  if (ct.includes('application/json')) {
+    const json = await res.json();
+    const raw = json.image || json.result || json.data || json.output || json.file;
+    if (!raw) throw new Error('AI 응답 JSON 안에서 이미지 필드를 찾지 못했습니다.');
+    if (typeof raw === 'string' && raw.startsWith('data:')) return dataUrlToBlob(raw);
+    if (typeof raw === 'string') return dataUrlToBlob(`data:image/png;base64,${raw}`);
+    throw new Error('AI 응답 JSON 이미지 형식이 지원되지 않습니다.');
+  }
+  return await res.blob();
+}
+
+async function blobToPureBase64(blob) {
+  const dataUrl = await blobToDataUrl(blob);
+  return dataUrl.split(',')[1] || '';
+}
+
+async function buildIopaintJsonPayload(originalBlob, maskBlob, opts) {
+  // IOPaint REST API는 multipart/form-data가 아니라 JSON Body를 받는다.
+  // 공식 InpaintRequest 스키마: image, mask는 base64 문자열이며 POST /api/v1/inpaint만 유효하다.
+  const imageB64 = await blobToPureBase64(originalBlob);
+  const maskB64 = await blobToPureBase64(maskBlob);
+  return {
+    image: imageB64,
+    mask: maskB64,
+    ldm_steps: 20,
+    ldm_sampler: 'plms',
+    hd_strategy: opts.hdStrategy,
+    hd_strategy_crop_margin: opts.cropMargin,
+    hd_strategy_crop_trigger_size: opts.cropTriggerSize,
+    hd_strategy_resize_limit: opts.resizeLimit,
+    prompt: opts.prompt || '',
+    negative_prompt: opts.negativePrompt || '',
+    sd_steps: opts.sdSteps,
+    sd_strength: opts.sdStrength,
+    sd_mask_blur: opts.maskBlur,
+    sd_guidance_scale: 7.5,
+    sd_sampler: 'UniPC',
+    sd_seed: -1,
+    sd_match_histograms: true,
+    sd_keep_unmasked_area: true,
+    cv2_flag: 'INPAINT_NS',
+    cv2_radius: Math.max(4, Math.round(opts.dilation / 4)),
+    use_croper: false,
+    use_extender: false,
+    enable_controlnet: false,
+    enable_brushnet: false,
+    enable_powerpaint_v2: false
+  };
+}
+
+async function readErrorTextSafely(res) {
+  try {
+    const text = await res.text();
+    return text ? text.slice(0, 500) : '';
+  } catch (e) {
+    return '';
+  }
+}
+
+async function callLocalInpaintServer(serverUrl, originalBlob, maskBlob, opts) {
+  const endpoint = `${serverUrl}/api/v1/inpaint`;
+  const payload = await buildIopaintJsonPayload(originalBlob, maskBlob, opts);
+
+  // HuggingFace IOPaint_LaMa는 /api/v1/server-config가 살아있는 FastAPI IOPaint 서버다.
+  // /api/inpaint, /inpaint는 이 서버에서 유효하지 않아 HTTP 405를 만들므로 호출하지 않는다.
+  const res = await fetch(endpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+    mode: 'cors'
+  });
+
+  if (!res.ok) {
+    const detail = await readErrorTextSafely(res);
+    throw new Error(`AI 서버 HTTP ${res.status}${detail ? ' - ' + detail : ''}`);
+  }
+
+  const blob = await decodeInpaintResponse(res);
+  if (!blob || blob.size < 32) {
+    throw new Error('AI 서버 응답 이미지가 비어 있습니다.');
+  }
+  log('[AI Ultra-Context] HuggingFace IOPaint API 성공', 'success');
+  return blob;
+}
+
+function selectionIntersectsPicture(pic, sel) {
+  const box = getOff(pic);
+  if (!box || !sel) return false;
+  const m = selectionHitMetrics(pic, sel);
+  return !!(m && m.intersects);
+}
+
+function getAiInpaintOptions() {
+  const dilation = clamp(parseInt(document.getElementById('ai-mask-dilation').value, 10) || 16, 0, 96);
+  const cropMargin = clamp(parseInt(document.getElementById('ai-crop-margin').value, 10) || 256, 32, 2048);
+  const hdStrategy = document.getElementById('ai-hd-strategy').value || 'Crop';
+  const model = document.getElementById('ai-model').value || 'lama';
+  return {
+    dilation,
+    cropMargin,
+    hdStrategy,
+    model,
+    cropTriggerSize: 1024,
+    resizeLimit: 2048,
+    maskBlur: Math.max(2, Math.round(dilation / 3)),
+    sdSteps: model === 'stable_diffusion' ? 30 : 20,
+    sdStrength: model === 'stable_diffusion' ? 0.75 : 1.0,
+    prompt: 'clean background, continuous texture, natural gradient, no watermark, no text',
+    negativePrompt: 'text, logo, watermark, blur, artifacts, blocks'
+  };
+}
+
+async function runLocalAiInpaintProcess(allSlides = false) {
+  if (state.fileType === 'pdf') {
+    return runPdfAiInpaintProcess(allSlides);
+  }
+  if (!state.zip || !state.slides.length) {
+    toast('프로젝트 PPTX/PDF를 먼저 불러오세요.', 'error');
+    return;
+  }
+  const sel = state.selection || getSelectionFromInputs();
+  if (!sel) {
+    toast('지울 픽셀 위치를 드래그해 주세요.', 'error');
+    return;
+  }
+
+  const serverUrl = normalizeServerUrl(document.getElementById('ai-server-url').value.trim());
+  document.getElementById('ai-server-url').value = serverUrl;
+  const opts = getAiInpaintOptions();
+
+  state.selection = sel;
+  setCoordInputsFromSelection(sel);
+  state.cleanedBlob = null;
+  state.isCleaned = false;
+
+  const slideIndices = allSlides ? state.slides.map((_, i) => i) : [state.activeIdx];
+
+  let inpaintCount = 0;
+  let textCount = 0;
+  let logoCount = 0;
+  let targetImageCount = 0;
+
+  log(`[AI Ultra-Context] ${allSlides ? '전체 슬라이드' : '현재 슬라이드'} HD Crop 인페인팅 가동`, 'system');
+  log(`[AI Ultra-Context] model=${opts.model}, hd_strategy=${opts.hdStrategy}, dilation=${opts.dilation}px, crop_margin=${opts.cropMargin}px`, 'system');
+
+  for (const si of slideIndices) {
+    const slide = state.slides[si];
+    slide.rels = await loadRels(state.zip, slide.path);
+
+    // 1) XML 레이어로 분리된 텍스트/소형 로고는 먼저 실제 삭제한다.
+    textCount += deleteTextXmlNodesInSelection(slide, si, sel);
+    const rm = await removeSmallPicturesAndCleanup(slide, si, sel);
+    logoCount += rm.nodeCount;
+    state.zip.file(slide.path, serializeXml(slide.xmlDoc));
+
+    // 2) 대형 배경 이미지에 픽셀로 녹아든 워터마크는 AI 인페인팅으로 복원한다.
+    for (const pic of findAll(slide.xmlDoc, 'pic')) {
+      const box = getOff(pic);
+      if (!box || !selectionIntersectsPicture(pic, sel)) continue;
+
+      const blip = findAll(pic, 'blip')[0];
+      const rid = blip ? getRelId(blip) : '';
+      const rel = rid ? slide.rels[rid] : null;
+      const mediaPath = rel?.resolved || '';
+      if (!mediaPath || /^https?:/i.test(mediaPath)) continue;
+
+      const dataUrl = await mediaDataUrl(mediaPath);
+      if (!dataUrl) continue;
+
+      try {
+        targetImageCount++;
+        log(`[AI Ultra-Context][Slide ${si + 1}] 원본 이미지 추출: ${mediaPath}`, 'system');
+
+        const img = await loadImageElement(dataUrl);
+        const maskBlob = await generateInpaintMask(img, sel, box, opts.dilation);
+        const originalBlob = await zipFileCaseInsensitive(state.zip, mediaPath).async('blob');
+
+        const returnedBlob = await callLocalInpaintServer(serverUrl, originalBlob, maskBlob, opts);
+        const buf = await returnedBlob.arrayBuffer();
+        state.zip.file(mediaPath, buf, { binary: true });
+
+        // Revoke previous object URLs created by this app where possible.
+        if (state.mediaCache[mediaPath] && String(state.mediaCache[mediaPath]).startsWith('blob:')) {
+          try { URL.revokeObjectURL(state.mediaCache[mediaPath]); } catch(e) {}
+        }
+        state.mediaCache[mediaPath] = await blobToDataUrl(returnedBlob);
+        inpaintCount++;
+        log(`[AI Ultra-Context][Slide ${si + 1}] HD Crop 복원 완료: ${mediaPath}`, 'success');
+      } catch(err) {
+        log(`[AI Ultra-Context][Slide ${si + 1}] 복원 실패: ${err.message}`, 'error');
+      }
+    }
+  }
+
+  await reloadSlideXmlFromZip();
+  await autoDetectWatermarksSilently();
+
+  if (inpaintCount || textCount || logoCount) {
+    state.isCleaned = true;
+    state.cleanedBlob = null;
+    state.cleanedFileName = state.fileName.replace(/\.pptx$/i, allSlides ? '_AI_Inpainted_AllSlides.pptx' : '_AI_Inpainted.pptx');
+    await buildCleanedBlobIfNeeded('ai-inpaint');
+    document.getElementById('btn-apply').disabled = false;
+    document.getElementById('stat-val-done').textContent = '완료';
+    log(`[AI Ultra-Context] 완료: 텍스트 ${textCount}개 / 소형로고 ${logoCount}개 / AI복원 ${inpaintCount}/${targetImageCount}개`, 'success');
+    toast('AI 맥락 추론 인페인팅 및 PPTX 동기화 완료', 'success');
+    renderSlideList();
+    await renderPreview();
+  } else {
+    log('[AI Ultra-Context] 선택 구역에서 처리 가능한 텍스트/로고/배경 이미지를 찾지 못했습니다.', 'warn');
+    toast('선택 범위 내 처리 대상이 없습니다.', 'info');
+  }
+}
+
+async function scanSelectedAreaOnly() {
+  if (state.fileType === 'pdf') {
+    const sel = state.selection || getSelectionFromInputs();
+    if (!sel) { toast('PDF 영역 좌표를 먼저 드래그해 주세요.', 'error'); return; }
+    state.selection = sel;
+    setCoordInputsFromSelection(sel);
+    state.targets = [{ slideIdx: state.activeIdx, element: null, type: 'image', label: 'PDF 래스터 선택 영역' }];
+    state.scanned = true;
+    renderTargetChecklist();
+    await renderPreview();
+    log('PDF 선택 영역 감지 완료: AI 인페인팅 또는 영역 적용 가능', 'warn');
+    return;
+  }
+  if (!state.zip || !state.slides.length) {
+    toast('PPTX/PDF 프로젝트 파일이 마운트되어 있지 않습니다.', 'error');
+    return;
+  }
+  const sel = state.selection || getSelectionFromInputs();
+  if (!sel) {
+    toast('영역 좌표 범위를 실시간 지정해 주십시오.', 'error');
+    return;
+  }
+  state.selection = sel;
+  setCoordInputsFromSelection(sel);
+  const slide = state.slides[state.activeIdx];
+  const targets = [];
+
+  findAll(slide.xmlDoc, 'sp').forEach(sp => {
+    if (robustSelectionHit(sp, sel, { text: true }) && findAll(sp, 't').some(t => (t.textContent || '').trim())) {
+      targets.push({ slideIdx: state.activeIdx, element: sp, type: 'text', label: '지정 영역 텍스트 노드' });
+    }
+  });
+
+  findAll(slide.xmlDoc, 'pic').forEach(pic => {
+    if (robustSelectionHit(pic, sel, { logo: true }) && !isLargeProtectedPicture(pic)) {
+      targets.push({ slideIdx: state.activeIdx, element: pic, type: 'image', label: '지정 영역 서브 로고/그래픽' });
+    }
+  });
+
+  state.targets = targets;
+  state.scanned = true;
+  state.isCleaned = false;
+  state.cleanedBlob = null;
+  
+  renderTargetChecklist();
+  await renderPreview();
+  log(`선택 영역 매치 스캔: ${targets.length}개 대상 파악`, 'warn');
+}
+
+// Right panel match list renderer
+function renderTargetChecklist() {
+  const container = document.getElementById('target-checklist');
+  const badge = document.getElementById('target-count');
+  container.innerHTML = '';
+  badge.textContent = `${state.targets.length}건`;
+
+  if (!state.targets.length) {
+    container.innerHTML = `<div style="padding: 20px; font-size: 11px; text-align:center; color: var(--text-dim);">검출된 안전 지우개 표적이 없습니다.</div>`;
+    return;
+  }
+
+  state.targets.forEach((t, i) => {
+    const item = document.createElement('div');
+    item.className = 'checklist-item';
+    item.innerHTML = `
+      <span class="type-lbl ${t.type}">${t.type}</span>
+      <span class="desc-lbl">${escHtml(t.label)}</span>
+      <span style="font-family:var(--font-mono); color:var(--success); font-size:9px;">Active</span>
+    `;
+    container.appendChild(item);
+  });
+}
+
+// ── Package Serialization and Re-build ──
+async function reloadSlideXmlFromZip() {
+  for (const slide of state.slides) {
+    slide.xmlDoc = parseXml(await getZipText(state.zip, slide.path));
+    slide.rels = await loadRels(state.zip, slide.path);
+  }
+}
+
+async function buildCleanedBlobIfNeeded(reason = 'manual') {
+  if (!state.zip) throw new Error('프로젝트 압축 파일 인스턴스가 전무합니다.');
+  if (state.cleanedBlob) return state.cleanedBlob;
+
+  log('무손실 압축 패키징 연산 시동 중...', 'system');
+  const arrayBuffer = await state.zip.generateAsync({
+    type: 'arraybuffer',
+    compression: 'DEFLATE',
+    compressionOptions: { level: 6 },
+    mimeType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+  });
+  state.cleanedBlob = new Blob([arrayBuffer], { type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' });
+  state.cleanedFileName = state.cleanedFileName || state.fileName.replace(/\.pptx$/i, '') + '_ClearDoc_v2.0_Cleaned.pptx';
+  document.getElementById('btn-apply').disabled = false;
+  return state.cleanedBlob;
+}
+
+function saveBlob(blob, fileName) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileName;
+  a.rel = 'noopener';
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+}
+
+async function downloadCleanedPptx() {
+  if (state.fileType === 'pdf') {
+    return downloadCleanedPdf();
+  }
+  if (!state.zip) {
+    toast('업로드된 파일이 없습니다.', 'error');
+    return;
+  }
+  const btn = document.getElementById('btn-apply');
+  const oldText = btn ? btn.textContent : '';
+  try {
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = '⏳ 압축 패키징 중...';
+    }
+    state.cleanedBlob = null; // Always force rebuild based on latest zip state
+    const blob = await buildCleanedBlobIfNeeded('manual');
+    const outName = state.cleanedFileName || state.fileName.replace(/\.pptx$/i, '_ClearDoc_v2.0_Cleaned.pptx');
+    saveBlob(blob, outName);
+    toast('파일 다운로드가 즉시 개시되었습니다.', 'success');
+    log(`다운로드 기록 보관 완료: ${outName}`, 'success');
+  } catch(err) {
+    log(`다운로드 실패 에러: ${err.message}`, 'error');
+    toast(`다운로드 실패: ${err.message}`, 'error');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = oldText || '💾 최종 정제 파일 다운로드';
+    }
+  }
+}
+
+// ── Interactive Slide Preview Renderer ──
+async function renderPreview() {
+  const body = document.getElementById('preview-body');
+  if (!state.slides.length) {
+    body.innerHTML = `
+      <div style="text-align:center; color: var(--text-muted); font-size: 12px; padding: 40px;">
+        <div style="font-size: 40px; margin-bottom: 12px; opacity:0.3;">🖥</div>
+        <h4>실시간 대시보드 미리보기 가동 준비 완료</h4>
+        <p style="font-size:11px; color: var(--text-dim); margin-top: 4px;">PPTX/PDF 파일을 불러오면 실제 미리보기가 화면에 매핑됩니다.</p>
+      </div>
+    `;
+    return;
+  }
+
+  // PDF 모드에서는 PPTX XML 렌더러를 타지 않고 PDF.js로 만든 실제 페이지 래스터를 표시한다.
+  // 이전 버전의 흰 화면/PPTX PREVIEW 오표시 문제는 이 분기 누락이 원인이었다.
+  if (state.fileType === 'pdf') {
+    updateActivePageDimensions();
+    renderPdfPreviewInto(body);
+    updateNav();
+    return;
+  }
+
+  if (state.fileType === 'pdf') {
+    renderPdfPreviewInto(body);
+    return;
+  }
+
+  const slide = state.slides[state.activeIdx];
+  const W = state.slideWidth, H = state.slideHeight;
+  const container = document.getElementById('preview-body-container');
+  const bodyRect = container.getBoundingClientRect();
+  
+  const maxW = Math.max(bodyRect.width - 48, 320);
+  const maxH = Math.max(bodyRect.height - 48, 220);
+  const ratio = Math.min(maxW / W, maxH / H);
+  const vw = Math.round(W * ratio);
+  const vh = Math.round(H * ratio);
+  
+  document.getElementById('zoom-value').textContent = `${Math.round(ratio * 10000)}%`;
+
+  const slideTargets = state.targets.filter(t => t.slideIdx === state.activeIdx);
+  let elements = '';
+
+  // Draw Pic nodes
+  for (const pic of findAll(slide.xmlDoc, 'pic')) {
+    const box = getOff(pic);
+    if (!box) continue;
+    const x = box.x * ratio, y = box.y * ratio, w = box.cx * ratio, h = box.cy * ratio;
+    const blip = findAll(pic, 'blip')[0];
+    const rid = blip ? getRelId(blip) : '';
+    const rel = rid ? slide.rels[rid] : null;
+    const media = rel?.resolved || '';
+    const url = await mediaDataUrl(media);
+    const isTarget = slideTargets.some(t => t.element === pic);
+    
+    if (isTarget) {
+      elements += `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="rgba(244,63,94,0.18)" stroke="#f43f5e" stroke-width="2" stroke-dasharray="5,3" rx="3"/>`;
+      elements += `<text x="${x + w/2}" y="${y + h/2}" fill="#f43f5e" font-size="${Math.max(10, Math.min(14, h * 0.5))}" text-anchor="middle" dominant-baseline="middle" font-family="sans-serif" font-weight="700">TARGET REMOVE</text>`;
+    } else if (url) {
+      elements += `<image x="${x}" y="${y}" width="${w}" height="${h}" href="${url}" preserveAspectRatio="none"/>`;
+    } else {
+      elements += `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="rgba(67,108,251,0.08)" stroke="rgba(67,108,251,0.2)" rx="3"/>`;
+      elements += `<text x="${x+w/2}" y="${y+h/2}" fill="rgba(67,108,251,0.6)" font-size="10" text-anchor="middle" dominant-baseline="middle" font-family="sans-serif">Media Element</text>`;
+    }
+  }
+
+  // Draw Text/Shape nodes
+  findAll(slide.xmlDoc, 'sp').forEach(sp => {
+    const box = getOff(sp);
+    if (!box) return;
+    const text = getText(sp);
+    const eraser = isClearDocAreaEraser(sp);
+    if (!text && !state.scanned && !eraser) return;
+    const x = box.x * ratio, y = box.y * ratio, w = box.cx * ratio, h = box.cy * ratio;
+    const isTarget = slideTargets.some(t => t.element === sp);
+
+    if (eraser) {
+      elements += `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="#ffffff" stroke="rgba(183,255,85,0.7)" stroke-width="1.5" stroke-dasharray="4,3" rx="2"/>`;
+      elements += `<text x="${x+w-5}" y="${y+h-5}" fill="rgba(9,10,15,0.4)" font-size="9" text-anchor="end" font-family="sans-serif" font-weight="600">Mask Erased</text>`;
+    } else if (isTarget) {
+      elements += `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="rgba(244,63,94,0.15)" stroke="#f43f5e" stroke-width="2" stroke-dasharray="5,3" rx="3"/>`;
+    } else if (text) {
+      const fontSize = Math.max(8, Math.min(24, h * 0.28));
+      elements += `<foreignObject x="${x+2}" y="${y+2}" width="${Math.max(w-4,1)}" height="${Math.max(h-4,1)}">
+        <div xmlns="http://www.w3.org/1999/xhtml" style="font-size:${fontSize}px; color:#1e293b; overflow:hidden; line-height:1.25; font-family:-apple-system,BlinkMacSystemFont,sans-serif; font-weight:600; text-align:center; display:flex; align-items:center; justify-content:center; width:100%; height:100%;">
+          ${escHtml(text.slice(0,120))}
+        </div>
+      </foreignObject>`;
+    }
+  });
+
+  const statusStr = state.isCleaned ? '정제 완료' : (state.scanned ? '스캔 가동 중' : '원본 분석 상태');
+  
+  body.innerHTML = `
+    <div id="slide-canvas-wrap" class="selectable" onpointerdown="onPreviewPointerDown(event)" style="width:${vw}px; height:${vh}px; background:#ffffff; position:relative;">
+      <svg id="slide-svg" width="${vw}" height="${vh}" viewBox="0 0 ${vw} ${vh}" xmlns="http://www.w3.org/2000/svg">
+        <rect width="${vw}" height="${vh}" fill="#ffffff"/>
+        ${elements}
+      </svg>
+      <div id="selection-box" class="selection-box"></div>
+      <div id="selection-chip" class="selection-chip" style="display:none"></div>
+      <div style="position:absolute; top:12px; left:12px; background:rgba(9,10,15,0.85); color:#b7ff55; border:1px solid rgba(183,255,85,0.3); font:10px var(--font-mono); padding:6px 10px; border-radius:8px; pointer-events:none; box-shadow:0 4px 12px rgba(0,0,0,0.4); display:flex; align-items:center; gap:6px;">
+        <span style="width:6px; height:6px; border-radius:50%; background:#b7ff55; box-shadow:0 0 6px #b7ff55;"></span>
+        <span>PPTX PREVIEW · ${statusStr}</span>
+      </div>
+    </div>
+  `;
+  state.preview = { ratio, vw, vh };
+  renderSelectionOverlay();
+}
+
+function zoomFit() {
+  renderPreview();
+}
+
+// ── Slider Navigation Controls ──
+async function prevSlide() {
+  if (state.activeIdx > 0) {
+    state.activeIdx--;
+    updateActivePageDimensions();
+    renderSlideList();
+    await renderPreview();
+  }
+}
+
+async function nextSlide() {
+  if (state.activeIdx < state.slides.length - 1) {
+    state.activeIdx++;
+    updateActivePageDimensions();
+    renderSlideList();
+    await renderPreview();
+  }
+}
+
+function updateNav() {
+  const current = state.slides.length ? `${state.activeIdx + 1} / ${state.slides.length}` : '— / —';
+  document.getElementById('slide-indicator').textContent = current;
+  document.getElementById('btn-prev').disabled = state.activeIdx === 0 || !state.slides.length;
+  document.getElementById('btn-next').disabled = state.activeIdx >= state.slides.length - 1 || !state.slides.length;
+}
+
+// ── State Reset ──
+function resetState() {
+  state.zip = null;
+  state.fileName = '';
+  state.slides = [];
+  state.targets = [];
+  state.activeIdx = 0;
+  state.scanned = false;
+  state.slideWidth = 9144000;
+  state.slideHeight = 5143500;
+  state.mediaCache = {};
+  state.cleanedBlob = null;
+  state.cleanedFileName = '';
+  state.isCleaned = false;
+  state.selection = null;
+  state.dragStart = null;
+  state.preview = null;
+  state.fileType = '';
+  state.pdfDoc = null;
+  state.pdfPages = [];
+}
+
+function resetAll() {
+  resetState();
+  document.getElementById('dropzone').style.display = '';
+  document.getElementById('file-info').style.display = 'none';
+  document.getElementById('file-input').value = '';
+  document.getElementById('btn-apply').disabled = true;
+  document.getElementById('btn-area-scan').disabled = true;
+  document.getElementById('slide-indicator').textContent = '— / —';
+  document.getElementById('slide-count-indicator').textContent = '0 / 0';
+  document.getElementById('btn-prev').disabled = true;
+  document.getElementById('btn-next').disabled = true;
+  document.getElementById('stat-val-total').textContent = '0';
+  document.getElementById('stat-val-done').textContent = 'N/A';
+  
+  document.getElementById('slide-nav-list').innerHTML = `
+    <div style="text-align: center; color: var(--text-dim); font-size: 11px; margin-top: 40px;">
+      파일을 불러오면 전체 슬라이드 리스트가 여기에 나타납니다.
+    </div>
+  `;
+  document.getElementById('preview-body').innerHTML = `
+    <div style="text-align:center; color: var(--text-muted); font-size: 12px; padding: 40px;">
+      <div style="font-size: 40px; margin-bottom: 12px; opacity:0.3;">🖥</div>
+      <h4>실시간 대시보드 미리보기 가동 준비 완료</h4>
+      <p style="font-size:11px; color: var(--text-dim); margin-top: 4px;">PPTX/PDF 파일을 불러오면 실제 미리보기가 화면에 매핑됩니다.</p>
+    </div>
+  `;
+  document.getElementById('target-checklist').innerHTML = `
+    <div style="padding: 20px; font-size: 11px; text-align:center; color: var(--text-dim);">
+      감지된 워터마크 대상 목록이 여기에 자동 나열됩니다.
+    </div>
+  `;
+  document.getElementById('log-panel').innerHTML = '';
+  updateFileModeUi();
+  log('프로젝트 가동 범위 초기화 성공', 'info');
+}
+
+function escHtml(s) {
+  return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+window.addEventListener('resize', () => {
+  if (state.slides.length) renderPreview();
+});
+
+
+
+function toggleMobilePanel(open) {
+  const panel = document.querySelector('.right-column');
+  if (!panel) return;
+  panel.classList.toggle('mobile-open', !!open);
+  document.body.classList.toggle('mobile-panel-open', !!open);
+}
+
+function scrollToPreviewMobile() {
+  const el = document.getElementById('preview-body-container');
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  toggleMobilePanel(false);
+}
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') toggleMobilePanel(false);
+});
+
+document.addEventListener('click', function(e) {
+  if (!document.body.classList.contains('mobile-panel-open')) return;
+  const panel = document.querySelector('.right-column');
+  const opener = e.target.closest('[onclick*="toggleMobilePanel"]');
+  if (panel && !panel.contains(e.target) && !opener) toggleMobilePanel(false);
+});
+
+
+
+const __cleardocOriginalRenderSlideList = renderSlideList;
+renderSlideList = function() {
+  if (state.fileType !== 'pdf') return __cleardocOriginalRenderSlideList.apply(this, arguments);
+  const container = document.getElementById('slide-nav-list');
+  container.innerHTML = '';
+  document.getElementById('slide-count-indicator').textContent = `${state.activeIdx + 1} / ${state.slides.length}`;
+  state.slides.forEach((slide, idx) => {
+    const page = state.pdfPages[idx];
+    const card = document.createElement('div');
+    card.className = `slide-card ${idx === state.activeIdx ? 'active' : ''}`;
+    card.onclick = () => jumpToSlide(idx);
+    const badge = page && page.dirty ? '<span class="slide-status-badge alert">정제됨</span>' : '<span class="slide-status-badge">원본</span>';
+    card.innerHTML = `
+      <div class="slide-index-badge">${idx + 1}</div>
+      <div class="slide-card-details">
+        <div class="slide-card-title">Page ${idx + 1}</div>
+        <div class="slide-card-desc">PDF Raster: ${page ? page.width + '×' + page.height : 'loading'}</div>
+      </div>
+      <div>${badge}</div>
+    `;
+    container.appendChild(card);
+  });
+  updateNav();
+};
+
+function updateMobileLabelsForFileType() {
+  const title = document.querySelector('.section-title span');
+  const downloadBtn = document.getElementById('btn-apply');
+  if (downloadBtn && state.fileType === 'pdf') downloadBtn.innerHTML = '💾 최종 정제 PDF 다운로드';
+  if (downloadBtn && state.fileType === 'pptx') downloadBtn.innerHTML = '💾 최종 정제 PPTX 다운로드';
+}
+
+const __cleardocOriginalRenderPreview = renderPreview;
+renderPreview = async function() {
+  await __cleardocOriginalRenderPreview.apply(this, arguments);
+  updateMobileLabelsForFileType();
+};
+
+log('ClearDoc Pro v2.6 PDF FIX AI 인페인팅 엔진 탑재 성공. 처리를 진행할 PPTX 파일을 로드하여 주십시오.', 'system');
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
