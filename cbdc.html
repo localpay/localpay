@@ -43,44 +43,7 @@
     .warn{background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;border-radius:14px;padding:.75rem}
     .ok{background:#ecfdf5;border:1px solid #bbf7d0;color:#065f46;border-radius:14px;padding:.75rem}
     .danger{background:#fff1f2;border:1px solid #fecdd3;color:#9f1239;border-radius:14px;padding:.75rem}
-    @media(max-width:768px){
-      .metric{font-size:1.22rem}
-      .top-floating-wrap{
-        right:10px;
-        top:50%;
-        bottom:auto;
-        transform:translateY(-50%);
-        gap:5px;
-      }
-      .top-floating-bubble{
-        position:absolute;
-        right:74px;
-        top:50%;
-        transform:translateY(-50%) translateX(8px) scale(.94);
-        font-size:12px;
-        padding:9px 13px;
-      }
-      .top-floating-bubble::after{
-        left:auto;
-        right:-6px;
-        bottom:50%;
-        transform:translateY(50%) rotate(45deg);
-        width:12px;
-        height:12px;
-      }
-      .top-floating-wrap:hover .top-floating-bubble,
-      .top-floating-wrap:focus-within .top-floating-bubble{
-        transform:translateY(-50%) translateX(0) scale(1);
-      }
-      .top-floating-btn{width:64px;height:96px}
-      .chart-wrap{height:330px}
-    }
-    @media(max-width:420px){
-      .top-floating-wrap{right:6px}
-      .top-floating-bubble{display:none}
-      .top-floating-btn{width:54px;height:82px}
-      .top-fallback{font-size:42px}
-    }
+    @media(max-width:768px){.metric{font-size:1.22rem}.top-floating-wrap{right:10px;bottom:12px}.top-floating-bubble{font-size:12px;padding:9px 13px}.top-floating-btn{width:64px;height:96px}.chart-wrap{height:330px}}
     @media print{body{background:#fff}.no-print{display:none!important}.card{box-shadow:none;border:1px solid #e2e8f0}.pdf-page{break-inside:avoid}}
   </style>
 </head>
