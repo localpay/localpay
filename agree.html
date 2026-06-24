@@ -267,13 +267,83 @@
       // 날짜 선택 시 지체일수 실시간 역산 반영
       useEffect(() => {
         if (isDateCalc && deliveryDueDate && actualDeliveryDate) {
-          const due = new Date(deliveryDueDate);
-          const actual = new Date(actualDeliveryDate);
+          const due = parseLocalDate(deliveryDueDate);
+          const actual = parseLocalDate(actualDeliveryDate);
+          if (!due || !actual) return;
           const diffTime = actual - due;
           const calculatedDays = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
           setDelayDays(calculatedDays);
         }
       }, [deliveryDueDate, actualDeliveryDate, isDateCalc]);
+
+      // 날짜 표시용: YYYY-MM-DD(요일)
+      // type="date" 입력값은 YYYY-MM-DD만 허용하므로, 화면 표시용 텍스트를 별도로 만들어 요일을 안정적으로 표시한다.
+      const normalizeDateOnly = (dateStr) => {
+        if (!dateStr) return '';
+        const match = String(dateStr).match(/\d{4}-\d{2}-\d{2}/);
+        return match ? match[0] : '';
+      };
+
+      const getKoreanWeekday = (dateStr) => {
+        const normalizedDate = normalizeDateOnly(dateStr);
+        if (!normalizedDate) return '';
+        const [year, month, day] = normalizedDate.split('-').map(Number);
+        const parsedDate = new Date(year, month - 1, day);
+        if (Number.isNaN(parsedDate.getTime())) return '';
+        return ['일', '월', '화', '수', '목', '금', '토'][parsedDate.getDay()];
+      };
+
+      const formatDateWithWeekday = (dateStr, fallbackText = '') => {
+        const normalizedDate = normalizeDateOnly(dateStr);
+        if (!normalizedDate) return fallbackText;
+        const weekday = getKoreanWeekday(normalizedDate);
+        return weekday ? `${normalizedDate}(${weekday})` : normalizedDate;
+      };
+
+      // 공정 소요 기간 시뮬레이션 날짜 계산용: 브라우저 시간대 차이로 날짜가 하루 밀리지 않도록 YYYY-MM-DD를 로컬 날짜로 처리
+      const parseLocalDate = (dateStr) => {
+        if (!dateStr) return null;
+        const [year, month, day] = dateStr.split('-').map(Number);
+        const parsedDate = new Date(year, month - 1, day);
+        return Number.isNaN(parsedDate.getTime()) ? null : parsedDate;
+      };
+
+      const toLocalDateString = (dateObj) => {
+        if (!dateObj || Number.isNaN(dateObj.getTime())) return '';
+        const year = dateObj.getFullYear();
+        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const day = String(dateObj.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      };
+
+      // 캘린더 선택 후에도 화면에는 YYYY-MM-DD(요일)이 보이도록 만든 공통 날짜 입력 컴포넌트
+      const WeekdayDateInput = ({ value, onChange, placeholder = '날짜 선택', wrapperClassName = 'w-full', className = '' }) => {
+        const normalizedValue = normalizeDateOnly(value);
+        const displayValue = formatDateWithWeekday(normalizedValue, placeholder);
+
+        return (
+          <div className={`relative ${wrapperClassName}`}>
+            <div className={`flex items-center justify-between gap-2 pr-9 ${className}`}>
+              <span className="truncate">{displayValue}</span>
+              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" aria-hidden="true">
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <rect x="3" y="4" width="18" height="18" rx="2" />
+                  <line x1="16" y1="2" x2="16" y2="6" />
+                  <line x1="8" y1="2" x2="8" y2="6" />
+                  <line x1="3" y1="10" x2="21" y2="10" />
+                </svg>
+              </span>
+            </div>
+            <input
+              type="date"
+              value={normalizedValue}
+              onChange={(e) => onChange(normalizeDateOnly(e.target.value))}
+              className="absolute inset-0 z-10 w-full h-full opacity-0 cursor-pointer"
+              aria-label={placeholder}
+            />
+          </div>
+        );
+      };
 
       const applyPreset = (preset) => {
         setContractType(preset.contractType);
@@ -527,16 +597,19 @@
         const oneRebidDays = totalDays + 15;
         const twoRebidDays = totalDays + 30;
 
-        const targetDate = new Date(targetDateStr);
+        const targetDate = parseLocalDate(targetDateStr) || new Date();
         const startCalculatedDate = new Date(targetDate);
         startCalculatedDate.setDate(targetDate.getDate() - totalDays);
+        const startCalculatedDateStr = toLocalDateString(startCalculatedDate);
 
         return {
           phases,
           totalDays,
           oneRebidDays,
           twoRebidDays,
-          startCalculatedDateStr: startCalculatedDate.toISOString().split('T')[0]
+          targetDateDisplay: formatDateWithWeekday(targetDateStr, '-'),
+          startCalculatedDateStr,
+          startCalculatedDateDisplay: formatDateWithWeekday(startCalculatedDateStr, '-')
         };
       };
 
@@ -1087,7 +1160,7 @@
                         <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl text-center">
                           <div className="text-[10px] text-slate-400 font-bold uppercase">최악 (2회유찰 수의)</div>
                           <div className="text-2xl font-black text-red-600 mt-1">{timelineSim.twoRebidDays} 일</div>
-                          <div className="text-[10px] text-slate-500 mt-1">소유 전환 +30일</div>
+                          <div className="text-[10px] text-slate-500 mt-1">수의 전환 +30일</div>
                         </div>
                       </div>
 
@@ -1095,17 +1168,20 @@
                       <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 mb-6 flex flex-col md:flex-row items-center justify-between gap-4">
                         <div>
                           <span className="text-xs font-bold text-slate-700 block">목표 계약 체결 희망일</span>
-                          <input 
-                            type="date" 
-                            value={targetDateStr}
-                            onChange={(e) => setTargetDateStr(e.target.value)}
-                            className="mt-1 bg-white border border-slate-300 rounded px-2 py-1 text-xs font-bold text-slate-800"
-                          />
+                          <div className="mt-1 flex flex-wrap items-center gap-2">
+                            <WeekdayDateInput
+                              value={targetDateStr}
+                              onChange={setTargetDateStr}
+                              placeholder="목표 계약 체결 희망일"
+                              wrapperClassName="w-[170px]"
+                              className="bg-white border border-slate-300 rounded px-2 py-1 text-xs font-bold text-slate-800 min-h-[30px]"
+                            />
+                          </div>
                         </div>
                         <div className="text-right md:text-right text-xs">
                           <span className="text-slate-400 font-semibold block">계약완료일 기준 발주요청 최종 한계선</span>
                           <span className="text-sm font-black text-indigo-600 block mt-1">
-                            👉 {timelineSim.startCalculatedDateStr} (이전 발주 필수)
+                            👉 {timelineSim.startCalculatedDateDisplay} (이전 발주 필수)
                           </span>
                         </div>
                       </div>
@@ -1203,20 +1279,20 @@
                           <>
                             <div>
                               <label className="block text-xs font-bold text-slate-700 mb-1.5">계약서 상 납품기한</label>
-                              <input 
-                                type="date" 
+                              <WeekdayDateInput
                                 value={deliveryDueDate}
-                                onChange={(e) => setDeliveryDueDate(e.target.value)}
-                                className="w-full bg-slate-50 border border-slate-300 text-slate-900 rounded-lg p-2 text-xs font-bold"
+                                onChange={setDeliveryDueDate}
+                                placeholder="계약서 상 납품기한"
+                                className="w-full bg-slate-50 border border-slate-300 text-slate-900 rounded-lg p-2 text-xs font-bold min-h-[38px]"
                               />
                             </div>
                             <div>
                               <label className="block text-xs font-bold text-slate-700 mb-1.5">실제 납품완료일 (현품수령일)</label>
-                              <input 
-                                type="date" 
+                              <WeekdayDateInput
                                 value={actualDeliveryDate}
-                                onChange={(e) => setActualDeliveryDate(e.target.value)}
-                                className="w-full bg-slate-50 border border-slate-300 text-slate-900 rounded-lg p-2 text-xs font-bold"
+                                onChange={setActualDeliveryDate}
+                                placeholder="실제 납품완료일 현품수령일"
+                                className="w-full bg-slate-50 border border-slate-300 text-slate-900 rounded-lg p-2 text-xs font-bold min-h-[38px]"
                               />
                             </div>
                           </>
@@ -1259,18 +1335,18 @@
                       {/* Calculation result breakdown & Formula Explanation */}
                       <div className="space-y-4">
                         <div className="p-5 bg-slate-950 text-white rounded-xl font-mono text-xs space-y-2 relative">
-                          <span className="absolute top-3 right-3 text-[10px] text-amber-400 font-bold bg-amber-950/50 border border-amber-900 px-2 py-0.5 rounded">지상률 고시 준수</span>
+                          <span className="absolute top-3 right-3 text-[10px] text-amber-400 font-bold bg-amber-950/50 border border-amber-900 px-2 py-0.5 rounded">지체상금률 기준 반영</span>
                           <div>■ 대상 계약종류: {delayDamages.typeName}</div>
                           <div>■ 일 지체상금률: {(delayDamages.rate * 100).toFixed(4)} % (일부 법정 특례요율 자동 반영)</div>
                           {isDateCalc && (
                             <>
-                              <div>■ 계약서 상 납품기한: {deliveryDueDate}</div>
-                              <div>■ 실제 현품수령일자: {actualDeliveryDate}</div>
+                              <div>■ 계약서 상 납품기한: {formatDateWithWeekday(deliveryDueDate)}</div>
+                              <div>■ 실제 현품수령일자: {formatDateWithWeekday(actualDeliveryDate)}</div>
                             </>
                           )}
                           <div className="text-indigo-300">■ 계산 산출된 총 지체일수: {delayDays} 일</div>
                           <div>■ 계약 시뮬레이션 총액: {delayDamages.baseAmount.toLocaleString()} 원</div>
-                          {isPartialDelivery && <div>■ 인수기성금 공제: - {delayDamages.baseAmount.toLocaleString()} 원</div>}
+                          {isPartialDelivery && <div>■ 인수기성금 공제: - {partialAmount.toLocaleString()} 원</div>}
                           <div className="border-t border-slate-800 my-2 pt-2 text-slate-400">■ 계산방식: 계약금액 × 지체일수 × 지체상금률</div>
                           <div className="text-sm text-amber-300 font-black">
                             ★ 최종 예상 지체상금: {delayDamages.finalPenalty.toLocaleString()} 원 {delayDamages.isCapped && "(상한제 30% 한도 적용 완료)"}
@@ -1290,7 +1366,7 @@
                             <strong>지체상금(L)</strong> = [계약금액(A) - 기완성부분인수액(B)] × 지체상금률(R) × 지체일수(N)<br/>
                             * 계약금액(A): {delayDamages.baseAmount.toLocaleString()} 원 (VAT 포함)<br/>
                             * 기인수액(B): {isPartialDelivery ? partialAmount.toLocaleString() : "0"} 원<br/>
-                            * 지상률(R): {delayDamages.rate} (하루 기준)<br/>
+                            * 지체상금률(R): {delayDamages.rate} (하루 기준)<br/>
                             * 지체일수(N): {delayDays} 일
                           </div>
                         </div>
@@ -1310,11 +1386,11 @@
 
 1. 계약 건명: ${contractType.toUpperCase()} 관련 발주 시뮬레이션 사업
 2. 계약 금액: 부가세 포함 약 ${delayDamages.baseAmount.toLocaleString()} 원
-3. 계약 납품기한: ${isDateCalc ? deliveryDueDate : '지정기한'}
-4. 실제 현품수령일: ${isDateCalc ? actualDeliveryDate : '수령 완료일'}
-5. 지체 내역 및 지상금 세부 산정:
+3. 계약 납품기한: ${isDateCalc ? formatDateWithWeekday(deliveryDueDate) : '지정기한'}
+4. 실제 현품수령일: ${isDateCalc ? formatDateWithWeekday(actualDeliveryDate) : '수령 완료일'}
+5. 지체 내역 및 지체상금 세부 산정:
   - 지체 일수: ${delayDays} 일
-  - 일일 지상률: ${delayDamages.rate * 1000}/1000
+  - 일일 지체상금률: ${delayDamages.rate * 1000}/1000
   - 기 납품/완성 공제액: ${isPartialDelivery ? partialAmount.toLocaleString() : "없음"} 원
   - 최종 부과 예정 금액: ${delayDamages.finalPenalty.toLocaleString()} 원`, 'noticeDraft')}
                           className="text-xs text-indigo-600 hover:text-indigo-800 flex items-center gap-1 font-bold"
@@ -1328,7 +1404,17 @@
 수신: ${companyName} 대표이사
 발신: 계약담당 공무원 / 발주기관장
 
-귀사와의 계약 건에 대하여 아래와 같이 지체상금 부과 대상 및 처분 예정을 통지하오니 귀책사유 면책에 관한 증빙을 제출하시길 바랍니다...`}
+귀사와의 계약 건에 대하여 아래와 같이 지체상금 부과 대상 및 처분 예정을 통지하오니 귀책사유 면책에 관한 증빙을 제출하시길 바랍니다.
+
+1. 계약 건명: ${contractType.toUpperCase()} 관련 발주 시뮬레이션 사업
+2. 계약 금액: 부가세 포함 약 ${delayDamages.baseAmount.toLocaleString()} 원
+3. 계약 납품기한: ${isDateCalc ? formatDateWithWeekday(deliveryDueDate) : '지정기한'}
+4. 실제 현품수령일: ${isDateCalc ? formatDateWithWeekday(actualDeliveryDate) : '수령 완료일'}
+5. 지체 내역 및 지체상금 세부 산정:
+  - 지체 일수: ${delayDays} 일
+  - 일일 지체상금률: ${delayDamages.rate * 1000}/1000
+  - 기 납품/완성 공제액: ${isPartialDelivery ? partialAmount.toLocaleString() : "없음"} 원
+  - 최종 부과 예정 금액: ${delayDamages.finalPenalty.toLocaleString()} 원`}
                       </pre>
                     </div>
                   </div>
