@@ -500,6 +500,40 @@ function createScoreTimeMeta() {
     };
 }
 
+function createRecordUuid() {
+    if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+    return "rec_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 10);
+}
+
+function stableRecordKey(record) {
+    return [
+        record?.name || "",
+        record?.dept || "",
+        Number(record?.score) || 0,
+        record?.timestamp || parseKstDateToTimestamp(record?.displayDate || record?.date) || 0,
+        record?.displayDate || record?.date || ""
+    ].join("|");
+}
+
+function makeLegacyUuid(record) {
+    // 구버전 기록은 uuid가 없으므로 내용 기반 키를 만들어 중복/유실 방지에 사용
+    return "legacy_" + btoa(unescape(encodeURIComponent(stableRecordKey(record))))
+        .replace(/[^a-zA-Z0-9]/g, "")
+        .slice(0, 48);
+}
+
+function mergeRankingsByUuid(baseList, addList) {
+    const map = new Map();
+    [...normalizeRankingsSafe(baseList), ...normalizeRankingsSafe(addList)].forEach(r => {
+        const key = r.uuid || makeLegacyUuid(r);
+        const prev = map.get(key);
+        if (!prev || (Number(r.timestamp) || 0) >= (Number(prev.timestamp) || 0)) {
+            map.set(key, {...r, uuid: key});
+        }
+    });
+    return [...map.values()].sort((a,b)=> (b.score-a.score) || ((b.timestamp||0)-(a.timestamp||0)));
+}
+
 function parseKstDateToTimestamp(value) {
     if (!value) return 0;
     const str = String(value).trim();
@@ -538,7 +572,8 @@ function cloneDefaultScoreData() {
     return {
         rankings: JSON.parse(JSON.stringify(DEFAULT_RANKINGS)),
         deptStats: JSON.parse(JSON.stringify(DEFAULT_DEPT_STATS)),
-        battles: {}
+        battles: {},
+        history: []
     };
 }
 
@@ -549,28 +584,35 @@ function normalizeRankingsSafe(list) {
         .map(r => {
             const displayDate = normalizeDisplayDate(r.displayDate || r.date);
             const timestamp = Number(r.timestamp) || parseKstDateToTimestamp(displayDate);
-            return {
+            const normalizedRecord = {
                 ...r,
                 name: String(r.name).trim() || "조조달",
                 dept: r.dept || "본사",
                 score: Number(r.score) || 0,
                 timestamp,
                 displayDate,
-                date: String(r.date || displayDate.slice(0, 10)).slice(0, 10)
+                date: String(r.date || displayDate.slice(0, 10)).slice(0, 10),
+                version: Number(r.version) || 1,
+                createdBy: r.createdBy || "jofams-run"
             };
+            normalizedRecord.uuid = r.uuid || makeLegacyUuid(normalizedRecord);
+            return normalizedRecord;
         });
 }
 
 function normalizeScoreData(data) {
     const base = cloneDefaultScoreData();
     const src = (data && typeof data === "object") ? data : {};
-    const rankings = normalizeRankingsSafe(src.rankings);
+    const rankings = mergeRankingsByUuid(src.rankings || [], []);
     return {
         ...base,
         ...src,
         rankings,
-        deptStats: Array.isArray(src.deptStats) ? src.deptStats : buildDeptStatsFromRankings(rankings),
-        battles: (src.battles && typeof src.battles === "object") ? src.battles : {}
+        // 기관 통계는 개인 랭킹 기준으로 항상 재계산하여 누락/중복을 방지
+        deptStats: buildDeptStatsFromRankings(rankings),
+        battles: (src.battles && typeof src.battles === "object") ? src.battles : {},
+        // history는 복구용 원장입니다. 기존 기록을 지우지 않고 누적합니다.
+        history: Array.isArray(src.history) ? src.history : []
     };
 }
 
@@ -626,6 +668,83 @@ async function saveScoreData(data) {
         alert("점수 저장 중 네트워크 오류가 발생했습니다. 기존 기록은 덮어쓰지 않았습니다. 잠시 후 다시 시도해 주세요.");
         return false;
     }
+}
+
+async function putScoreDataAndVerify(payload, verifyUuid, beforeCount) {
+    const saved = await saveScoreData(payload);
+    if (!saved) return false;
+
+    // 저장 직후 서버에서 다시 읽어 실제 반영 여부 확인
+    _scoreCache = null;
+    const checked = await loadScoreData(true);
+    if (checked.__loadFailed) return false;
+    const exists = checked.rankings.some(r => r.uuid === verifyUuid);
+    const countOk = checked.rankings.length >= beforeCount;
+    if (!exists || !countOk) {
+        console.warn("⚠️ 저장 검증 실패", {exists, countOk, beforeCount, afterCount: checked.rankings.length});
+        return false;
+    }
+    return true;
+}
+
+async function appendRankingRecordSafely(newRecord, maxRetry = 3) {
+    const record = normalizeRankingsSafe([{...newRecord, uuid: newRecord.uuid || createRecordUuid(), version: 1, createdBy: "jofams-run"}])[0];
+    if (!record) return false;
+
+    for (let attempt = 1; attempt <= maxRetry; attempt++) {
+        const latest = await loadScoreData(true);
+        if (latest.__loadFailed) {
+            alert("서버 기록을 불러오지 못해 저장을 중단했습니다. 기존 명예의 전당 기록 보호를 위해 새로고침 후 다시 시도해 주세요.");
+            return false;
+        }
+
+        const beforeCount = latest.rankings.length;
+        const mergedRankings = mergeRankingsByUuid(latest.rankings, [record]);
+        const mergedHistory = Array.isArray(latest.history) ? [...latest.history] : [];
+        if (!mergedHistory.some(h => h.uuid === record.uuid)) {
+            mergedHistory.push({
+                ...record,
+                action: "appendScore",
+                savedAt: getKoreaDateTimeString()
+            });
+        }
+
+        const payload = normalizeScoreData({
+            ...latest,
+            rankings: mergedRankings,
+            deptStats: buildDeptStatsFromRankings(mergedRankings),
+            history: mergedHistory
+        });
+
+        const ok = await putScoreDataAndVerify(payload, record.uuid, Math.max(beforeCount, mergedRankings.length));
+        if (ok) {
+            RANKINGS = payload.rankings;
+            DEPT_STATS = payload.deptStats;
+            return true;
+        }
+
+        // 동시 저장 충돌 가능성: 최신본을 다시 읽고 병합 재시도
+        await new Promise(resolve => setTimeout(resolve, 350 * attempt));
+    }
+
+    alert("점수 저장 검증에 실패했습니다. 기록 유실 방지를 위해 저장을 중단했습니다. 잠시 후 다시 시도해 주세요.");
+    return false;
+}
+
+async function updateBattleScoreSafely(roomId, battleData, maxRetry = 3) {
+    for (let attempt = 1; attempt <= maxRetry; attempt++) {
+        const latest = await loadScoreData(true);
+        if (latest.__loadFailed) return false;
+        const battles = {...(latest.battles || {}), [roomId]: battleData};
+        const payload = normalizeScoreData({...latest, battles});
+        const ok = await saveScoreData(payload);
+        if (!ok) return false;
+        _scoreCache = null;
+        const checked = await loadScoreData(true);
+        if (checked.battles && checked.battles[roomId]) return true;
+        await new Promise(resolve => setTimeout(resolve, 350 * attempt));
+    }
+    return false;
 }
 
 function loadRankings() { return JSON.parse(JSON.stringify(DEFAULT_RANKINGS)); }
@@ -2220,39 +2339,28 @@ async function submitScore() {
     _scoreSubmitting = true;
     const regBox = document.getElementById("reg-container");
     if (regBox) regBox.style.pointerEvents = "none";
+
     const name = (document.getElementById("input-name").value || "조조달").trim();
     const dept = document.getElementById("select-dept").value;
     const finalScore = Math.round(accumulatedScore + gameScore);
 
-    // 중요: 화면 진입 직후 비동기 로딩이 끝나기 전에 저장하면
-    // 기존 명예의 전당 데이터가 빈 배열로 덮어써지는 문제가 발생할 수 있음.
-    // 저장 직전에 서버 최신 데이터를 강제로 다시 읽어 기존 기록과 병합한다.
-    const latest = await loadScoreData(true);
-    if (latest.__loadFailed) {
-        alert("서버 기록을 불러오지 못해 저장을 중단했습니다. 기존 명예의 전당 기록 보호를 위해 새로고침 후 다시 시도해 주세요.");
-        _scoreSubmitting = false;
-        if (regBox) regBox.style.pointerEvents = "auto";
-        return;
-    }
-    RANKINGS = normalizeRankings(latest.rankings);
-
-    RANKINGS.push({
+    const newRecord = {
+        uuid: createRecordUuid(),
         name,
         dept,
         score: finalScore,
-        ...createScoreTimeMeta()
-    });
+        ...createScoreTimeMeta(),
+        version: 1,
+        createdBy: "jofams-run"
+    };
 
-    // 기관 통계는 누락/중복을 방지하기 위해 개인 랭킹 기준으로 매번 재계산
-    DEPT_STATS = buildDeptStatsFromRankings(RANKINGS);
-
-    // 중요: battle 데이터 등 기존 JSONBin 필드를 보존한 상태로 랭킹만 갱신
-    const saved = await saveScoreData({...latest, rankings: RANKINGS, deptStats: DEPT_STATS});
+    const saved = await appendRankingRecordSafely(newRecord);
     if (!saved) {
         _scoreSubmitting = false;
         if (regBox) regBox.style.pointerEvents = "auto";
         return;
     }
+
     document.getElementById("reg-container").classList.add("hidden");
     playSound("skill");
     showScreen("leaderboard");
@@ -2449,12 +2557,8 @@ function doShare(method) {
 // ── 배틀 점수 JSONBin 저장 ──
 async function saveBattleScore(roomId, data) {
     try {
-        const existing = await loadScoreData(true);
-        if (existing.__loadFailed) return;
-        if (!existing.battles) existing.battles = {};
-        existing.battles[roomId] = data;
-        // 개인/기관 랭킹을 보존한 상태로 배틀 데이터만 추가
-        await saveScoreData(existing);
+        const ok = await updateBattleScoreSafely(roomId, data);
+        if (!ok) console.warn("배틀 저장 검증 실패:", roomId);
     } catch(e) { console.warn("배틀 저장 실패:", e); }
 }
 
