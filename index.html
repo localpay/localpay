@@ -487,6 +487,50 @@ function getKoreaDateTimeString() {
     return `${p.year}-${p.month}-${p.day} ${p.hour}:${p.minute}:${p.second}`;
 }
 
+// 점수 기록용 시간 필드 표준화
+// - timestamp: 정렬/비교용 숫자값
+// - displayDate: 화면 표시용 한국시간 문자열
+// - date: 구버전 호환용 날짜값
+function createScoreTimeMeta() {
+    const displayDate = getKoreaDateTimeString();
+    return {
+        timestamp: Date.now(),
+        displayDate,
+        date: displayDate.slice(0, 10)
+    };
+}
+
+function parseKstDateToTimestamp(value) {
+    if (!value) return 0;
+    const str = String(value).trim();
+    const m = str.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?)?/);
+    if (!m) {
+        const parsed = Date.parse(str);
+        return Number.isNaN(parsed) ? 0 : parsed;
+    }
+    const y = Number(m[1]);
+    const mo = Number(m[2]);
+    const d = Number(m[3]);
+    const h = Number(m[4] || 0);
+    const mi = Number(m[5] || 0);
+    const sec = Number(m[6] || 0);
+    // 한국시간(KST, UTC+9)을 절대시간(timestamp)으로 변환
+    return Date.UTC(y, mo - 1, d, h - 9, mi, sec);
+}
+
+function normalizeDisplayDate(value) {
+    if (!value) return getKoreaDateTimeString();
+    const str = String(value).trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return `${str} 00:00:00`;
+    const m = str.match(/^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2})(?::(\d{2}))?/);
+    if (m) return `${m[1]} ${m[2]}:${m[3] || '00'}`;
+    return str;
+}
+
+function getRankingDisplayDate(record) {
+    return normalizeDisplayDate(record?.displayDate || record?.date);
+}
+
 let _scoreCache = null;
 let _scoreLoadOk = false;
 
@@ -502,14 +546,19 @@ function normalizeRankingsSafe(list) {
     if (!Array.isArray(list)) return [];
     return list
         .filter(r => r && r.name && r.score !== undefined && r.score !== null && !Number.isNaN(Number(r.score)))
-        .map(r => ({
-            ...r,
-            name: String(r.name).trim() || "조조달",
-            dept: r.dept || "본사",
-            score: Number(r.score) || 0,
-            date: r.date || getKoreaDateTimeString(),
-            timestamp: Number(r.timestamp) || Date.parse(String(r.date || "")) || 0
-        }));
+        .map(r => {
+            const displayDate = normalizeDisplayDate(r.displayDate || r.date);
+            const timestamp = Number(r.timestamp) || parseKstDateToTimestamp(displayDate);
+            return {
+                ...r,
+                name: String(r.name).trim() || "조조달",
+                dept: r.dept || "본사",
+                score: Number(r.score) || 0,
+                timestamp,
+                displayDate,
+                date: String(r.date || displayDate.slice(0, 10)).slice(0, 10)
+            };
+        });
 }
 
 function normalizeScoreData(data) {
@@ -2191,8 +2240,7 @@ async function submitScore() {
         name,
         dept,
         score: finalScore,
-        date: getKoreaDateTimeString(),
-        timestamp: Date.now()
+        ...createScoreTimeMeta()
     });
 
     // 기관 통계는 누락/중복을 방지하기 위해 개인 랭킹 기준으로 매번 재계산
@@ -2245,7 +2293,7 @@ function renderRankings() {
         return `<div class="p-3 border rounded-xl flex justify-between items-center ${glow}">
             <div class="flex items-center gap-3">
                 <div class="w-8 h-8 flex items-center justify-center rounded-full bg-slate-950 font-black">${badge}</div>
-                <div><span class="text-xs font-bold text-slate-200 block">${r.name} (${r.dept})</span><span class="text-[9px] text-slate-500">${r.date}</span></div>
+                <div><span class="text-xs font-bold text-slate-200 block">${r.name} (${r.dept})</span><span class="text-[9px] text-slate-500">${getRankingDisplayDate(r)}</span></div>
             </div>
             <div class="text-right"><span class="text-xs font-extrabold retro-title text-white">${r.score.toLocaleString()}</span><span class="text-[9px] text-sky-400 block">SVP</span></div>
         </div>`;
@@ -2329,7 +2377,7 @@ function openShareModal(mode) {
 
         // 배틀 룸 ID 생성 & JSONBin에 저장
         pendingBattleRoomId = "battle_" + Date.now() + "_" + Math.random().toString(36).slice(2,7);
-        saveBattleScore(pendingBattleRoomId, { name, dept, score, date: getKoreaDateTimeString() });
+        saveBattleScore(pendingBattleRoomId, { name, dept, score, ...createScoreTimeMeta() });
     } else {
         badge.textContent = "📣 게임 공유";
         badge.className = "text-[9px] bg-sky-500/10 border border-sky-500/20 text-sky-400 px-2 py-0.5 rounded-full font-bold";
