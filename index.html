@@ -488,8 +488,8 @@ function getKoreaDateTimeString() {
 
 let _scoreCache = null;
 
-async function loadScoreData() {
-    if (_scoreCache) return _scoreCache;
+async function loadScoreData(forceRefresh = false) {
+    if (!forceRefresh && _scoreCache) return _scoreCache;
     try {
         const res = await fetch(JSONBIN_URL + "/latest", {
             headers: { "X-Master-Key": JSONBIN_API_KEY }
@@ -541,7 +541,7 @@ const FAKE_NAMES = ["서영훈","정은교","이보라","이규화","박찬혁"]
     if (data.rankings) {
         // 구 가상 데이터만 있을 경우 빈 배열로 처리
         const realEntries = data.rankings.filter(r => !FAKE_NAMES.includes(r.name));
-        RANKINGS = realEntries.length > 0 ? data.rankings : [];
+        RANKINGS = realEntries.length > 0 ? normalizeRankings(data.rankings) : [];
     }
     if (data.deptStats) DEPT_STATS = data.deptStats;
 })();
@@ -2091,13 +2091,47 @@ function endGame() {
     showScreen("gameover");
 }
 
+function normalizeRankings(list) {
+    return Array.isArray(list) ? list.filter(r => r && r.name && typeof r.score === "number") : [];
+}
+
+function buildDeptStatsFromRankings(rankings) {
+    const stats = JSON.parse(JSON.stringify(DEFAULT_DEPT_STATS));
+    rankings.forEach(r => {
+        const deptName = r.dept || "본사";
+        let d = stats.find(x => x.name === deptName);
+        if (!d) {
+            d = { name: deptName, total: 0, members: 0 };
+            stats.push(d);
+        }
+        d.total += Number(r.score) || 0;
+        d.members += 1;
+    });
+    return stats;
+}
+
 async function submitScore() {
     const name = (document.getElementById("input-name").value || "조조달").trim();
     const dept = document.getElementById("select-dept").value;
     const finalScore = Math.round(accumulatedScore + gameScore);
-    RANKINGS.push({name, dept, score: finalScore, date: getKoreaDateTimeString()});
-    const d = DEPT_STATS.find(x => x.name === dept);
-    if (d) { d.total += finalScore; d.members++; }
+
+    // 중요: 화면 진입 직후 비동기 로딩이 끝나기 전에 저장하면
+    // 기존 명예의 전당 데이터가 빈 배열로 덮어써지는 문제가 발생할 수 있음.
+    // 저장 직전에 서버 최신 데이터를 강제로 다시 읽어 기존 기록과 병합한다.
+    const latest = await loadScoreData(true);
+    RANKINGS = normalizeRankings(latest.rankings);
+
+    RANKINGS.push({
+        name,
+        dept,
+        score: finalScore,
+        date: getKoreaDateTimeString(),
+        timestamp: Date.now()
+    });
+
+    // 기관 통계는 누락/중복을 방지하기 위해 개인 랭킹 기준으로 매번 재계산
+    DEPT_STATS = buildDeptStatsFromRankings(RANKINGS);
+
     await saveScoreData({rankings: RANKINGS, deptStats: DEPT_STATS});
     document.getElementById("reg-container").classList.add("hidden");
     playSound("skill");
@@ -2125,7 +2159,7 @@ function changeTab(id) {
 
 function renderRankings() {
     const c = document.getElementById("ranking-indiv");
-    const sorted = [...RANKINGS].sort((a,b)=>b.score-a.score);
+    const sorted = [...RANKINGS].sort((a,b)=> (b.score-a.score) || ((b.timestamp||0)-(a.timestamp||0)));
     if (sorted.length === 0) {
         c.innerHTML = `<div class="text-center py-10 text-slate-500 text-xs">아직 등록된 점수가 없습니다.<br>첫 번째 기록을 남겨보세요! 🏃</div>`;
         return;
