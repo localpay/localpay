@@ -468,6 +468,7 @@ function getKoreaDateParts() {
         hour: "2-digit",
         minute: "2-digit",
         second: "2-digit",
+        hourCycle: "h23",
         hour12: false
     }).formatToParts(new Date()).reduce((acc, part) => {
         acc[part.type] = part.value;
@@ -487,26 +488,76 @@ function getKoreaDateTimeString() {
 }
 
 let _scoreCache = null;
+let _scoreLoadOk = false;
+
+function cloneDefaultScoreData() {
+    return {
+        rankings: JSON.parse(JSON.stringify(DEFAULT_RANKINGS)),
+        deptStats: JSON.parse(JSON.stringify(DEFAULT_DEPT_STATS)),
+        battles: {}
+    };
+}
+
+function normalizeRankingsSafe(list) {
+    if (!Array.isArray(list)) return [];
+    return list
+        .filter(r => r && r.name && r.score !== undefined && r.score !== null && !Number.isNaN(Number(r.score)))
+        .map(r => ({
+            ...r,
+            name: String(r.name).trim() || "조조달",
+            dept: r.dept || "본사",
+            score: Number(r.score) || 0,
+            date: r.date || getKoreaDateTimeString(),
+            timestamp: Number(r.timestamp) || Date.parse(String(r.date || "")) || 0
+        }));
+}
+
+function normalizeScoreData(data) {
+    const base = cloneDefaultScoreData();
+    const src = (data && typeof data === "object") ? data : {};
+    const rankings = normalizeRankingsSafe(src.rankings);
+    return {
+        ...base,
+        ...src,
+        rankings,
+        deptStats: Array.isArray(src.deptStats) ? src.deptStats : buildDeptStatsFromRankings(rankings),
+        battles: (src.battles && typeof src.battles === "object") ? src.battles : {}
+    };
+}
 
 async function loadScoreData(forceRefresh = false) {
     if (!forceRefresh && _scoreCache) return _scoreCache;
     try {
         const res = await fetch(JSONBIN_URL + "/latest", {
-            headers: { "X-Master-Key": JSONBIN_API_KEY }
+            headers: { "X-Master-Key": JSONBIN_API_KEY },
+            cache: "no-store"
         });
-        if (!res.ok) throw new Error("fetch failed");
+        if (!res.ok) throw new Error("fetch failed: " + res.status);
         const json = await res.json();
-        const data = json.record;
+        const data = normalizeScoreData(json.record);
         _scoreCache = data;
+        _scoreLoadOk = true;
         return data;
     } catch(e) {
-        console.warn("JSONBin 점수 불러오기 실패, 기본값 사용:", e);
-        return { rankings: JSON.parse(JSON.stringify(DEFAULT_RANKINGS)), deptStats: JSON.parse(JSON.stringify(DEFAULT_DEPT_STATS)) };
+        console.warn("JSONBin 점수 불러오기 실패:", e);
+        _scoreLoadOk = false;
+        // 중요: 서버 읽기 실패 시 기본값으로 덮어쓰면 기존 기록이 사라질 수 있으므로
+        // 이미 보유 중인 캐시가 있으면 캐시를 반환하고, 없으면 실패 플래그를 붙여 저장을 막는다.
+        if (_scoreCache) return _scoreCache;
+        return {...cloneDefaultScoreData(), __loadFailed: true};
     }
 }
 
 async function saveScoreData(data) {
-    _scoreCache = data;
+    const normalized = normalizeScoreData(data);
+
+    // 안전장치: 기존 캐시에 기록이 있는데 저장 대상 랭킹이 비어 있으면 서버 덮어쓰기를 차단
+    if ((_scoreCache?.rankings?.length || 0) > 0 && normalized.rankings.length === 0) {
+        console.warn("⚠️ 빈 랭킹 저장 차단: 기존 명예의 전당 기록 보호");
+        alert("서버 기록 보호를 위해 빈 랭킹 저장을 차단했습니다. 새로고침 후 다시 시도해 주세요.");
+        return false;
+    }
+
     try {
         const res = await fetch(JSONBIN_URL, {
             method: "PUT",
@@ -514,15 +565,17 @@ async function saveScoreData(data) {
                 "Content-Type": "application/json",
                 "X-Master-Key": JSONBIN_API_KEY
             },
-            body: JSON.stringify(data)
+            body: JSON.stringify(normalized)
         });
-        if (res.ok) {
-            console.log("✅ JSONBin 점수 저장 성공");
-        } else {
-            console.warn("JSONBin 저장 실패:", res.status);
-        }
+        if (!res.ok) throw new Error("save failed: " + res.status);
+        _scoreCache = normalized;
+        _scoreLoadOk = true;
+        console.log("✅ JSONBin 점수 저장 성공");
+        return true;
     } catch(e) {
-        console.warn("JSONBin 저장 오류 (세션 메모리 유지):", e);
+        console.warn("JSONBin 저장 오류:", e);
+        alert("점수 저장 중 네트워크 오류가 발생했습니다. 기존 기록은 덮어쓰지 않았습니다. 잠시 후 다시 시도해 주세요.");
+        return false;
     }
 }
 
@@ -538,12 +591,13 @@ let DEPT_STATS = JSON.parse(JSON.stringify(DEFAULT_DEPT_STATS));
 const FAKE_NAMES = ["서영훈","정은교","이보라","이규화","박찬혁"];
 (async function() {
     const data = await loadScoreData();
+    if (data.__loadFailed) return;
     if (data.rankings) {
-        // 구 가상 데이터만 있을 경우 빈 배열로 처리
+        // 구 가상 데이터만 있을 경우 빈 배열로 처리하되, 서버 저장은 하지 않음
         const realEntries = data.rankings.filter(r => !FAKE_NAMES.includes(r.name));
         RANKINGS = realEntries.length > 0 ? normalizeRankings(data.rankings) : [];
     }
-    if (data.deptStats) DEPT_STATS = data.deptStats;
+    DEPT_STATS = buildDeptStatsFromRankings(RANKINGS);
 })();
 
 // ============================================================
@@ -2092,7 +2146,7 @@ function endGame() {
 }
 
 function normalizeRankings(list) {
-    return Array.isArray(list) ? list.filter(r => r && r.name && typeof r.score === "number") : [];
+    return normalizeRankingsSafe(list);
 }
 
 function buildDeptStatsFromRankings(rankings) {
@@ -2110,7 +2164,13 @@ function buildDeptStatsFromRankings(rankings) {
     return stats;
 }
 
+let _scoreSubmitting = false;
+
 async function submitScore() {
+    if (_scoreSubmitting) return;
+    _scoreSubmitting = true;
+    const regBox = document.getElementById("reg-container");
+    if (regBox) regBox.style.pointerEvents = "none";
     const name = (document.getElementById("input-name").value || "조조달").trim();
     const dept = document.getElementById("select-dept").value;
     const finalScore = Math.round(accumulatedScore + gameScore);
@@ -2119,6 +2179,12 @@ async function submitScore() {
     // 기존 명예의 전당 데이터가 빈 배열로 덮어써지는 문제가 발생할 수 있음.
     // 저장 직전에 서버 최신 데이터를 강제로 다시 읽어 기존 기록과 병합한다.
     const latest = await loadScoreData(true);
+    if (latest.__loadFailed) {
+        alert("서버 기록을 불러오지 못해 저장을 중단했습니다. 기존 명예의 전당 기록 보호를 위해 새로고침 후 다시 시도해 주세요.");
+        _scoreSubmitting = false;
+        if (regBox) regBox.style.pointerEvents = "auto";
+        return;
+    }
     RANKINGS = normalizeRankings(latest.rankings);
 
     RANKINGS.push({
@@ -2132,10 +2198,18 @@ async function submitScore() {
     // 기관 통계는 누락/중복을 방지하기 위해 개인 랭킹 기준으로 매번 재계산
     DEPT_STATS = buildDeptStatsFromRankings(RANKINGS);
 
-    await saveScoreData({rankings: RANKINGS, deptStats: DEPT_STATS});
+    // 중요: battle 데이터 등 기존 JSONBin 필드를 보존한 상태로 랭킹만 갱신
+    const saved = await saveScoreData({...latest, rankings: RANKINGS, deptStats: DEPT_STATS});
+    if (!saved) {
+        _scoreSubmitting = false;
+        if (regBox) regBox.style.pointerEvents = "auto";
+        return;
+    }
     document.getElementById("reg-container").classList.add("hidden");
     playSound("skill");
     showScreen("leaderboard");
+    _scoreSubmitting = false;
+    if (regBox) regBox.style.pointerEvents = "auto";
 }
 
 // ============================================================
@@ -2181,7 +2255,7 @@ function renderRankings() {
 function renderDepts() {
     const c = document.getElementById("ranking-dept");
     const sorted = [...DEPT_STATS].sort((a,b)=>b.total-a.total);
-    const maxVal = sorted[0].total;
+    const maxVal = sorted[0]?.total || 1;
     const barColors = ["bg-amber-500","bg-slate-400","bg-amber-700","bg-sky-500","bg-sky-500"];
     const textColors = ["text-amber-400","text-slate-300","text-amber-600","text-sky-400","text-sky-400"];
     c.innerHTML = sorted.map((d,i) => `
@@ -2327,9 +2401,11 @@ function doShare(method) {
 // ── 배틀 점수 JSONBin 저장 ──
 async function saveBattleScore(roomId, data) {
     try {
-        const existing = await loadScoreData();
+        const existing = await loadScoreData(true);
+        if (existing.__loadFailed) return;
         if (!existing.battles) existing.battles = {};
         existing.battles[roomId] = data;
+        // 개인/기관 랭킹을 보존한 상태로 배틀 데이터만 추가
         await saveScoreData(existing);
     } catch(e) { console.warn("배틀 저장 실패:", e); }
 }
