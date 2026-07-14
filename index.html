@@ -371,6 +371,35 @@
     <div id="learning-effect-items"></div>
 </div>
 
+
+<div id="knowledge-result-card" class="hidden mt-3 bg-gradient-to-br from-sky-500/10 to-violet-500/10 border border-sky-400/30 rounded-2xl p-3 text-left">
+    <div class="flex items-center justify-between mb-2">
+        <div>
+            <div class="text-[9px] font-black text-sky-300 tracking-wider">KNOWLEDGE VALIDATION · STEP 5</div>
+            <div class="text-xs font-black text-white mt-0.5">공공구매 지식검증 결과</div>
+        </div>
+        <div class="text-right">
+            <div id="knowledge-result-score" class="text-xl font-black text-sky-300">0점</div>
+            <div id="knowledge-result-correct" class="text-[8px] text-slate-500">0/3 정답</div>
+        </div>
+    </div>
+    <div class="grid grid-cols-2 gap-2 mb-2">
+        <div class="bg-slate-950/70 rounded-xl p-2 text-center">
+            <div class="text-[8px] text-slate-500">통합 역량점수</div>
+            <div id="integrated-result-score" class="text-lg font-black text-emerald-400">0점</div>
+        </div>
+        <div class="bg-slate-950/70 rounded-xl p-2 text-center">
+            <div class="text-[8px] text-slate-500">통합 역량수준</div>
+            <div id="integrated-result-level" class="text-lg font-black text-violet-300">입문</div>
+        </div>
+    </div>
+    <div class="text-[8px] text-slate-500 mb-1">문항별 해설</div>
+    <div id="knowledge-result-details"></div>
+    <div class="mt-2 text-[8px] text-slate-500 leading-relaxed">
+        통합점수 = 게임행동 40% + 지식검증 40% + 재도전 개선도 20%
+    </div>
+</div>
+
 <div id="reg-container" class="mt-4 bg-[#091630] border border-sky-900 rounded-2xl p-3.5 flex justify-between items-center">
             <div class="text-left">
                 <span class="text-[9px] text-slate-400 block font-bold">기록을 전당에 등록!</span>
@@ -1160,6 +1189,258 @@ function getAdaptiveCourseSummary() {
 }
 
 
+
+// STEP 5: 공공구매 지식검증 퀴즈
+const KNOWLEDGE_QUESTIONS = [
+    {
+        id: "q1",
+        category: "여성기업제품",
+        question: "여성기업이 유명 브랜드 제품을 단순 유통·판매하는 경우, 해당 구매가 언제나 여성기업제품 구매실적으로 인정된다.",
+        options: ["O", "X"],
+        answer: 1,
+        explanation: "대표자가 여성이라는 사실만으로 모든 유통제품이 여성기업제품 실적으로 인정되는 것은 아닙니다. 관련 확인서, 기업유형, 제품·실적 인정기준을 함께 확인해야 합니다."
+    },
+    {
+        id: "q2",
+        category: "중증장애인생산품",
+        question: "중증장애인생산품은 보건복지부가 지정한 생산시설에서 생산한 품목인지 확인해야 한다.",
+        options: ["O", "X"],
+        answer: 0,
+        explanation: "중증장애인생산품은 지정 생산시설과 해당 생산품 여부를 확인하는 절차가 중요합니다."
+    },
+    {
+        id: "q3",
+        category: "기술개발제품",
+        question: "기술개발제품과 시범구매제품은 목적과 인정체계가 같으므로 동일한 제도로 보아도 된다.",
+        options: ["O", "X"],
+        answer: 1,
+        explanation: "기술개발제품과 시범구매제품은 연계될 수 있지만 선정·인정 근거와 운영 목적이 서로 다르므로 구분해야 합니다."
+    },
+    {
+        id: "q4",
+        category: "중소기업제품",
+        question: "수의계약으로 구매한 경우라도 계약상대자와 제품이 중소기업제품 실적요건을 충족하면 실적으로 검토할 수 있다.",
+        options: ["O", "X"],
+        answer: 0,
+        explanation: "계약방식만으로 실적 인정 여부가 결정되지는 않습니다. 계약상대자와 제품의 요건, 실적 집계기준을 확인해야 합니다."
+    },
+    {
+        id: "q5",
+        category: "녹색제품",
+        question: "녹색제품 구매 검토 시 환경표지·우수재활용제품 등 관련 인증 여부를 확인하는 것이 필요하다.",
+        options: ["O", "X"],
+        answer: 0,
+        explanation: "녹색제품 여부는 관련 인증과 공식 확인경로를 통해 확인하는 것이 중요합니다."
+    },
+    {
+        id: "q6",
+        category: "장애인기업제품",
+        question: "장애인기업제품과 중증장애인생산품은 동일한 확인서와 동일한 구매목표를 적용한다.",
+        options: ["O", "X"],
+        answer: 1,
+        explanation: "두 제도는 근거, 확인체계, 구매목표와 실적집계 방식이 서로 다르므로 구분해야 합니다."
+    },
+    {
+        id: "q7",
+        category: "사회적기업제품",
+        question: "사회적기업제품 구매실적을 검토할 때는 계약상대자의 사회적기업 인증 여부만 보면 되고, 구매대상 제품·용역은 확인할 필요가 없다.",
+        options: ["O", "X"],
+        answer: 1,
+        explanation: "기업 인증뿐 아니라 실제 구매한 제품·용역과 집계기준에 부합하는지도 확인해야 합니다."
+    },
+    {
+        id: "q8",
+        category: "창업기업제품",
+        question: "창업기업 확인은 설립연도만 단순 확인하는 것으로 충분하지 않고, 유효한 확인서와 적용요건을 확인해야 한다.",
+        options: ["O", "X"],
+        answer: 0,
+        explanation: "창업기업 해당 여부와 실적 인정은 유효한 확인서와 관련 기준을 함께 확인해야 합니다."
+    }
+];
+
+let activeQuizQuestions = [];
+let quizAnswers = {};
+let currentQuizResult = null;
+let pendingDiagnosisForQuiz = null;
+
+function selectKnowledgeQuestions(count = 3) {
+    const weakNames = new Set((adaptiveCourseProfile?.weakItemNames || []).map(String));
+    const priority = KNOWLEDGE_QUESTIONS.filter(q => weakNames.has(q.category));
+    const rest = KNOWLEDGE_QUESTIONS.filter(q => !weakNames.has(q.category));
+    const shuffle = arr => [...arr].sort(() => Math.random() - 0.5);
+    return [...shuffle(priority), ...shuffle(rest)].slice(0, count);
+}
+
+function openKnowledgeQuiz(diagnosis) {
+    pendingDiagnosisForQuiz = diagnosis;
+    activeQuizQuestions = selectKnowledgeQuestions(3);
+    quizAnswers = {};
+    currentQuizResult = null;
+
+    const overlay = document.getElementById("knowledge-quiz-overlay");
+    const list = document.getElementById("knowledge-quiz-list");
+    if (!overlay || !list) {
+        finalizeKnowledgeQuiz(true);
+        return;
+    }
+
+    list.innerHTML = activeQuizQuestions.map((q, idx) => `
+        <div class="bg-slate-950/70 border border-slate-800 rounded-2xl p-3">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-[9px] font-black text-sky-300">문항 ${idx + 1}</span>
+                <span class="text-[8px] text-violet-300 bg-violet-500/10 border border-violet-400/20 px-2 py-0.5 rounded-full">${q.category}</span>
+            </div>
+            <div class="text-xs text-slate-100 leading-relaxed font-bold mb-3">${q.question}</div>
+            <div class="grid grid-cols-2 gap-2">
+                ${q.options.map((opt, oi) => `
+                    <button type="button" onclick="selectKnowledgeAnswer('${q.id}', ${oi}, this)"
+                        class="knowledge-answer-btn h-12 rounded-xl border border-slate-700 bg-slate-900 text-slate-300 font-black text-sm active:scale-95 transition-all">
+                        ${opt}
+                    </button>
+                `).join("")}
+            </div>
+        </div>
+    `).join("");
+
+    document.getElementById("knowledge-quiz-progress").textContent = `0 / ${activeQuizQuestions.length} 응답`;
+    document.getElementById("btn-submit-knowledge-quiz").disabled = true;
+    document.getElementById("btn-submit-knowledge-quiz").classList.add("opacity-40", "cursor-not-allowed");
+    overlay.classList.remove("hidden");
+}
+
+function selectKnowledgeAnswer(questionId, optionIndex, button) {
+    quizAnswers[questionId] = optionIndex;
+    const parent = button.parentElement;
+    [...parent.querySelectorAll("button")].forEach(btn => {
+        btn.className = "knowledge-answer-btn h-12 rounded-xl border border-slate-700 bg-slate-900 text-slate-300 font-black text-sm active:scale-95 transition-all";
+    });
+    button.className = "knowledge-answer-btn h-12 rounded-xl border border-sky-400 bg-sky-500/15 text-sky-300 font-black text-sm active:scale-95 transition-all";
+
+    const answered = Object.keys(quizAnswers).length;
+    document.getElementById("knowledge-quiz-progress").textContent = `${answered} / ${activeQuizQuestions.length} 응답`;
+    const submit = document.getElementById("btn-submit-knowledge-quiz");
+    if (answered >= activeQuizQuestions.length) {
+        submit.disabled = false;
+        submit.classList.remove("opacity-40", "cursor-not-allowed");
+    }
+}
+
+function scoreKnowledgeQuiz() {
+    const details = activeQuizQuestions.map(q => {
+        const selected = quizAnswers[q.id];
+        const correct = selected === q.answer;
+        return {
+            id: q.id,
+            category: q.category,
+            selected,
+            selectedLabel: selected === undefined ? null : q.options[selected],
+            correctAnswer: q.answer,
+            correctLabel: q.options[q.answer],
+            correct,
+            explanation: q.explanation
+        };
+    });
+    const correctCount = details.filter(x => x.correct).length;
+    const total = details.length || 1;
+    return {
+        quizVersion: 1,
+        totalQuestions: details.length,
+        correctCount,
+        incorrectCount: details.length - correctCount,
+        knowledgeScore: Math.round((correctCount / total) * 100),
+        details,
+        generatedAt: Date.now()
+    };
+}
+
+function buildIntegratedCompetencyScore(diagnosis, quizResult) {
+    const behaviorScore = Number(diagnosis?.overallScore) || 0;
+    const knowledgeScore = Number(quizResult?.knowledgeScore) || 0;
+    const previousDelta = Number(currentLearningEffect?.overallDelta) || 0;
+    const improvementScore = Math.max(0, Math.min(100, 50 + previousDelta * 2));
+
+    const integratedScore = Math.round(
+        behaviorScore * 0.4 +
+        knowledgeScore * 0.4 +
+        improvementScore * 0.2
+    );
+
+    let level = "입문";
+    if (integratedScore >= 85) level = "전문가";
+    else if (integratedScore >= 70) level = "숙련";
+    else if (integratedScore >= 50) level = "성장";
+
+    return {
+        integratedVersion: 1,
+        integratedScore,
+        level,
+        weights: {
+            behavior: 0.4,
+            knowledge: 0.4,
+            improvement: 0.2
+        },
+        behaviorScore,
+        knowledgeScore,
+        improvementScore,
+        generatedAt: Date.now()
+    };
+}
+
+function renderKnowledgeQuizResult(quizResult, integrated) {
+    const card = document.getElementById("knowledge-result-card");
+    if (!card) return;
+    card.classList.remove("hidden");
+    document.getElementById("knowledge-result-score").textContent = `${quizResult.knowledgeScore}점`;
+    document.getElementById("knowledge-result-correct").textContent =
+        `${quizResult.correctCount}/${quizResult.totalQuestions} 정답`;
+    document.getElementById("integrated-result-score").textContent = `${integrated.integratedScore}점`;
+    document.getElementById("integrated-result-level").textContent = integrated.level;
+
+    document.getElementById("knowledge-result-details").innerHTML = quizResult.details.map(d => `
+        <div class="py-1.5 border-b border-slate-800/70 last:border-0">
+            <div class="flex justify-between gap-2 text-[9px]">
+                <span class="text-slate-300">${d.category}</span>
+                <span class="${d.correct ? "text-emerald-400" : "text-rose-400"} font-black">${d.correct ? "정답" : "오답"}</span>
+            </div>
+            <div class="text-[8px] text-slate-500 mt-0.5 leading-relaxed">${d.explanation}</div>
+        </div>
+    `).join("");
+}
+
+function finalizeKnowledgeQuiz(skipped = false) {
+    if (!pendingDiagnosisForQuiz) return;
+
+    currentQuizResult = skipped ? {
+        quizVersion: 1,
+        skipped: true,
+        totalQuestions: 0,
+        correctCount: 0,
+        incorrectCount: 0,
+        knowledgeScore: 0,
+        details: [],
+        generatedAt: Date.now()
+    } : scoreKnowledgeQuiz();
+
+    currentLearningEffect = calculateLearningEffect(pendingDiagnosisForQuiz);
+    renderLearningEffect(currentLearningEffect);
+
+    const integrated = buildIntegratedCompetencyScore(pendingDiagnosisForQuiz, currentQuizResult);
+    pendingDiagnosisForQuiz.integratedCompetency = integrated;
+    renderKnowledgeQuizResult(currentQuizResult, integrated);
+
+    saveAdaptiveCourseProfile(pendingDiagnosisForQuiz);
+
+    const overlay = document.getElementById("knowledge-quiz-overlay");
+    if (overlay) overlay.classList.add("hidden");
+
+    document.getElementById("reg-container").classList.remove("hidden");
+}
+
+function submitKnowledgeQuiz() {
+    if (Object.keys(quizAnswers).length < activeQuizQuestions.length) return;
+    finalizeKnowledgeQuiz(false);
+}
+
 // STEP 4: 맞춤형 코스 전후 학습효과 비교
 let currentLearningEffect = null;
 
@@ -1365,6 +1646,10 @@ function startGame() {
     adaptiveCourseApplied = Boolean(adaptiveCourseProfile?.weakItemIds?.length);
     adaptiveSpawnStats = {};
     currentLearningEffect = null;
+    currentQuizResult = null;
+    pendingDiagnosisForQuiz = null;
+    activeQuizQuestions = [];
+    quizAnswers = {};
     document.getElementById("hud-name").textContent = name;
     document.getElementById("hud-dept").textContent = dept;
     document.getElementById("reg-info").textContent = name + " (" + dept + ")";
@@ -2700,12 +2985,9 @@ function endGame() {
 
     const diagnosis = buildCompetencyDiagnosis(finalScore);
     renderCompetencyDiagnosis(diagnosis);
-    currentLearningEffect = calculateLearningEffect(diagnosis);
-    renderLearningEffect(currentLearningEffect);
-    saveAdaptiveCourseProfile(diagnosis);
-
-    document.getElementById("reg-container").classList.remove("hidden");
+    document.getElementById("reg-container").classList.add("hidden");
     showScreen("gameover");
+    setTimeout(() => openKnowledgeQuiz(diagnosis), 350);
 }
 
 function normalizeRankings(list) {
@@ -2857,8 +3139,10 @@ function buildPlayAnalytics(finalScore) {
     const competencyDiagnosis = buildCompetencyDiagnosis(finalScore);
 
     return {
-        analyticsVersion: 4,
+        analyticsVersion: 5,
         competencyDiagnosis,
+        knowledgeQuiz: currentQuizResult,
+        integratedCompetency: competencyDiagnosis?.integratedCompetency || buildIntegratedCompetencyScore(competencyDiagnosis, currentQuizResult),
         adaptiveCourse: getAdaptiveCourseSummary(),
         learningEffect: currentLearningEffect || calculateLearningEffect(competencyDiagnosis),
         playSessionId,
@@ -2903,6 +3187,12 @@ window.previewJofamsLearningEffect = () => {
     const diagnosis = buildCompetencyDiagnosis(Math.round(accumulatedScore + gameScore));
     return calculateLearningEffect(diagnosis);
 };
+window.previewJofamsKnowledgeQuiz = () => ({
+    activeQuestions: activeQuizQuestions,
+    answers: quizAnswers,
+    result: currentQuizResult,
+    integrated: pendingDiagnosisForQuiz?.integratedCompetency || null
+});
 window.resetJofamsAdaptiveCourse = () => {
     localStorage.removeItem(ADAPTIVE_PROFILE_KEY);
     adaptiveCourseProfile = null;
@@ -2930,7 +3220,7 @@ async function submitScore() {
         dept,
         score: finalScore,
         ...createScoreTimeMeta(),
-        version: 4,
+        version: 5,
         createdBy: "jofams-run",
         analytics
     };
@@ -3179,5 +3469,32 @@ async function loadBattleScore(roomId) {
 // ============================================================
 showScreen("menu");
 </script>
+
+<div id="knowledge-quiz-overlay" class="hidden fixed inset-0 z-[90] bg-slate-950/95 backdrop-blur-md overflow-y-auto">
+    <div class="min-h-full flex items-center justify-center p-4">
+        <div class="w-full max-w-md bg-[#071426] border border-sky-500/30 rounded-3xl shadow-2xl p-4">
+            <div class="flex items-start justify-between gap-3 mb-3">
+                <div>
+                    <div class="text-[9px] font-black text-sky-300 tracking-wider">KNOWLEDGE CHECK · STEP 5</div>
+                    <h3 class="text-lg font-black text-white mt-1">공공구매 지식검증</h3>
+                    <p class="text-[9px] text-slate-400 mt-1">게임 수행점수와 실제 제도 이해도를 분리하여 측정합니다.</p>
+                </div>
+                <div id="knowledge-quiz-progress" class="text-[9px] text-sky-300 bg-sky-500/10 border border-sky-400/20 rounded-full px-2 py-1 whitespace-nowrap">0 / 3 응답</div>
+            </div>
+            <div id="knowledge-quiz-list" class="space-y-3"></div>
+            <div class="mt-4 flex gap-2">
+                <button type="button" onclick="finalizeKnowledgeQuiz(true)"
+                    class="w-1/3 h-12 rounded-xl border border-slate-700 bg-slate-900 text-slate-400 text-[10px] font-black">
+                    건너뛰기
+                </button>
+                <button id="btn-submit-knowledge-quiz" type="button" onclick="submitKnowledgeQuiz()" disabled
+                    class="w-2/3 h-12 rounded-xl bg-gradient-to-r from-sky-500 to-violet-500 text-white text-xs font-black opacity-40 cursor-not-allowed">
+                    결과 분석하기
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 </body>
 </html>
