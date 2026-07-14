@@ -1244,9 +1244,11 @@ function getAdaptiveCourseSummary() {
 // 보안 원칙: 외부 LLM API 키는 HTML에 직접 넣지 않습니다.
 // Firebase Functions, Cloudflare Workers 등 서버 중계 주소만 설정합니다.
 const AI_REPORT_ENDPOINT =
-    window.JOFAMS_AI_ENDPOINT ||
-    localStorage.getItem("jofams_ai_report_endpoint") ||
-    ""; // 배포 후 Worker 주소 저장 또는 직접 입력
+  window.JOFAMS_AI_ENDPOINT ||
+  localStorage.getItem(
+    "jofams_ai_report_endpoint"
+  ) ||
+  "https://jofams-ai-report.churchoffire.workers.dev/api/jofams-report";
 const AI_REPORT_TIMEOUT_MS = 12000;
 
 let currentAiReport = null;
