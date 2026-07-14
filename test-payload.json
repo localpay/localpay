@@ -1,0 +1,52 @@
+{
+  "performance": {
+    "finalScore": 12800,
+    "stageReached": 4,
+    "totalCollected": 31,
+    "uniqueCollected": 9,
+    "maxCombo": 7,
+    "collisionCount": 2
+  },
+  "diagnosis": {
+    "overallScore": 72,
+    "level": "숙련",
+    "strengths": [
+      {
+        "name": "여성기업제품",
+        "mastery": 88
+      }
+    ],
+    "weaknesses": [
+      {
+        "name": "기술개발제품",
+        "mastery": 42
+      },
+      {
+        "name": "시범구매제품",
+        "mastery": 48
+      }
+    ],
+    "recommendation": "기술개발제품 집중코스"
+  },
+  "knowledge": {
+    "score": 67,
+    "correctCount": 2,
+    "totalQuestions": 3,
+    "wrongCategories": [
+      "기술개발제품"
+    ]
+  },
+  "integrated": {
+    "score": 70,
+    "level": "숙련",
+    "behaviorScore": 72,
+    "knowledgeScore": 67,
+    "improvementScore": 75
+  },
+  "learningEffect": {
+    "compared": true,
+    "overallDelta": 9,
+    "improvedWeakCount": 2,
+    "verdict": "향상"
+  }
+}

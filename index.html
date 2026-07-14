@@ -400,6 +400,55 @@
     </div>
 </div>
 
+
+<div id="ai-report-loading" class="hidden mt-3 bg-slate-950/70 border border-sky-500/20 rounded-2xl p-3 text-center">
+    <div class="text-xs font-black text-sky-300 animate-pulse">AI 코칭 리포트를 생성하고 있습니다…</div>
+</div>
+
+<div id="generative-ai-report-card" class="hidden mt-3 bg-gradient-to-br from-fuchsia-500/10 via-violet-500/10 to-sky-500/10 border border-fuchsia-400/30 rounded-2xl p-3 text-left">
+    <div class="flex items-start justify-between gap-2 mb-2">
+        <div>
+            <div class="text-[9px] font-black text-fuchsia-300 tracking-wider">GENERATIVE AI REPORT · STEP 6</div>
+            <div id="ai-report-title" class="text-xs font-black text-white mt-0.5">공공구매 AI 코칭 리포트</div>
+        </div>
+        <div id="ai-report-source" class="text-[8px] text-sky-300 bg-sky-500/10 border border-sky-400/20 rounded-full px-2 py-1 whitespace-nowrap">분석 중</div>
+    </div>
+
+    <div id="ai-report-summary" class="text-[9px] text-slate-200 leading-relaxed bg-slate-950/60 rounded-xl p-2 mb-2"></div>
+
+    <div class="grid grid-cols-2 gap-2 mb-2">
+        <div class="bg-slate-950/50 rounded-xl p-2">
+            <div class="text-[8px] font-black text-emerald-400 mb-1">강점 분야</div>
+            <div id="ai-report-strengths" class="flex flex-wrap gap-1"></div>
+        </div>
+        <div class="bg-slate-950/50 rounded-xl p-2">
+            <div class="text-[8px] font-black text-amber-400 mb-1">보완 분야</div>
+            <div id="ai-report-weaknesses" class="flex flex-wrap gap-1"></div>
+        </div>
+    </div>
+
+    <div class="space-y-2">
+        <div class="bg-slate-950/50 rounded-xl p-2">
+            <div class="text-[8px] font-black text-violet-300 mb-1">지식검증 피드백</div>
+            <div id="ai-report-knowledge" class="text-[8px] text-slate-300 leading-relaxed"></div>
+        </div>
+        <div class="bg-slate-950/50 rounded-xl p-2">
+            <div class="text-[8px] font-black text-sky-300 mb-1">맞춤형 재도전 제안</div>
+            <div id="ai-report-retry" class="text-[8px] text-slate-300 leading-relaxed"></div>
+        </div>
+        <div class="bg-slate-950/50 rounded-xl p-2">
+            <div class="text-[8px] font-black text-emerald-300 mb-1">학습효과 해석</div>
+            <div id="ai-report-effect" class="text-[8px] text-slate-300 leading-relaxed"></div>
+        </div>
+        <div class="bg-slate-950/50 rounded-xl p-2">
+            <div class="text-[8px] font-black text-rose-300 mb-1">실무 적용 체크리스트</div>
+            <div id="ai-report-checklist" class="space-y-1"></div>
+        </div>
+    </div>
+
+    <div id="ai-report-disclaimer" class="mt-2 text-[7px] text-slate-500 leading-relaxed"></div>
+</div>
+
 <div id="reg-container" class="mt-4 bg-[#091630] border border-sky-900 rounded-2xl p-3.5 flex justify-between items-center">
             <div class="text-left">
                 <span class="text-[9px] text-slate-400 block font-bold">기록을 전당에 등록!</span>
@@ -1190,6 +1239,197 @@ function getAdaptiveCourseSummary() {
 
 
 
+
+// STEP 6: 생성형 AI 개인 맞춤 리포트
+// 보안 원칙: 외부 LLM API 키는 HTML에 직접 넣지 않습니다.
+// Firebase Functions, Cloudflare Workers 등 서버 중계 주소만 설정합니다.
+const AI_REPORT_ENDPOINT =
+    window.JOFAMS_AI_ENDPOINT ||
+    localStorage.getItem("jofams_ai_report_endpoint") ||
+    ""; // 배포 후 Worker 주소 저장 또는 직접 입력
+const AI_REPORT_TIMEOUT_MS = 12000;
+
+let currentAiReport = null;
+
+function buildAiReportPayload(diagnosis, quizResult, integrated, learningEffect) {
+    return {
+        service: "JofamsRun",
+        reportVersion: 1,
+        generatedAt: new Date().toISOString(),
+        player: {
+            name: (document.getElementById("input-name")?.value || "조조달").trim(),
+            dept: document.getElementById("select-dept")?.value || "본사"
+        },
+        performance: {
+            finalScore: Math.round(accumulatedScore + gameScore),
+            stageReached: currentStage,
+            totalCollected,
+            uniqueCollected: uniqueCollected.size,
+            maxCombo: missionStats.maxCombo || comboCount || 0,
+            collisionCount: Number(sessionAnalytics?.collisionCount) || 0
+        },
+        diagnosis: {
+            overallScore: diagnosis?.overallScore ?? null,
+            level: diagnosis?.level ?? null,
+            strengths: (diagnosis?.strengths || []).map(x => ({name:x.name, mastery:x.mastery})),
+            weaknesses: (diagnosis?.weaknesses || []).map(x => ({name:x.name, mastery:x.mastery})),
+            recommendation: diagnosis?.recommendation || ""
+        },
+        knowledge: {
+            score: quizResult?.knowledgeScore ?? null,
+            correctCount: quizResult?.correctCount ?? null,
+            totalQuestions: quizResult?.totalQuestions ?? null,
+            wrongCategories: (quizResult?.details || []).filter(x => !x.correct).map(x => x.category)
+        },
+        integrated: {
+            score: integrated?.integratedScore ?? null,
+            level: integrated?.level ?? null,
+            behaviorScore: integrated?.behaviorScore ?? null,
+            knowledgeScore: integrated?.knowledgeScore ?? null,
+            improvementScore: integrated?.improvementScore ?? null
+        },
+        learningEffect: {
+            compared: Boolean(learningEffect?.compared),
+            overallDelta: learningEffect?.overallDelta ?? null,
+            improvedWeakCount: learningEffect?.improvedWeakCount ?? null,
+            verdict: learningEffect?.verdictLabel || null
+        }
+    };
+}
+
+function buildLocalFallbackReport(payload) {
+    const strengths = payload.diagnosis.strengths.map(x => x.name).slice(0, 3);
+    const weaknesses = payload.diagnosis.weaknesses.map(x => x.name).slice(0, 3);
+    const wrongCategories = payload.knowledge.wrongCategories || [];
+    const score = payload.integrated.score ?? 0;
+    const level = payload.integrated.level || "입문";
+    const delta = payload.learningEffect.overallDelta;
+
+    const summary = `${payload.player.name}님의 통합 공공구매 역량은 ${score}점, ${level} 수준입니다. `
+        + (strengths.length ? `${strengths.join("·")} 분야에서 상대적으로 강점을 보였습니다. ` : "")
+        + (weaknesses.length ? `${weaknesses.join("·")} 분야는 추가 학습이 필요합니다.` : "");
+
+    const learning = wrongCategories.length
+        ? `${[...new Set(wrongCategories)].join("·")} 관련 지식문항을 다시 확인하세요. 공공구매 백과에서 제도 목적, 확인서 및 실적 인정조건을 점검하는 것이 좋습니다.`
+        : "지식검증에서 확인된 주요 오류가 없습니다. 다음 단계에서는 실제 구매상황 판단 문제에 도전해 보세요.";
+
+    const retry = weaknesses.length
+        ? `다음 재도전에서는 ${weaknesses.slice(0,2).join("·")} 품목이 더 자주 등장하는 맞춤형 코스를 권장합니다.`
+        : "다음 재도전에서는 고난도 실무상황 미션을 권장합니다.";
+
+    const effect = delta === null || delta === undefined
+        ? "이번 결과는 향후 학습효과 비교를 위한 기준값으로 저장됩니다."
+        : `직전 플레이 대비 종합역량은 ${delta >= 0 ? "+" : ""}${Math.round(delta)}점 변했습니다.`;
+
+    return {
+        reportVersion: 1,
+        source: "local-explainable-fallback",
+        model: "rule-based-nlg-v1",
+        generatedAt: Date.now(),
+        title: `${payload.player.name}님의 공공구매 AI 코칭 리포트`,
+        summary,
+        strengths,
+        weaknesses,
+        knowledgeFeedback: learning,
+        retryRecommendation: retry,
+        learningEffect: effect,
+        practicalChecklist: [
+            "구매 전 해당 기업·제품의 유효한 확인서와 인증 여부를 확인하세요.",
+            "기업유형뿐 아니라 실제 구매대상 제품·용역의 실적 인정요건도 함께 확인하세요.",
+            "판단이 어려운 경우 공식 시스템과 공공구매 담당부서에 최종 확인하세요."
+        ],
+        disclaimer: "이 리포트는 교육용 분석 결과이며 실제 계약·실적 인정 여부를 확정하지 않습니다."
+    };
+}
+
+async function requestGenerativeAiReport(payload) {
+    if (!AI_REPORT_ENDPOINT) {
+        return buildLocalFallbackReport(payload);
+    }
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), AI_REPORT_TIMEOUT_MS);
+    try {
+        const response = await fetch(AI_REPORT_ENDPOINT, {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            // 개인정보 최소화: 생성형 AI 서버에는 이름·소속을 보내지 않습니다.
+            body: JSON.stringify({
+                ...payload,
+                player: { pseudonym: "participant" }
+            }),
+            signal: controller.signal
+        });
+        if (!response.ok) throw new Error(`AI report HTTP ${response.status}`);
+        const result = await response.json();
+        return {
+            reportVersion: 1,
+            source: result.source || "server-generative-ai",
+            model: result.model || "unknown",
+            generatedAt: Date.now(),
+            title: result.title || `${payload.player.name}님의 공공구매 AI 코칭 리포트`,
+            summary: result.summary || "",
+            strengths: Array.isArray(result.strengths) ? result.strengths : [],
+            weaknesses: Array.isArray(result.weaknesses) ? result.weaknesses : [],
+            knowledgeFeedback: result.knowledgeFeedback || "",
+            retryRecommendation: result.retryRecommendation || "",
+            learningEffect: result.learningEffect || "",
+            practicalChecklist: Array.isArray(result.practicalChecklist) ? result.practicalChecklist : [],
+            disclaimer: result.disclaimer || "AI 생성 결과는 담당자 검토가 필요합니다."
+        };
+    } catch (error) {
+        console.warn("생성형 AI 리포트 호출 실패, 로컬 리포트로 대체:", error);
+        const fallback = buildLocalFallbackReport(payload);
+        fallback.fallbackReason = String(error?.message || error);
+        return fallback;
+    } finally {
+        clearTimeout(timer);
+    }
+}
+
+function renderAiReport(report) {
+    const card = document.getElementById("generative-ai-report-card");
+    if (!card || !report) return;
+    card.classList.remove("hidden");
+
+    document.getElementById("ai-report-title").textContent = report.title || "공공구매 AI 코칭 리포트";
+    document.getElementById("ai-report-source").textContent =
+        report.source === "server-generative-ai" ? `생성형 AI · ${report.model}` : "설명 가능한 로컬 리포트";
+    document.getElementById("ai-report-summary").textContent = report.summary || "";
+    document.getElementById("ai-report-knowledge").textContent = report.knowledgeFeedback || "";
+    document.getElementById("ai-report-retry").textContent = report.retryRecommendation || "";
+    document.getElementById("ai-report-effect").textContent = report.learningEffect || "";
+
+    const strengths = document.getElementById("ai-report-strengths");
+    strengths.innerHTML = (report.strengths || []).length
+        ? report.strengths.map(x => `<span class="inline-flex text-[8px] font-black text-emerald-300 bg-emerald-500/10 border border-emerald-400/20 rounded-full px-2 py-1">${typeof x === "string" ? x : x.name}</span>`).join("")
+        : '<span class="text-[8px] text-slate-500">추가 데이터 필요</span>';
+
+    const weaknesses = document.getElementById("ai-report-weaknesses");
+    weaknesses.innerHTML = (report.weaknesses || []).length
+        ? report.weaknesses.map(x => `<span class="inline-flex text-[8px] font-black text-amber-300 bg-amber-500/10 border border-amber-400/20 rounded-full px-2 py-1">${typeof x === "string" ? x : x.name}</span>`).join("")
+        : '<span class="text-[8px] text-slate-500">특이 취약영역 없음</span>';
+
+    const checklist = document.getElementById("ai-report-checklist");
+    checklist.innerHTML = (report.practicalChecklist || []).map(item =>
+        `<div class="flex gap-2 text-[8px] text-slate-300 leading-relaxed"><span class="text-sky-400">✓</span><span>${item}</span></div>`
+    ).join("");
+
+    document.getElementById("ai-report-disclaimer").textContent = report.disclaimer || "";
+}
+
+async function generateAndRenderAiReport(diagnosis, quizResult, integrated, learningEffect) {
+    const loading = document.getElementById("ai-report-loading");
+    if (loading) loading.classList.remove("hidden");
+
+    const payload = buildAiReportPayload(diagnosis, quizResult, integrated, learningEffect);
+    currentAiReport = await requestGenerativeAiReport(payload);
+    renderAiReport(currentAiReport);
+
+    if (loading) loading.classList.add("hidden");
+    return currentAiReport;
+}
+
 // STEP 5: 공공구매 지식검증 퀴즈
 const KNOWLEDGE_QUESTIONS = [
     {
@@ -1433,7 +1673,14 @@ function finalizeKnowledgeQuiz(skipped = false) {
     const overlay = document.getElementById("knowledge-quiz-overlay");
     if (overlay) overlay.classList.add("hidden");
 
-    document.getElementById("reg-container").classList.remove("hidden");
+    generateAndRenderAiReport(
+        pendingDiagnosisForQuiz,
+        currentQuizResult,
+        integrated,
+        currentLearningEffect
+    ).finally(() => {
+        document.getElementById("reg-container").classList.remove("hidden");
+    });
 }
 
 function submitKnowledgeQuiz() {
@@ -1647,6 +1894,7 @@ function startGame() {
     adaptiveSpawnStats = {};
     currentLearningEffect = null;
     currentQuizResult = null;
+    currentAiReport = null;
     pendingDiagnosisForQuiz = null;
     activeQuizQuestions = [];
     quizAnswers = {};
@@ -3139,10 +3387,11 @@ function buildPlayAnalytics(finalScore) {
     const competencyDiagnosis = buildCompetencyDiagnosis(finalScore);
 
     return {
-        analyticsVersion: 5,
+        analyticsVersion: 7,
         competencyDiagnosis,
         knowledgeQuiz: currentQuizResult,
         integratedCompetency: competencyDiagnosis?.integratedCompetency || buildIntegratedCompetencyScore(competencyDiagnosis, currentQuizResult),
+        generativeAiReport: currentAiReport,
         adaptiveCourse: getAdaptiveCourseSummary(),
         learningEffect: currentLearningEffect || calculateLearningEffect(competencyDiagnosis),
         playSessionId,
@@ -3193,6 +3442,30 @@ window.previewJofamsKnowledgeQuiz = () => ({
     result: currentQuizResult,
     integrated: pendingDiagnosisForQuiz?.integratedCompetency || null
 });
+window.previewJofamsAiReport = () => currentAiReport;
+window.setJofamsAiEndpoint = (url) => {
+    const value = String(url || "").trim().replace(/\/$/, "");
+    if (!value) {
+        localStorage.removeItem("jofams_ai_report_endpoint");
+        return "";
+    }
+    localStorage.setItem("jofams_ai_report_endpoint", value);
+    return value;
+};
+window.getJofamsAiEndpoint = () =>
+    window.JOFAMS_AI_ENDPOINT ||
+    localStorage.getItem("jofams_ai_report_endpoint") ||
+    "";
+window.testJofamsAiReport = async () => {
+    const diagnosis = pendingDiagnosisForQuiz || buildCompetencyDiagnosis(Math.round(accumulatedScore + gameScore));
+    const quiz = currentQuizResult || {knowledgeScore:0, correctCount:0, totalQuestions:0, details:[]};
+    const integrated = diagnosis?.integratedCompetency || buildIntegratedCompetencyScore(diagnosis, quiz);
+    const effect = currentLearningEffect || calculateLearningEffect(diagnosis);
+    const payload = buildAiReportPayload(diagnosis, quiz, integrated, effect);
+    currentAiReport = await requestGenerativeAiReport(payload);
+    renderAiReport(currentAiReport);
+    return currentAiReport;
+};
 window.resetJofamsAdaptiveCourse = () => {
     localStorage.removeItem(ADAPTIVE_PROFILE_KEY);
     adaptiveCourseProfile = null;
@@ -3220,7 +3493,7 @@ async function submitScore() {
         dept,
         score: finalScore,
         ...createScoreTimeMeta(),
-        version: 5,
+        version: 7,
         createdBy: "jofams-run",
         analytics
     };

@@ -1,0 +1,13 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "jofams-ai-report",
+  "main": "src/index.js",
+  "compatibility_date": "2026-07-15",
+  "ai": {
+    "binding": "AI"
+  },
+  "vars": {
+    "AI_MODEL": "@cf/meta/llama-3.1-8b-instruct-fast",
+    "ALLOWED_ORIGINS": "https://localpay.github.io,http://localhost:8787,http://127.0.0.1:8787"
+  }
+}
