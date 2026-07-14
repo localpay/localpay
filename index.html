@@ -315,6 +315,10 @@
         </div>
         <!-- STEP 2: 개인별 공공구매 역량 자동진단 -->
         <div id="ai-diagnosis-card" class="hidden mt-3 bg-gradient-to-br from-violet-500/10 to-sky-500/10 border border-violet-400/30 rounded-2xl p-3 text-left">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-[9px] font-black text-violet-300 tracking-wider">AI LOG ANALYSIS · STEP 3</span>
+                <span class="text-[8px] text-sky-300 bg-sky-500/10 border border-sky-400/20 rounded-full px-2 py-0.5">다음 플레이 맞춤 적용</span>
+            </div>
             <div class="flex justify-between items-center mb-2">
                 <div>
                     <div class="text-[9px] text-violet-300 font-black tracking-widest">PERSONALIZED DIAGNOSIS</div>
@@ -339,7 +343,35 @@
             </div>
             <div class="mt-2 text-[8px] leading-relaxed text-slate-500">※ 플레이 로그를 설명 가능한 가중치 모델로 분석한 자동진단입니다. 법령·실적 인정 여부는 담당부서의 최종 확인이 필요합니다.</div>
         </div>
-        <div id="reg-container" class="mt-4 bg-[#091630] border border-sky-900 rounded-2xl p-3.5 flex justify-between items-center">
+        
+<div id="learning-effect-card" class="hidden mt-3 bg-gradient-to-br from-emerald-500/10 to-cyan-500/10 border border-emerald-400/30 rounded-2xl p-3 text-left">
+    <div class="flex items-center justify-between mb-2">
+        <div>
+            <div class="text-[9px] font-black text-emerald-300 tracking-wider">AI LEARNING EFFECT · STEP 4</div>
+            <div class="text-xs font-black text-white mt-0.5">맞춤형 학습효과 비교</div>
+        </div>
+        <div id="learning-effect-verdict" class="text-[9px] font-black text-emerald-300 bg-emerald-500/10 border border-emerald-400/20 rounded-full px-2 py-1">기준 플레이</div>
+    </div>
+    <div class="grid grid-cols-3 gap-2 mb-2">
+        <div class="bg-slate-950/70 rounded-xl p-2 text-center">
+            <div class="text-[8px] text-slate-500">이전 역량</div>
+            <div id="learning-effect-prev" class="text-sm font-black text-slate-200">-</div>
+        </div>
+        <div class="bg-slate-950/70 rounded-xl p-2 text-center">
+            <div class="text-[8px] text-slate-500">현재 역량</div>
+            <div id="learning-effect-current" class="text-sm font-black text-sky-300">-</div>
+        </div>
+        <div class="bg-slate-950/70 rounded-xl p-2 text-center">
+            <div class="text-[8px] text-slate-500">변화</div>
+            <div id="learning-effect-delta" class="text-sm font-black text-sky-300">기준값 저장</div>
+        </div>
+    </div>
+    <div id="learning-effect-message" class="text-[9px] text-slate-300 leading-relaxed bg-slate-950/50 rounded-xl p-2 mb-2"></div>
+    <div class="text-[8px] font-black text-slate-500 mb-1">취약품목 숙련도 변화</div>
+    <div id="learning-effect-items"></div>
+</div>
+
+<div id="reg-container" class="mt-4 bg-[#091630] border border-sky-900 rounded-2xl p-3.5 flex justify-between items-center">
             <div class="text-left">
                 <span class="text-[9px] text-slate-400 block font-bold">기록을 전당에 등록!</span>
                 <span id="reg-info" class="text-xs text-slate-200 font-bold">조조달 (본사)</span>
@@ -1022,6 +1054,228 @@ let stageHistory = [];
 let gameEndReason = "unknown";
 let devicePlaySequence = parseInt(localStorage.getItem("jofams_play_sequence") || "0", 10);
 
+
+// STEP 3: 개인별 맞춤형 재도전 코스
+const ADAPTIVE_PROFILE_KEY = "jofams_adaptive_profile_v1";
+let adaptiveCourseProfile = null;
+let adaptiveSpawnStats = {};
+let adaptiveCourseApplied = false;
+
+function loadAdaptiveCourseProfile() {
+    try {
+        const raw = localStorage.getItem(ADAPTIVE_PROFILE_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (!parsed || !Array.isArray(parsed.weakItemIds)) return null;
+        return parsed;
+    } catch (e) {
+        console.warn("맞춤형 코스 프로필 불러오기 실패:", e);
+        return null;
+    }
+}
+
+function saveAdaptiveCourseProfile(diagnosis) {
+    if (!diagnosis) return;
+    const weakItems = (diagnosis.weaknesses || []).slice(0, 3);
+    const profile = {
+        profileVersion: 1,
+        generatedAt: Date.now(),
+        sourceDiagnosisVersion: diagnosis.diagnosisVersion || 1,
+        previousOverallScore: Number(diagnosis.overallScore) || 0,
+        previousLevel: diagnosis.level || "입문",
+        weakItemIds: weakItems.map(x => Number(x.id)).filter(Boolean),
+        weakItemNames: weakItems.map(x => x.name),
+        weakItemMastery: weakItems.map(x => ({id:Number(x.id), name:x.name, mastery:Number(x.mastery)||0})),
+        recommendation: diagnosis.recommendation || ""
+    };
+    try {
+        localStorage.setItem(ADAPTIVE_PROFILE_KEY, JSON.stringify(profile));
+        adaptiveCourseProfile = profile;
+    } catch (e) {
+        console.warn("맞춤형 코스 프로필 저장 실패:", e);
+    }
+}
+
+function buildAdaptiveWeights(profile) {
+    const weakSet = new Set((profile?.weakItemIds || []).map(Number));
+    const weights = {};
+    PUBLIC_PURCHASES.forEach(item => {
+        // 기본 가중치 1.0, 취약품목은 2.6배, 현재 플레이에서 이미 많이 나온 품목은 소폭 감쇠
+        const spawned = Number(adaptiveSpawnStats[item.id]) || 0;
+        const base = weakSet.has(item.id) ? 2.6 : 1.0;
+        const repetitionPenalty = 1 / (1 + spawned * 0.12);
+        weights[item.id] = Math.max(0.35, base * repetitionPenalty);
+    });
+    return weights;
+}
+
+function selectAdaptiveItem() {
+    const profile = adaptiveCourseProfile;
+    if (!profile || !profile.weakItemIds?.length) {
+        return PUBLIC_PURCHASES[Math.floor(Math.random() * PUBLIC_PURCHASES.length)];
+    }
+
+    const weights = buildAdaptiveWeights(profile);
+    const total = PUBLIC_PURCHASES.reduce((sum, item) => sum + (weights[item.id] || 0), 0);
+    let pick = Math.random() * total;
+    for (const item of PUBLIC_PURCHASES) {
+        pick -= weights[item.id] || 0;
+        if (pick <= 0) {
+            adaptiveSpawnStats[item.id] = (adaptiveSpawnStats[item.id] || 0) + 1;
+            return item;
+        }
+    }
+    const fallback = PUBLIC_PURCHASES[PUBLIC_PURCHASES.length - 1];
+    adaptiveSpawnStats[fallback.id] = (adaptiveSpawnStats[fallback.id] || 0) + 1;
+    return fallback;
+}
+
+function showAdaptiveCourseToast() {
+    if (!adaptiveCourseProfile?.weakItemNames?.length) return;
+    const wrap = document.getElementById("toast-wrap");
+    if (!wrap) return;
+    document.getElementById("toast-title").textContent = "🧠 맞춤형 재도전 코스 적용";
+    document.getElementById("toast-msg").textContent =
+        `${adaptiveCourseProfile.weakItemNames.slice(0, 2).join("·")} 품목이 더 자주 등장합니다.`;
+    document.getElementById("toast-icon").innerHTML = '<span style="font-size:24px">🎯</span>';
+    wrap.style.opacity = "1";
+    wrap.style.transform = "translateY(0)";
+    clearTimeout(toastTmr);
+    toastTmr = setTimeout(() => {
+        wrap.style.opacity = "0";
+        wrap.style.transform = "translateY(-8px)";
+    }, 3200);
+}
+
+function getAdaptiveCourseSummary() {
+    return {
+        applied: Boolean(adaptiveCourseApplied),
+        profileVersion: adaptiveCourseProfile?.profileVersion || null,
+        sourceGeneratedAt: adaptiveCourseProfile?.generatedAt || null,
+        weakItemIds: adaptiveCourseProfile?.weakItemIds || [],
+        weakItemNames: adaptiveCourseProfile?.weakItemNames || [],
+        previousOverallScore: adaptiveCourseProfile?.previousOverallScore ?? null,
+        spawnCounts: {...adaptiveSpawnStats}
+    };
+}
+
+
+// STEP 4: 맞춤형 코스 전후 학습효과 비교
+let currentLearningEffect = null;
+
+function calculateLearningEffect(currentDiagnosis) {
+    const profile = adaptiveCourseProfile;
+    const applied = Boolean(adaptiveCourseApplied && profile?.weakItemIds?.length);
+    const previousOverall = Number(profile?.previousOverallScore);
+    const currentOverall = Number(currentDiagnosis?.overallScore) || 0;
+
+    const currentItemMap = new Map(
+        (currentDiagnosis?.itemProfiles || []).map(item => [Number(item.id), item])
+    );
+
+    const weakItemChanges = (profile?.weakItemMastery || []).map(prev => {
+        const current = currentItemMap.get(Number(prev.id));
+        const previousMastery = Number(prev.mastery) || 0;
+        const currentMastery = Number(current?.mastery) || 0;
+        return {
+            id: Number(prev.id),
+            name: prev.name,
+            previousMastery,
+            currentMastery,
+            delta: currentMastery - previousMastery,
+            improved: currentMastery > previousMastery
+        };
+    });
+
+    const comparable = applied && Number.isFinite(previousOverall);
+    const overallDelta = comparable ? currentOverall - previousOverall : null;
+    const improvedWeakCount = weakItemChanges.filter(x => x.delta > 0).length;
+    const averageWeakDelta = weakItemChanges.length
+        ? weakItemChanges.reduce((sum, x) => sum + x.delta, 0) / weakItemChanges.length
+        : null;
+
+    let verdict = "baseline";
+    let verdictLabel = "기준 플레이";
+    let message = "이번 플레이 결과를 다음 맞춤형 학습의 기준값으로 저장했습니다.";
+
+    if (comparable) {
+        if ((overallDelta ?? 0) >= 8 || (averageWeakDelta ?? 0) >= 10) {
+            verdict = "strong_improvement";
+            verdictLabel = "뚜렷한 향상";
+            message = `맞춤형 코스 적용 후 종합역량이 ${overallDelta >= 0 ? "+" : ""}${Math.round(overallDelta)}점 변했고, 취약품목 ${improvedWeakCount}개에서 개선이 확인되었습니다.`;
+        } else if ((overallDelta ?? 0) > 0 || improvedWeakCount > 0) {
+            verdict = "improvement";
+            verdictLabel = "향상";
+            message = `맞춤형 코스 적용 후 종합역량이 ${overallDelta >= 0 ? "+" : ""}${Math.round(overallDelta)}점 변했고, 취약품목 ${improvedWeakCount}개가 개선되었습니다.`;
+        } else if ((overallDelta ?? 0) <= -8) {
+            verdict = "decline";
+            verdictLabel = "추가 학습 필요";
+            message = `이번 재도전에서는 종합역량이 ${Math.round(overallDelta)}점 변했습니다. 취약품목을 다시 확인하고 재도전하세요.`;
+        } else {
+            verdict = "stable";
+            verdictLabel = "유지";
+            message = "종합역량은 유사한 수준을 유지했습니다. 취약품목 반복학습을 한 번 더 권장합니다.";
+        }
+    }
+
+    return {
+        effectVersion: 1,
+        compared: comparable,
+        adaptiveCourseApplied: applied,
+        previousOverallScore: Number.isFinite(previousOverall) ? previousOverall : null,
+        currentOverallScore: currentOverall,
+        overallDelta,
+        previousLevel: profile?.previousLevel || null,
+        currentLevel: currentDiagnosis?.level || null,
+        weakItemChanges,
+        improvedWeakCount,
+        averageWeakDelta,
+        verdict,
+        verdictLabel,
+        message,
+        generatedAt: Date.now()
+    };
+}
+
+function renderLearningEffect(effect) {
+    const card = document.getElementById("learning-effect-card");
+    if (!card || !effect) return;
+
+    card.classList.remove("hidden");
+    document.getElementById("learning-effect-verdict").textContent = effect.verdictLabel;
+    document.getElementById("learning-effect-message").textContent = effect.message;
+
+    const deltaEl = document.getElementById("learning-effect-delta");
+    if (effect.compared && effect.overallDelta !== null) {
+        const d = Math.round(effect.overallDelta);
+        deltaEl.textContent = `${d >= 0 ? "+" : ""}${d}점`;
+        deltaEl.className = "text-xl font-black " + (d > 0 ? "text-emerald-400" : d < 0 ? "text-rose-400" : "text-slate-300");
+    } else {
+        deltaEl.textContent = "기준값 저장";
+        deltaEl.className = "text-sm font-black text-sky-300";
+    }
+
+    const prevEl = document.getElementById("learning-effect-prev");
+    const currEl = document.getElementById("learning-effect-current");
+    prevEl.textContent = effect.previousOverallScore ?? "-";
+    currEl.textContent = effect.currentOverallScore ?? "-";
+
+    const list = document.getElementById("learning-effect-items");
+    const changes = effect.weakItemChanges || [];
+    if (!changes.length) {
+        list.innerHTML = '<div class="text-[9px] text-slate-500">첫 플레이 후 취약품목 변화가 여기에 표시됩니다.</div>';
+    } else {
+        list.innerHTML = changes.map(item => {
+            const d = Math.round(item.delta);
+            const cls = d > 0 ? "text-emerald-400" : d < 0 ? "text-rose-400" : "text-slate-400";
+            return `<div class="flex justify-between items-center text-[9px] py-1 border-b border-slate-800/70 last:border-0">
+                <span class="text-slate-300">${item.name}</span>
+                <span class="${cls} font-black">${item.previousMastery} → ${item.currentMastery} (${d >= 0 ? "+" : ""}${d})</span>
+            </div>`;
+        }).join("");
+    }
+}
+
 // #9 콤보 시스템
 let comboCount = 0;
 let comboTimer = 0;
@@ -1107,6 +1361,10 @@ function startGame() {
     if (isPlaying) return;
     const name = (document.getElementById("input-name").value || "조조달").trim();
     const dept = document.getElementById("select-dept").value;
+    adaptiveCourseProfile = loadAdaptiveCourseProfile();
+    adaptiveCourseApplied = Boolean(adaptiveCourseProfile?.weakItemIds?.length);
+    adaptiveSpawnStats = {};
+    currentLearningEffect = null;
     document.getElementById("hud-name").textContent = name;
     document.getElementById("hud-dept").textContent = dept;
     document.getElementById("reg-info").textContent = name + " (" + dept + ")";
@@ -1151,6 +1409,9 @@ function startGame() {
     resetSkillBtn();
     initSidePanels();
     updateMissionHUD();
+    if (adaptiveCourseApplied) {
+        setTimeout(showAdaptiveCourseToast, 700);
+    }
 
     if (battleOpponentData) {
         document.getElementById("hud-battle-info").classList.remove("hidden");
@@ -1420,7 +1681,7 @@ function updateItems() {
     // #7 골든 아이템 스폰 (5% 확률)
     if (frame % 40 === 0) {
         const isGolden = Math.random() < 0.05;
-        const item = PUBLIC_PURCHASES[Math.floor(Math.random()*12)];
+        const item = selectAdaptiveItem();
         items.push({x:getLaneX(Math.floor(Math.random()*3)), y:-40, item, size: isGolden ? 38 : 34, golden: isGolden});
     }
     for (let i = items.length-1; i >= 0; i--) {
@@ -2439,6 +2700,9 @@ function endGame() {
 
     const diagnosis = buildCompetencyDiagnosis(finalScore);
     renderCompetencyDiagnosis(diagnosis);
+    currentLearningEffect = calculateLearningEffect(diagnosis);
+    renderLearningEffect(currentLearningEffect);
+    saveAdaptiveCourseProfile(diagnosis);
 
     document.getElementById("reg-container").classList.remove("hidden");
     showScreen("gameover");
@@ -2593,8 +2857,10 @@ function buildPlayAnalytics(finalScore) {
     const competencyDiagnosis = buildCompetencyDiagnosis(finalScore);
 
     return {
-        analyticsVersion: 2,
+        analyticsVersion: 4,
         competencyDiagnosis,
+        adaptiveCourse: getAdaptiveCourseSummary(),
+        learningEffect: currentLearningEffect || calculateLearningEffect(competencyDiagnosis),
         playSessionId,
         playStartedAt,
         playEndedAt: endedAt,
@@ -2628,6 +2894,22 @@ function buildPlayAnalytics(finalScore) {
 // 개발자도구에서 현재 수집값을 점검할 수 있는 읽기 전용 도우미
 window.previewJofamsAnalytics = () => buildPlayAnalytics(Math.round(accumulatedScore + gameScore));
 window.previewJofamsDiagnosis = () => buildCompetencyDiagnosis(Math.round(accumulatedScore + gameScore));
+window.previewJofamsAdaptiveCourse = () => ({
+    profile: adaptiveCourseProfile || loadAdaptiveCourseProfile(),
+    weights: buildAdaptiveWeights(adaptiveCourseProfile || loadAdaptiveCourseProfile()),
+    session: getAdaptiveCourseSummary()
+});
+window.previewJofamsLearningEffect = () => {
+    const diagnosis = buildCompetencyDiagnosis(Math.round(accumulatedScore + gameScore));
+    return calculateLearningEffect(diagnosis);
+};
+window.resetJofamsAdaptiveCourse = () => {
+    localStorage.removeItem(ADAPTIVE_PROFILE_KEY);
+    adaptiveCourseProfile = null;
+    adaptiveCourseApplied = false;
+    adaptiveSpawnStats = {};
+    return true;
+};
 
 let _scoreSubmitting = false;
 
@@ -2648,7 +2930,7 @@ async function submitScore() {
         dept,
         score: finalScore,
         ...createScoreTimeMeta(),
-        version: 2,
+        version: 4,
         createdBy: "jofams-run",
         analytics
     };
