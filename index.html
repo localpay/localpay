@@ -313,6 +313,32 @@
             <div class="text-[10px] text-emerald-400 font-black mb-1.5">&#128203; 오늘의 미션 결과</div>
             <div id="mission-result-list" class="space-y-1 text-[10px]"></div>
         </div>
+        <!-- STEP 2: 개인별 공공구매 역량 자동진단 -->
+        <div id="ai-diagnosis-card" class="hidden mt-3 bg-gradient-to-br from-violet-500/10 to-sky-500/10 border border-violet-400/30 rounded-2xl p-3 text-left">
+            <div class="flex justify-between items-center mb-2">
+                <div>
+                    <div class="text-[9px] text-violet-300 font-black tracking-widest">PERSONALIZED DIAGNOSIS</div>
+                    <div class="text-xs text-white font-black">🤖 공공구매 역량 자동진단</div>
+                </div>
+                <span id="ai-diagnosis-level" class="px-2 py-1 rounded-full bg-violet-500/20 border border-violet-400/30 text-[10px] font-black text-violet-200">분석중</span>
+            </div>
+            <p id="ai-diagnosis-summary" class="text-[10px] leading-relaxed text-slate-200 mb-2"></p>
+            <div class="grid grid-cols-2 gap-2 mb-2">
+                <div class="bg-slate-950/60 border border-emerald-500/20 rounded-xl p-2">
+                    <div class="text-[9px] font-black text-emerald-400 mb-1">강점 품목</div>
+                    <div id="ai-diagnosis-strengths" class="text-[9px] leading-relaxed text-slate-300"></div>
+                </div>
+                <div class="bg-slate-950/60 border border-rose-500/20 rounded-xl p-2">
+                    <div class="text-[9px] font-black text-rose-400 mb-1">보완 품목</div>
+                    <div id="ai-diagnosis-weaknesses" class="text-[9px] leading-relaxed text-slate-300"></div>
+                </div>
+            </div>
+            <div class="bg-sky-950/40 border border-sky-500/20 rounded-xl p-2">
+                <div class="text-[9px] font-black text-sky-400 mb-1">다음 학습 추천</div>
+                <div id="ai-diagnosis-recommendation" class="text-[10px] leading-relaxed text-slate-200"></div>
+            </div>
+            <div class="mt-2 text-[8px] leading-relaxed text-slate-500">※ 플레이 로그를 설명 가능한 가중치 모델로 분석한 자동진단입니다. 법령·실적 인정 여부는 담당부서의 최종 확인이 필요합니다.</div>
+        </div>
         <div id="reg-container" class="mt-4 bg-[#091630] border border-sky-900 rounded-2xl p-3.5 flex justify-between items-center">
             <div class="text-left">
                 <span class="text-[9px] text-slate-400 block font-bold">기록을 전당에 등록!</span>
@@ -2411,6 +2437,9 @@ function endGame() {
         ).join("");
     }
 
+    const diagnosis = buildCompetencyDiagnosis(finalScore);
+    renderCompetencyDiagnosis(diagnosis);
+
     document.getElementById("reg-container").classList.remove("hidden");
     showScreen("gameover");
 }
@@ -2440,6 +2469,108 @@ function serializeCountMap(countMap) {
     return out;
 }
 
+// ============================================================
+// STEP 2: EXPLAINABLE PERSONAL COMPETENCY DIAGNOSIS
+// - 외부 API 없이 브라우저에서 즉시 실행되는 설명 가능한 가중치 모델입니다.
+// - 획득/누락/반복수집/진행도/충돌 데이터를 조합해 12개 품목별 숙련도를 계산합니다.
+// ============================================================
+function buildCompetencyDiagnosis(finalScore) {
+    const itemProfiles = PUBLIC_PURCHASES.map(item => {
+        const collected = Number(itemCounts?.[item.id]) || 0;
+        const missed = Number(missedItemCounts?.[item.id]) || 0;
+        const opportunities = collected + missed;
+        const captureRate = opportunities > 0 ? collected / opportunities : 0;
+        const exposureScore = Math.min(1, opportunities / 3);
+        const repeatBonus = Math.min(0.15, Math.max(0, collected - 1) * 0.05);
+        const mastery = Math.round(Math.max(0, Math.min(100,
+            (captureRate * 70) + (exposureScore * 20) + (collected > 0 ? 10 : 0) + (repeatBonus * 100)
+        )));
+        return {
+            id: item.id,
+            name: item.name,
+            collected,
+            missed,
+            opportunities,
+            captureRate: Math.round(captureRate * 100),
+            mastery
+        };
+    });
+
+    const observed = itemProfiles.filter(x => x.opportunities > 0);
+    const sortedHigh = [...itemProfiles].sort((a,b) => (b.mastery-a.mastery) || (b.collected-a.collected));
+    const sortedLow = [...itemProfiles].sort((a,b) => (a.mastery-b.mastery) || (b.missed-a.missed));
+    const strengths = sortedHigh.filter(x => x.collected > 0).slice(0, 3);
+    const weaknesses = sortedLow.filter(x => x.mastery < 70 || x.missed > 0).slice(0, 3);
+    const avgMastery = observed.length
+        ? Math.round(observed.reduce((sum,x)=>sum+x.mastery,0) / observed.length)
+        : 0;
+    const coverage = Math.round((uniqueCollected.size / PUBLIC_PURCHASES.length) * 100);
+    const completedMissionCount = todayMissions.filter(m => m.done).length;
+    const missionRate = todayMissions.length ? completedMissionCount / todayMissions.length : 0;
+    const stageScore = Math.min(100, Math.max(0, (currentStage / 10) * 100));
+    const controlScore = Math.max(0, 100 - collisionCount * 12);
+    const overallScore = Math.round(
+        avgMastery * 0.45 + coverage * 0.25 + stageScore * 0.15 + controlScore * 0.10 + missionRate * 100 * 0.05
+    );
+
+    let level = '입문';
+    if (overallScore >= 85) level = '전문가';
+    else if (overallScore >= 70) level = '숙련';
+    else if (overallScore >= 50) level = '성장';
+
+    const weakNames = weaknesses.map(x => x.name);
+    let recommendation;
+    if (!weakNames.length) {
+        recommendation = '12대 품목을 고르게 익혔습니다. 다음 도전에서는 충돌을 줄이고 고난도 실무판단 미션에 도전해 보세요.';
+    } else if (uniqueCollected.size < 6) {
+        recommendation = `${weakNames.slice(0,2).join('·')} 중심의 기초 수집코스를 권장합니다. 다음 플레이에서는 우선 8종 이상 수집을 목표로 하세요.`;
+    } else {
+        recommendation = `${weakNames.slice(0,2).join('·')} 집중코스를 권장합니다. 공공구매 백과에서 제도 목적과 실적 인정 조건을 확인한 뒤 재도전하세요.`;
+    }
+
+    const summary = `${PUBLIC_PURCHASES.length}개 품목 중 ${uniqueCollected.size}종을 수집했고, 관찰된 품목의 평균 숙련도는 ${avgMastery}점입니다. ` +
+        `도달 스테이지 ${currentStage}, 최대 콤보 ${Number(missionStats.maxCombo)||0}, 충돌 ${collisionCount}회를 종합해 역량수준을 '${level}'로 진단했습니다.`;
+
+    return {
+        diagnosisVersion: 1,
+        engine: 'explainable-weighted-model-v1',
+        generatedAt: Date.now(),
+        overallScore,
+        level,
+        averageItemMastery: avgMastery,
+        coveragePercent: coverage,
+        strengths,
+        weaknesses,
+        recommendation,
+        summary,
+        itemProfiles,
+        evidence: {
+            finalScore,
+            stageReached: currentStage,
+            uniqueCollectedCount: uniqueCollected.size,
+            collisionCount,
+            maxCombo: Number(missionStats.maxCombo) || 0,
+            completedMissionCount,
+            totalMissionCount: todayMissions.length
+        }
+    };
+}
+
+function renderCompetencyDiagnosis(diagnosis) {
+    const card = document.getElementById('ai-diagnosis-card');
+    if (!card || !diagnosis) return;
+    card.classList.remove('hidden');
+    document.getElementById('ai-diagnosis-level').textContent = `${diagnosis.level} · ${diagnosis.overallScore}점`;
+    document.getElementById('ai-diagnosis-summary').textContent = diagnosis.summary;
+    document.getElementById('ai-diagnosis-strengths').textContent = diagnosis.strengths.length
+        ? diagnosis.strengths.map(x => `${x.name} ${x.mastery}점`).join(' · ')
+        : '충분한 수집 데이터가 없습니다.';
+    document.getElementById('ai-diagnosis-weaknesses').textContent = diagnosis.weaknesses.length
+        ? diagnosis.weaknesses.map(x => `${x.name} ${x.mastery}점`).join(' · ')
+        : '뚜렷한 취약품목이 없습니다.';
+    document.getElementById('ai-diagnosis-recommendation').textContent = diagnosis.recommendation;
+}
+
 function buildPlayAnalytics(finalScore) {
     const endedAt = Date.now();
     const durationMs = playStartedAt ? Math.max(0, endedAt - playStartedAt) : 0;
@@ -2459,8 +2590,11 @@ function buildPlayAnalytics(finalScore) {
         scoreDiff: finalScore - Number(battleOpponentData.score || 0)
     } : null;
 
+    const competencyDiagnosis = buildCompetencyDiagnosis(finalScore);
+
     return {
-        analyticsVersion: 1,
+        analyticsVersion: 2,
+        competencyDiagnosis,
         playSessionId,
         playStartedAt,
         playEndedAt: endedAt,
@@ -2493,6 +2627,7 @@ function buildPlayAnalytics(finalScore) {
 
 // 개발자도구에서 현재 수집값을 점검할 수 있는 읽기 전용 도우미
 window.previewJofamsAnalytics = () => buildPlayAnalytics(Math.round(accumulatedScore + gameScore));
+window.previewJofamsDiagnosis = () => buildCompetencyDiagnosis(Math.round(accumulatedScore + gameScore));
 
 let _scoreSubmitting = false;
 
