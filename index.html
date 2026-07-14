@@ -458,77 +458,12 @@ const FIREBASE_CONFIG = {
 };
 
 // ─────────────────────────────────────────────────────────────
-// LEGACY JSONBIN MIGRATION
+// LEGACY JSONBIN MIGRATION — SECURITY HARDENED
 // ─────────────────────────────────────────────────────────────
-// 기존 JSONBin에 남아 있는 랭킹을 Firestore로 1회성 이전하기 위한 호환 코드입니다.
-// 기록 유실 방지를 위해 기존 JSONBin 데이터가 있으면 Firestore scores 컬렉션에
-// uuid 기반 문서 ID로 create 시도합니다. 이미 이전된 문서는 보안 규칙상 update가
-// 거부될 수 있으며, 이는 정상적인 중복 방지 동작입니다.
-const LEGACY_JSONBIN_BIN_ID  = "6a2a60ecda38895dfeaba5ce";
-const LEGACY_JSONBIN_API_KEY = "$2a$10$m7G5pXX3trEYFVwemmNXYun0/A8blUKscu24twOEnkvCowx3BjfUm";
-const LEGACY_JSONBIN_URL = `https://api.jsonbin.io/v3/b/${LEGACY_JSONBIN_BIN_ID}/latest`;
-const LEGACY_MIGRATION_FLAG = "jofams_jsonbin_to_firestore_migration_v1";
-
-async function fetchLegacyJsonBinRankings() {
-    try {
-        const res = await fetch(LEGACY_JSONBIN_URL + "?_=" + Date.now(), {
-            method: "GET",
-            cache: "no-store",
-            headers: { "X-Master-Key": LEGACY_JSONBIN_API_KEY }
-        });
-        if (!res.ok) throw new Error("JSONBin HTTP " + res.status);
-        const json = await res.json();
-        const payload = json.record || json || {};
-        return Array.isArray(payload.rankings) ? payload.rankings : [];
-    } catch(e) {
-        console.warn("기존 JSONBin 랭킹 이전용 조회 실패:", e);
-        return [];
-    }
-}
-
+// 브라우저 소스에 관리자 키를 포함하지 않도록 기존 JSONBin 마이그레이션을 비활성화했습니다.
+// 이전이 필요하면 관리자 환경(Cloud Functions/Admin SDK)에서 별도로 수행해야 합니다.
 async function migrateLegacyJsonBinToFirestore() {
-    // 현재 브라우저에서 이미 이전 시도한 경우 반복 실행하지 않습니다.
-    // 다른 PC에서 이미 이전된 문서는 Firestore create 규칙에 의해 중복 생성되지 않습니다.
-    if (localStorage.getItem(LEGACY_MIGRATION_FLAG) === "done") return;
-
-    const legacyList = await fetchLegacyJsonBinRankings();
-    const records = normalizeRankingsSafe(legacyList);
-    if (!records.length) {
-        localStorage.setItem(LEGACY_MIGRATION_FLAG, "done");
-        return;
-    }
-
-    try {
-        const api = await getFirestoreApi();
-        const { db, doc, setDoc, serverTimestamp } = api;
-        let created = 0;
-        for (const r of records) {
-            const id = r.uuid || makeLegacyUuid(r);
-            try {
-                await setDoc(doc(db, "scores", id), {
-                    uuid: id,
-                    name: r.name,
-                    dept: r.dept,
-                    score: Number(r.score) || 0,
-                    timestamp: Number(r.timestamp) || parseKstDateToTimestamp(r.displayDate || r.date) || Date.now(),
-                    displayDate: normalizeDisplayDate(r.displayDate || r.date),
-                    date: String(r.date || normalizeDisplayDate(r.displayDate || r.date).slice(0, 10)).slice(0, 10),
-                    createdAt: serverTimestamp(),
-                    createdBy: "legacy-jsonbin-migration",
-                    version: Number(r.version) || 1,
-                    legacySource: "jsonbin"
-                });
-                created++;
-            } catch(e) {
-                // 이미 존재하는 문서에 대한 update 거부는 중복 이전 방지로 보고 무시합니다.
-                console.warn("기존 기록 이전 생략/실패:", id, e);
-            }
-        }
-        console.log(`기존 JSONBin 랭킹 Firestore 이전 시도 완료: ${records.length}건 중 ${created}건 생성 시도`);
-        localStorage.setItem(LEGACY_MIGRATION_FLAG, "done");
-    } catch(e) {
-        console.warn("기존 JSONBin 랭킹 이전 실패:", e);
-    }
+    return;
 }
 
 const DEFAULT_RANKINGS = [];
@@ -803,7 +738,8 @@ async function appendRankingRecordSafely(newRecord, maxRetry = 2) {
                 createdAt: serverTimestamp(),
                 createdBy: record.createdBy,
                 version: record.version,
-                userAgent: navigator.userAgent ? navigator.userAgent.slice(0, 160) : ""
+                userAgent: navigator.userAgent ? navigator.userAgent.slice(0, 160) : "",
+                analytics: record.analytics || null
             });
 
             const verified = await verifyScoreRecord(record.uuid);
@@ -1050,6 +986,16 @@ let currentStage = 1;
 let stageClearTimer = 0;
 let accumulatedScore = 0;
 
+// AI 분석용 플레이 세션 로그
+let playStartedAt = 0;
+let playSessionId = "";
+let collisionCount = 0;
+let skillUsageCount = 0;
+let missedItemCounts = {};
+let stageHistory = [];
+let gameEndReason = "unknown";
+let devicePlaySequence = parseInt(localStorage.getItem("jofams_play_sequence") || "0", 10);
+
 // #9 콤보 시스템
 let comboCount = 0;
 let comboTimer = 0;
@@ -1141,6 +1087,15 @@ function startGame() {
 
     gameScore = 0; accumulatedScore = 0; uniqueCollected.clear(); totalCollected = 0;
     itemCounts = {}; PUBLIC_PURCHASES.forEach(p => itemCounts[p.id] = 0);
+    missedItemCounts = {}; PUBLIC_PURCHASES.forEach(p => missedItemCounts[p.id] = 0);
+    playStartedAt = Date.now();
+    playSessionId = createRecordUuid();
+    collisionCount = 0;
+    skillUsageCount = 0;
+    stageHistory = [{stage: 1, enteredAt: playStartedAt}];
+    gameEndReason = "playing";
+    devicePlaySequence += 1;
+    localStorage.setItem("jofams_play_sequence", String(devicePlaySequence));
     skillCharge = 0; isSkillActive = false; skillTimer = 0;
     gameSpeed = 2.6; distRun = 0; frame = 0;
     currentStage = 1; stageClearTimer = 0;
@@ -1269,6 +1224,7 @@ canvas.addEventListener("touchmove", e => e.preventDefault(), {passive:false});
 function activateSkill() {
     if (skillCharge < 100 || isSkillActive) return;
     isSkillActive = true; skillCharge = 0; skillTimer = 300;
+    skillUsageCount++;
     playSound("skill");
     document.getElementById("hud-skill-bar").style.width = "0%";
 
@@ -1399,6 +1355,7 @@ function updateObstacles() {
                     playSound("crash"); createExplosion(o.x, o.y, "#f97316");
                     obstacles.splice(i, 1); gameScore += 400; continue;
                 }
+                collisionCount++;
                 playSound("crash"); triggerRevival(); return;
             }
             // 폭탄을 점프로 통과 (y 기준으로 지나쳤을 때)
@@ -1425,6 +1382,7 @@ function updateObstacles() {
                     playSound("crash"); createExplosion(o.x, o.y, "#3b82f6");
                     obstacles.splice(i, 1); gameScore += 400; continue;
                 }
+                collisionCount++;
                 playSound("crash"); triggerRevival(); return;
             }
         }
@@ -1485,6 +1443,7 @@ function updateItems() {
                 missionStats.stagesCleared++;
                 if (currentStage === 1) missionStats.stage1Clear = 1;
                 currentStage++;
+                stageHistory.push({stage: currentStage, enteredAt: Date.now()});
                 gameSpeed = 2.6 * Math.pow(1.05, currentStage - 1);
                 stageClearTimer = 180;
                 document.getElementById("stage-clear-num").textContent = "STAGE " + currentStage + " 시작!";
@@ -1503,7 +1462,10 @@ function updateItems() {
             updateMissionHUD();
             items.splice(i, 1); continue;
         }
-        if (e.y > CH + 50) items.splice(i, 1);
+        if (e.y > CH + 50) {
+            if (e.item && e.item.id) missedItemCounts[e.item.id] = (missedItemCounts[e.item.id] || 0) + 1;
+            items.splice(i, 1);
+        }
     }
 }
 
@@ -1534,6 +1496,7 @@ function togglePause() {
     else { if (rafId) cancelAnimationFrame(rafId); }
 }
 function confirmQuit() {
+    gameEndReason = "quit";
     isPaused = false;
     document.getElementById("pause-overlay").classList.add("hidden");
     isPlaying = false;
@@ -1548,6 +1511,7 @@ window.addEventListener("keydown", e => { if (e.key === "Escape" && isPlaying) t
 // ============================================================
 function triggerRevival() {
     if (revivalUsed || skillCharge < 100) {
+        gameEndReason = "collision";
         endGame(); return;
     }
     isPlaying = false;
@@ -1563,6 +1527,7 @@ function triggerRevival() {
             clearInterval(revivalTimer);
             // 자동 종료 (버튼 안 누르면)
             overlay.classList.add("hidden");
+            gameEndReason = "revival_timeout";
             endGame();
         }
     }, 1000);
@@ -1581,6 +1546,7 @@ function doRevive() {
     rafId = requestAnimationFrame(gameLoop);
 }
 function confirmEndGame() {
+    gameEndReason = "revival_declined";
     clearInterval(revivalTimer);
     document.getElementById("revival-overlay").classList.add("hidden");
     endGame();
@@ -1668,6 +1634,7 @@ function closeTutorial() {
 // #12 ENDING SEQUENCE (10 STAGE CLEAR)
 // ============================================================
 function showEnding() {
+    gameEndReason = "all_stages_cleared";
     isPlaying = false;
     if (rafId) cancelAnimationFrame(rafId);
     stopBGM();
@@ -2467,6 +2434,66 @@ function buildDeptStatsFromRankings(rankings) {
     return stats;
 }
 
+function serializeCountMap(countMap) {
+    const out = {};
+    PUBLIC_PURCHASES.forEach(p => { out[String(p.id)] = Number(countMap?.[p.id]) || 0; });
+    return out;
+}
+
+function buildPlayAnalytics(finalScore) {
+    const endedAt = Date.now();
+    const durationMs = playStartedAt ? Math.max(0, endedAt - playStartedAt) : 0;
+    const missionResults = todayMissions.map(m => ({
+        id: m.id,
+        description: m.desc,
+        target: m.target,
+        progress: Number(missionStats[m.stat]) || 0,
+        completed: Boolean(m.done),
+        bonus: m.bonus
+    }));
+    const battleResult = battleOpponentData ? {
+        opponentName: String(battleOpponentData.name || ""),
+        opponentDept: String(battleOpponentData.dept || ""),
+        opponentScore: Number(battleOpponentData.score) || 0,
+        result: finalScore > Number(battleOpponentData.score || 0) ? "win" : finalScore === Number(battleOpponentData.score || 0) ? "draw" : "lose",
+        scoreDiff: finalScore - Number(battleOpponentData.score || 0)
+    } : null;
+
+    return {
+        analyticsVersion: 1,
+        playSessionId,
+        playStartedAt,
+        playEndedAt: endedAt,
+        playDurationMs: durationMs,
+        playDurationSec: Math.round(durationMs / 1000),
+        devicePlaySequence,
+        character: selectedChar,
+        controlMode: ctrlMode,
+        stageReached: currentStage,
+        stagesCleared: Number(missionStats.stagesCleared) || 0,
+        stageHistory,
+        distanceRun: Number(distRun.toFixed(2)),
+        totalCollected,
+        uniqueCollectedCount: uniqueCollected.size,
+        collectedItemIds: Array.from(uniqueCollected).sort((a,b)=>a-b),
+        itemCounts: serializeCountMap(itemCounts),
+        missedItemCounts: serializeCountMap(missedItemCounts),
+        collisionCount,
+        hurdlePassed: Number(missionStats.hurdlePassed) || 0,
+        bombJumped: Number(missionStats.bombJumped) || 0,
+        maxCombo: Number(missionStats.maxCombo) || 0,
+        skillUsageCount,
+        revivalUsed: Boolean(revivalUsed),
+        missionResults,
+        battleResult,
+        endReason: gameEndReason === "playing" ? "manual_score_submit" : gameEndReason,
+        finalScore
+    };
+}
+
+// 개발자도구에서 현재 수집값을 점검할 수 있는 읽기 전용 도우미
+window.previewJofamsAnalytics = () => buildPlayAnalytics(Math.round(accumulatedScore + gameScore));
+
 let _scoreSubmitting = false;
 
 async function submitScore() {
@@ -2479,14 +2506,16 @@ async function submitScore() {
     const dept = document.getElementById("select-dept").value;
     const finalScore = Math.round(accumulatedScore + gameScore);
 
+    const analytics = buildPlayAnalytics(finalScore);
     const newRecord = {
         uuid: createRecordUuid(),
         name,
         dept,
         score: finalScore,
         ...createScoreTimeMeta(),
-        version: 1,
-        createdBy: "jofams-run"
+        version: 2,
+        createdBy: "jofams-run",
+        analytics
     };
 
     const saved = await appendRankingRecordSafely(newRecord);
