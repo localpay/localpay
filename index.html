@@ -112,17 +112,17 @@
         <span id="webview-title" class="text-xs font-bold text-slate-200 truncate flex-1"></span>
         <a id="webview-open-external" href="#" target="_blank" rel="noopener noreferrer" class="touch-manipulation text-[10px] text-slate-500 underline decoration-slate-700 underline-offset-2 shrink-0 active:text-sky-400">새 창 ↗</a>
     </div>
-    <div class="relative flex-1">
-        <div id="webview-loading" class="hidden absolute inset-0 flex flex-col items-center justify-center gap-2 text-slate-500 text-xs">
-            <span class="text-lg">⏳</span>
-            <span>불러오는 중…</span>
+    <div class="relative flex-1 bg-white">
+        <div id="webview-loading" class="absolute inset-0 flex flex-col items-center justify-center gap-2 text-slate-500 text-xs bg-[#01040f] transition-opacity duration-300">
+            <span class="text-lg animate-pulse">⏳</span>
+            <span id="webview-loading-text">불러오는 중…</span>
         </div>
-        <div id="webview-fallback" class="hidden absolute inset-0 flex flex-col items-center justify-center gap-3 text-center px-8">
+        <div id="webview-fallback" class="hidden absolute inset-0 flex flex-col items-center justify-center gap-3 text-center px-8 bg-[#01040f]">
             <span class="text-2xl">🔗</span>
             <span class="text-xs text-slate-400 leading-relaxed">이 페이지는 앱 내 화면으로 표시할 수 없습니다.<br>아래 버튼으로 새 창에서 열어주세요.</span>
             <a id="webview-fallback-link" href="#" target="_blank" rel="noopener noreferrer" class="touch-manipulation px-4 py-2 bg-sky-500/15 border border-sky-500/40 rounded-xl text-xs font-bold text-sky-300 active:scale-95">새 창에서 열기 ↗</a>
         </div>
-        <iframe id="webview-frame" title="webview" src="about:blank" class="w-full h-full border-0 bg-white" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+        <iframe id="webview-frame" title="webview" src="about:blank" class="relative w-full h-full border-0 bg-white" referrerpolicy="no-referrer-when-downgrade"></iframe>
     </div>
 </div>
 
@@ -1876,11 +1876,17 @@ function showScreen(id) {
 // 로딩 타임아웃 시 "새 창에서 열기" 대체 안내를 제공한다.
 // ============================================================
 let webviewTimeoutId = null;
+let webviewSlowHintId = null;
 let webviewLoaded = false;
 
+// 참고: iframe에는 의도적으로 loading="lazy"를 사용하지 않는다.
+// 이 화면은 열리기 전까지 부모 요소가 hidden(display:none) 상태이므로,
+// lazy-loading을 적용하면 "화면에 보이지 않는 요소"로 판단되어
+// src를 지정해도 실제 로딩이 무기한 지연될 수 있기 때문이다.
 function openWebview(url, title) {
     const frame = document.getElementById("webview-frame");
     const loading = document.getElementById("webview-loading");
+    const loadingText = document.getElementById("webview-loading-text");
     const fallback = document.getElementById("webview-fallback");
     const titleEl = document.getElementById("webview-title");
     const openExternal = document.getElementById("webview-open-external");
@@ -1891,34 +1897,51 @@ function openWebview(url, title) {
     fallbackLink.href = url;
 
     fallback.classList.add("hidden");
-    frame.classList.add("hidden");
     loading.classList.remove("hidden");
+    loading.style.opacity = "1";
+    if (loadingText) loadingText.textContent = "불러오는 중…";
 
     webviewLoaded = false;
     clearTimeout(webviewTimeoutId);
+    clearTimeout(webviewSlowHintId);
 
     frame.onload = () => {
         if (frame.src === "about:blank") return;
         webviewLoaded = true;
-        loading.classList.add("hidden");
+        clearTimeout(webviewTimeoutId);
+        clearTimeout(webviewSlowHintId);
+        loading.style.opacity = "0";
+        setTimeout(() => loading.classList.add("hidden"), 300);
         fallback.classList.add("hidden");
-        frame.classList.remove("hidden");
     };
+
+    // 화면을 먼저 활성화(hidden 해제)한 뒤 src를 지정해야
+    // 브라우저가 iframe을 정상적인 로딩 대상으로 인식한다.
+    showScreen("webview");
     frame.src = url;
 
+    // 로딩이 길어질 경우, 실패로 단정하기 전에 안내 문구만 먼저 갱신
+    webviewSlowHintId = setTimeout(() => {
+        if (!webviewLoaded && loadingText) {
+            loadingText.textContent = "예상보다 오래 걸리고 있어요…";
+        }
+    }, 4500);
+
+    // 최종 타임아웃: 이 시점까지 load 이벤트가 없으면 대체 화면 표시.
+    // 느린 로딩과, 대상 사이트의 X-Frame-Options/CSP(frame-ancestors)로 인한
+    // 임베드 차단(이 경우 브라우저가 아예 load 이벤트를 주지 않을 수 있음)을
+    // 모두 포괄하는 안전장치이며, 후자는 클라이언트 코드로 우회할 수 없다.
     webviewTimeoutId = setTimeout(() => {
         if (!webviewLoaded) {
             loading.classList.add("hidden");
-            frame.classList.add("hidden");
             fallback.classList.remove("hidden");
         }
-    }, 4000);
-
-    showScreen("webview");
+    }, 10000);
 }
 
 function closeWebview() {
     clearTimeout(webviewTimeoutId);
+    clearTimeout(webviewSlowHintId);
     const frame = document.getElementById("webview-frame");
     frame.onload = null;
     frame.src = "about:blank";
