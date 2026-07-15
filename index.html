@@ -1910,9 +1910,33 @@ function openWebview(url, title) {
         webviewLoaded = true;
         clearTimeout(webviewTimeoutId);
         clearTimeout(webviewSlowHintId);
-        loading.style.opacity = "0";
-        setTimeout(() => loading.classList.add("hidden"), 300);
-        fallback.classList.add("hidden");
+
+        // X-Frame-Options/CSP(frame-ancestors)로 임베드가 차단된 경우,
+        // 브라우저는 load 이벤트는 정상적으로 발생시키되 실제 탐색은
+        // 거부하여 iframe이 최초 about:blank 상태에 머무른 채 흰 화면만
+        // 표시한다. 이를 감지하기 위해 아래 방식을 사용한다:
+        //  - 정상적으로 다른 출처(cross-origin) 페이지가 로드되었다면,
+        //    브라우저 동일 출처 정책(SOP)에 의해 접근 시 예외가 발생하는
+        //    것이 정상이다.
+        //  - 예외 없이 접근되고 값이 about:blank라면, 실제 탐색이
+        //    차단되어 빈 문서에 머물러 있다는 뜻이므로 임베드 차단으로
+        //    간주하고 대체 화면을 노출한다.
+        let blocked = false;
+        try {
+            const currentHref = frame.contentWindow && frame.contentWindow.location.href;
+            if (currentHref === "about:blank") blocked = true;
+        } catch (e) {
+            blocked = false; // cross-origin 접근 차단 = 정상적으로 다른 페이지가 로드됨
+        }
+
+        if (blocked) {
+            loading.classList.add("hidden");
+            fallback.classList.remove("hidden");
+        } else {
+            loading.style.opacity = "0";
+            setTimeout(() => loading.classList.add("hidden"), 300);
+            fallback.classList.add("hidden");
+        }
     };
 
     // 화면을 먼저 활성화(hidden 해제)한 뒤 src를 지정해야
