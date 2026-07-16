@@ -1420,16 +1420,54 @@ function renderAiReport(report) {
     document.getElementById("ai-report-disclaimer").textContent = report.disclaimer || "";
 }
 
-async function generateAndRenderAiReport(diagnosis, quizResult, integrated, learningEffect) {
+async function generateAndRenderAiReport(
+    diagnosis,
+    quizResult,
+    integrated,
+    learningEffect
+) {
     const loading = document.getElementById("ai-report-loading");
-    if (loading) loading.classList.remove("hidden");
 
-    const payload = buildAiReportPayload(diagnosis, quizResult, integrated, learningEffect);
-    currentAiReport = await requestGenerativeAiReport(payload);
-    renderAiReport(currentAiReport);
+    if (loading) {
+        loading.classList.remove("hidden");
+    }
 
-    if (loading) loading.classList.add("hidden");
-    return currentAiReport;
+    try {
+        const payload = buildAiReportPayload(
+            diagnosis,
+            quizResult,
+            integrated,
+            learningEffect
+        );
+
+        currentAiReport = await requestGenerativeAiReport(payload);
+        renderAiReport(currentAiReport);
+
+        return currentAiReport;
+
+    } catch (error) {
+        console.error("AI 리포트 처리 오류:", error);
+
+        const payload = buildAiReportPayload(
+            diagnosis,
+            quizResult,
+            integrated,
+            learningEffect
+        );
+
+        currentAiReport = buildLocalFallbackReport(payload);
+        currentAiReport.fallbackReason =
+            String(error?.message || error);
+
+        renderAiReport(currentAiReport);
+
+        return currentAiReport;
+
+    } finally {
+        if (loading) {
+            loading.classList.add("hidden");
+        }
+    }
 }
 
 // STEP 5: 공공구매 지식검증 퀴즈
