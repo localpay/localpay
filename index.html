@@ -3814,11 +3814,23 @@ function doShare(method) {
     if (method === "sms") {
         window.location.href = "sms:?body=" + encodeURIComponent(fullMsg);
     } else if (method === "kakao") {
-        // 카카오링크 SDK가 없으므로 카카오톡 앱 공유 (모바일) 또는 링크 복사
+        // 카카오톡 공유 기능 종료로 인해, 아이콘/버튼은 기존과 동일하게 유지하되
+        // 실제 동작은 텍스트 공유(공유 시트 또는 클립보드 복사)로 대체
         if (navigator.share) {
             navigator.share({ title: "조팸스 런!", text, url }).catch(()=>{});
         } else {
-            window.open("https://story.kakao.com/share?url=" + encodeURIComponent(url), "_blank");
+            navigator.clipboard.writeText(fullMsg).then(() => {
+                const msg = document.getElementById("share-copy-msg");
+                msg.classList.remove("hidden");
+                setTimeout(() => msg.classList.add("hidden"), 2500);
+            }).catch(() => {
+                const ta = document.createElement("textarea");
+                ta.value = fullMsg; document.body.appendChild(ta); ta.select();
+                document.execCommand("copy"); document.body.removeChild(ta);
+                const msg = document.getElementById("share-copy-msg");
+                msg.classList.remove("hidden");
+                setTimeout(() => msg.classList.add("hidden"), 2500);
+            });
         }
     } else if (method === "email") {
         const subject = shareMode === "battle" ? "⚔️ 조팸스 런 배틀 도전!" : "🎮 조팸스 런 게임 추천!";
